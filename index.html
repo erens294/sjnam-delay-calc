@@ -713,11 +713,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
     <div class="card p-5">
       <h3 class="font-semibold mb-3">📈 Tren Monthly Cost PM</h3>
-      <canvas id="chartLine" height="200"></canvas>
+      <div class="relative h-[260px]"><canvas id="chartLine"></canvas></div>
     </div>
     <div class="card p-5">
       <h3 class="font-semibold mb-3">🥧 Distribusi Delay per Kategori</h3>
-      <div class="max-w-xs mx-auto"><canvas id="chartPie" height="240"></canvas></div>
+      <div class="max-w-xs mx-auto"><div class="relative h-[240px] max-w-xs mx-auto"><canvas id="chartPie"></canvas></div></div>
     </div>
   </div>
 
@@ -728,11 +728,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <h3 class="font-semibold">📊 Delay per Kategori (menit)</h3>
         <span class="text-xs text-slate-400">Klik bar untuk filter</span>
       </div>
-      <canvas id="chartBar" height="200"></canvas>
+      <div class="relative h-[260px]"><canvas id="chartBar"></canvas></div>
     </div>
     <div class="card p-5">
       <h3 class="font-semibold mb-3">🔵 Flight Status Distribution</h3>
-      <div class="max-w-xs mx-auto"><canvas id="chartStatus" height="240"></canvas></div>
+      <div class="max-w-xs mx-auto"><div class="relative h-[240px] max-w-xs mx-auto"><canvas id="chartStatus"></canvas></div></div>
     </div>
   </div>
 
@@ -741,18 +741,18 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
   <!-- Route Delay Bar Chart -->
   <div class="card p-5 mb-5">
     <h3 class="font-semibold mb-3">🗺️ Quantity Delay per Rute</h3>
-    <canvas id="chartRouteBar" height="180"></canvas>
+    <div class="relative h-[300px]"><canvas id="chartRouteBar"></canvas></div>
   </div>
 
   <!-- Charts Row 3: Trend Cost PM by Station + Pie Cost by Airlines -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
     <div class="card p-5">
       <h3 class="font-semibold mb-3">📊 Trend Cost PM by Station</h3>
-      <canvas id="chartCostStation" height="200"></canvas>
+      <div class="relative h-[260px]"><canvas id="chartCostStation"></canvas></div>
     </div>
     <div class="card p-5">
       <h3 class="font-semibold mb-3">🥧 Distribusi Cost by Airlines</h3>
-      <div class="max-w-xs mx-auto"><canvas id="chartCostAirlines" height="240"></canvas></div>
+      <div class="max-w-xs mx-auto"><div class="relative h-[240px] max-w-xs mx-auto"><canvas id="chartCostAirlines"></canvas></div></div>
     </div>
   </div>
 </section>
@@ -5488,26 +5488,7 @@ document.addEventListener('DOMContentLoaded', function(){ document.getElementByI
   }
   window.getLocalDelay = getLocalDelay;
   
-  // Patch table rendering if exists
-  const checkInterval = setInterval(()=>{
-    const rows = document.querySelectorAll('#dataTableBody tr');
-    if(rows.length){
-      rows.forEach(row=>{
-        const cells = row.querySelectorAll('td');
-        // Assuming Delay Now is column 8 or 9 - find by data attribute
-        const flightCell = row.querySelector('[data-field="delayNow"]');
-        if(flightCell){
-          const stdUtc = row.dataset.stdUtc;
-          const route = row.dataset.route;
-          flightCell.textContent = getLocalDelay(stdUtc, route);
-        }
-      });
-    }
-  }, 2000);
-})();
-
-
-document.getElementById('closePdf')?.addEventListener('click', ()=>{
+  document.getElementById('closePdf')?.addEventListener('click', ()=>{
   const modal = document.getElementById('pdfModal');
   modal.classList.add('hidden');
   modal.classList.remove('flex');
@@ -5523,12 +5504,6 @@ document.getElementById('toggleTrainingMenu')?.addEventListener('click', ()=>{
   if(icon) icon.style.transform = open ? 'rotate(-90deg)' : 'rotate(0deg)';
 });
 </script>
-<script>
-window.addEventListener('error', function(e){
-  console.error('[SJNAM Error]', e.message, 'at', e.filename, e.lineno);
-  if(window.showToast) showToast('Error: '+e.message, 'error');
-});
-</script>
 <!-- PDF Viewer Modal -->
 <div id="pdfModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
   <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl">
@@ -5542,4 +5517,10 @@ window.addEventListener('error', function(e){
   </div>
 </div>
 
+<script>
+window.addEventListener('error', function(e){
+  console.error('[SJNAM Error]', e.message, 'at', e.filename, e.lineno);
+  if(window.showToast) showToast('Error: '+e.message, 'error');
+});
+</script>
 </body></html>
