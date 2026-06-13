@@ -306,7 +306,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
 <!-- HEADER -->
 
-<div id="mainContent" class="ml-64 transition-all duration-300 min-h-screen">
+<div id="mainContent" class="ml-64 ml-64 transition-all duration-300 min-h-screen">
   <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
     <div class="px-4 py-3 flex items-center justify-between">
       <button id="btnToggleSidebar" class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -4907,6 +4907,32 @@ const SESSION_KEY = 'sjnam_session_v1';
 const CURRENT_TAB_KEY = 'sjnam_current_tab';
 
 let currentUser = null;
+
+
+// === PATCH LOGIN v5.1 - fix key mismatch ===
+(function(){
+  const OLD_KEY = 'sjn_users_v1';
+  const NEW_KEY = 'sjnam_users_v1';
+  try{
+    const oldUsers = localStorage.getItem(OLD_KEY);
+    const newUsers = localStorage.getItem(NEW_KEY);
+    if(oldUsers && !newUsers){
+      localStorage.setItem(NEW_KEY, oldUsers);
+      console.log('[AUTH] Migrated users from old key');
+    }
+    // Force create default if still empty
+    let users = JSON.parse(localStorage.getItem(NEW_KEY) || '[]');
+    if(users.length===0){
+      users = [
+        {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
+        {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
+        {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'}
+      ];
+      localStorage.setItem(NEW_KEY, JSON.stringify(users));
+      console.log('[AUTH] Default users created');
+    }
+  }catch(e){ console.error('migration error', e) }
+})();
 
 // Init default users
 function initUsers(){
