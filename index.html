@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="id" class="scroll-smooth"><head><meta charset="UTF-8">
 
@@ -2490,6 +2491,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="flex gap-2 border-b border-slate-200 dark:border-slate-700 mb-4 -mx-1 overflow-x-auto">
       <button data-soal-subtab="bank" class="soal-subtab-btn active px-4 py-2 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 whitespace-nowrap">📋 Bank Soal</button>
       <button data-soal-subtab="peserta" class="soal-subtab-btn px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">🗂️ Bank Data Peserta</button>
+      <button data-soal-subtab="station" class="soal-subtab-btn px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">🏢 Bank Station</button>
     </div>
 
     <!-- SUB TAB: BANK SOAL -->
@@ -2521,6 +2523,29 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <button id="btnClearPeserta" class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-xl">🗑 Hapus Semua Data</button>
         <span class="text-xs text-slate-500 ml-auto">Total Peserta: <span id="pesertaTotalCount">0</span></span>
       </div>
+    <!-- SUB TAB: BANK STATION -->
+    <div id="soalSubStation" class="soal-subtab-pane hidden">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button id="btnAddStation" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl">+ Tambah Station</button>
+        <button id="btnExportStation" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-sm font-semibold rounded-xl">⬇️ Export Excel</button>
+        <input type="file" id="importStation" accept=".xlsx,.xls" class="hidden">
+        <button onclick="document.getElementById('importStation').click()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">⬆️ Import Excel</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100 dark:bg-slate-800"><tr>
+            <th class="px-3 py-2 text-left">No</th>
+            <th class="px-3 py-2 text-left">Stasiun</th>
+            <th class="px-3 py-2 text-left">Perusahaan</th>
+            <th class="px-3 py-2 text-left">Tanggal Training</th>
+            <th class="px-3 py-2 text-left">Berlaku Hingga</th>
+            <th class="px-3 py-2 text-left">Aksi</th>
+          </tr></thead>
+          <tbody id="stationTableBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+        </table>
+      </div>
+    </div>
+
       <div class="overflow-x-auto -mx-2">
         <table class="w-full text-sm">
           <thead>
@@ -5576,7 +5601,7 @@ document.addEventListener('DOMContentLoaded', function(){ document.getElementByI
 (function(){
   const TRAINING_KEY = 'sjn_training_v1';
   let trainingData; try { trainingData = JSON.parse(localStorage.getItem(TRAINING_KEY) || ''); } catch(e){}
-  if(!trainingData){ trainingData = {materi:[{id:'basic',title:'Basic Service Indoctrination',desc:'Pengenalan layanan dasar Sriwijaya Air & NAM Air'}],soal:[],peserta:[]}; }
+  if(!trainingData){ trainingData = {materi:[{id:'basic',title:'Basic Service Indoctrination',desc:'Pengenalan layanan dasar Sriwijaya Air & NAM Air'}],soal:[],peserta:[],banks:[{id:'basic',name:'Basic Service Indoctrination',questions:[]},{id:'smile',name:'Training SMILE',questions:[]}],stations:[]}; }
   if(!Array.isArray(trainingData.soal)) trainingData.soal = [];
   if(!Array.isArray(trainingData.peserta)) trainingData.peserta = [];
   if(!Array.isArray(trainingData.materi)) trainingData.materi = [{id:'basic',title:'Basic Service Indoctrination',desc:'Pengenalan layanan dasar Sriwijaya Air & NAM Air'}];
@@ -6153,6 +6178,17 @@ function renderCertificate(p, prefix){
         isDown = false;
         el.style.transition = '';
         savePositions();
+    // wheel to resize font
+    el.addEventListener('wheel', (e)=>{
+      if(!e.ctrlKey && !e.altKey) return; // require ctrl or alt to avoid scroll conflict
+      e.preventDefault();
+      const style = window.getComputedStyle(el);
+      let size = parseFloat(style.fontSize) || 16;
+      size += (e.deltaY < 0 ? 2 : -2);
+      size = Math.max(10, Math.min(72, size));
+      el.style.fontSize = size + 'px';
+      savePositions();
+    });
       }
     });
     // touch
@@ -6262,14 +6298,25 @@ function renderCertificate(p, prefix){
 
   async function downloadCertificate(previewElId, filenamePrefix, certNo){
     const el = document.getElementById(previewElId);
-    if(typeof html2canvas === 'undefined'){ showToast('html2canvas belum load, coba refresh','error'); return null; }
-    const canvas = await html2canvas(el, {scale:2});
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `${filenamePrefix}-${certNo}.png`;
-    link.href = dataUrl;
-    link.click();
-    return dataUrl;
+    if(typeof html2canvas === 'undefined'){ showToast('html2canvas belum load','error'); return null; }
+    showToast('Membuat PDF...','info');
+    const canvas = await html2canvas(el, {scale:3, useCORS:true, backgroundColor:'#ffffff'});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    // fit image
+    const imgProps = pdf.getImageProperties(imgData);
+    const ratio = Math.min(pdfW/imgProps.width, pdfH/imgProps.height);
+    const w = imgProps.width * ratio;
+    const h = imgProps.height * ratio;
+    const x = (pdfW - w)/2;
+    const y = (pdfH - h)/2;
+    pdf.addImage(imgData, 'PNG', x, y, w, h);
+    pdf.save(`${filenamePrefix}-${certNo}.pdf`);
+    showToast('PDF berhasil diunduh','success');
+    return imgData;
   }
   window.downloadCertificate = downloadCertificate;
 
@@ -6508,6 +6555,7 @@ function renderCertificate(p, prefix){
       createdAt: new Date().toISOString(),
       expiredDate: addYears(tanggal || new Date().toISOString().slice(0,10), 2),
     };
+    if(trainingData.peserta.length >= 150){ showToast("Maksimal 150 peserta tercapai","error"); return; }
     trainingData.peserta.push(peserta);
     saveTraining();
     if(typeof renderPeserta === 'function') renderPeserta();
@@ -6644,5 +6692,102 @@ window.addEventListener('error', function(e){
 window.addEventListener('beforeunload', ()=>{
   if(window.autoSyncTimer) clearTimeout(window.autoSyncTimer);
 });
+
+
+// === PATCH V5: Bank Station & Sync ===
+(function(){
+  if(!window.trainingData.stations) window.trainingData.stations = [];
+  if(!window.trainingData.banks) window.trainingData.banks = [{id:'basic',name:'Basic Service Indoctrination',questions:[]},{id:'smile',name:'Training SMILE',questions:[]}];
+  
+  function renderStations(){
+    const tbody = document.getElementById('stationTableBody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    (trainingData.stations||[]).forEach((s,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="px-3 py-2">${i+1}</td>
+        <td class="px-3 py-2">${s.stasiun||''}</td>
+        <td class="px-3 py-2">${s.perusahaan||''}</td>
+        <td class="px-3 py-2">${s.tanggal||''}</td>
+        <td class="px-3 py-2">${s.berlaku||''}</td>
+        <td class="px-3 py-2"><button class="text-red-500 text-xs" onclick="delStation(${i})">Hapus</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  window.delStation = function(i){ trainingData.stations.splice(i,1); saveTraining(); renderStations(); };
+  
+  document.getElementById('btnAddStation')?.addEventListener('click', ()=>{
+    const stasiun = prompt('Nama Stasiun:'); if(!stasiun) return;
+    const perusahaan = prompt('Perusahaan:')||'';
+    const tanggal = prompt('Tanggal Training (YYYY-MM-DD):')||new Date().toISOString().slice(0,10);
+    const d = new Date(tanggal); d.setFullYear(d.getFullYear()+2);
+    const berlaku = d.toISOString().slice(0,10);
+    trainingData.stations.push({stasiun, perusahaan, tanggal, berlaku});
+    saveTraining(); renderStations(); showToast('Station ditambahkan','success');
+  });
+  
+  // Subtab switching for station
+  document.querySelectorAll('[data-soal-subtab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.soal-subtab-btn').forEach(b=>b.classList.remove('active','border-blue-600','text-blue-600'));
+      btn.classList.add('active','border-blue-600','text-blue-600');
+      document.querySelectorAll('.soal-subtab-pane').forEach(p=>p.classList.add('hidden'));
+      const target = btn.dataset.soalSubtab;
+      document.getElementById('soalSub'+target.charAt(0).toUpperCase()+target.slice(1))?.classList.remove('hidden');
+      if(target==='station') renderStations();
+    });
+  });
+  
+  // Service Training Sync
+  let autoSyncTimer = null;
+  function doSync(){
+    const passed = (trainingData.peserta||[]).filter(p=> (p.nilai||0) >= 70);
+    const serviceData = passed.map(p=>{
+      const st = (trainingData.stations||[]).find(s=>s.stasiun===p.stasiun) || {};
+      return {
+        nama: p.nama,
+        stasiun: p.stasiun,
+        perusahaan: p.perusahaan || st.perusahaan || '',
+        certNo: p.certNo,
+        tanggal: p.tanggal,
+        berlaku: p.expiredDate
+      };
+    });
+    localStorage.setItem('sjn_service_training_v1', JSON.stringify(serviceData));
+    showToast(`Sinkronisasi selesai: ${serviceData.length} peserta`, 'success');
+    if(typeof renderServiceTraining === 'function') renderServiceTraining();
+  }
+  document.getElementById('btnSyncService')?.addEventListener('click', doSync);
+  document.getElementById('autoSyncToggle')?.addEventListener('change', (e)=>{
+    if(e.target.checked){
+      autoSyncTimer = setInterval(doSync, 30000);
+      showToast('Auto-Sync aktif (30s)','info');
+    } else {
+      clearInterval(autoSyncTimer);
+    }
+  });
+  
+  // Peserta bank selection
+  const originalStartPeserta = window.startPesertaQuiz;
+  window.startPesertaQuiz = function(){
+    const banks = trainingData.banks || [];
+    if(banks.length > 1){
+      const choice = prompt('Pilih Bank Soal:\n' + banks.map((b,i)=>`${i+1}. ${b.name}`).join('\n') + '\n\nMasukkan nomor:','1');
+      const idx = Math.max(0, Math.min(banks.length-1, (parseInt(choice)||1)-1));
+      window.selectedBankId = banks[idx].id;
+    }
+    if(originalStartPeserta) originalStartPeserta();
+  };
+  
+  // Ensure peserta limit on manual add
+  const origSaveTraining = window.saveTraining;
+  window.saveTraining = function(){
+    if(trainingData.peserta && trainingData.peserta.length > 150){
+      trainingData.peserta = trainingData.peserta.slice(0,150);
+      showToast('Dibatasi 150 peserta','warning');
+    }
+    if(origSaveTraining) origSaveTraining();
+  };
+})();
 
 </body></html>
