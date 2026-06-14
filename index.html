@@ -77,7 +77,7 @@
 #homeMenuContent, #adminMenuContent, #trainingMenuContent {
   overflow: hidden;
   transition: max-height 0.3s ease, opacity 0.25s ease;
-  max-height: 600px;
+  max-height: 1200px;
   opacity: 1;
 }
 #homeMenuContent.collapsed, #adminMenuContent.collapsed, #trainingMenuContent.collapsed {
@@ -2680,6 +2680,39 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
 <!-- ============= TAB SERTIFIKAT ============= -->
 <section id="tab-sertifikat" class="tab-pane">
+  
+  <!-- ============= ADMIN TEMPLATE UPLOAD ============= -->
+  <div class="card p-5 md:p-6 mb-5 border-l-4 border-amber-500">
+    <div class="flex items-start justify-between">
+      <div>
+        <h2 class="text-lg font-bold flex items-center gap-2">🎨 Template Sertifikat</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Upload background untuk sertifikat. Admin bisa ganti tanpa edit kode. Tersimpan lokal & langsung dipakai renderCertificate.</p>
+      </div>
+      <span class="badge bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Admin Only</span>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5 mt-4">
+      <div class="md:col-span-2 space-y-3">
+        <div>
+          <label class="text-xs font-semibold">File Background (PNG/JPG, rasio A4 landscape 1.414:1)</label>
+          <input type="file" id="certTemplateInput" accept="image/png,image/jpeg,image/webp" class="input mt-1">
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btnSaveTemplate" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl">💾 Simpan & Terapkan</button>
+          <button id="btnResetTemplate" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-sm font-semibold rounded-xl">♻️ Reset Default</button>
+          <button id="btnDownloadTemplate" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">⬇️ Download Template Saat Ini</button>
+        </div>
+        <p id="templateStatus" class="text-xs text-slate-500">Status: belum ada template custom.</p>
+      </div>
+      <div>
+        <label class="text-xs font-semibold">Preview</label>
+        <div id="templatePreviewBox" class="mt-1 aspect-[1.414/1] w-full bg-slate-100 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden relative">
+          <span class="text-[11px] text-slate-400">Preview kosong</span>
+          <img id="templatePreviewImg" class="absolute inset-0 w-full h-full object-cover hidden" alt="preview">
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card p-5 md:p-6">
     <h2 class="text-lg font-bold mb-1">Cari &amp; Cetak Ulang Sertifikat</h2>
     <p class="text-xs text-slate-500 mb-4">Sertifikat otomatis dibuat saat peserta menyelesaikan Soal Training. Cari berdasarkan No Sertifikat, Nama, atau Email untuk cetak ulang / kirim ulang.</p>
@@ -5964,9 +5997,101 @@ document.addEventListener('DOMContentLoaded', function(){ document.getElementByI
   }
   window.renderCertificate = renderCertificate;
 
+  // === CERTIFICATE TEMPLATE UPLOAD ===
+  const TEMPLATE_KEY = 'sjn_cert_template_v1';
+  function loadCertificateTemplate(){
+    const data = JSON.parse(localStorage.getItem(TEMPLATE_KEY) || 'null');
+    const previews = ['certReprintPreview','pesertaCertPreview'];
+    previews.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(data && data.dataUrl){
+        el.style.backgroundImage = `url(${data.dataUrl})`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.style.backgroundRepeat = 'no-repeat';
+        // hapus gradient default
+        el.classList.remove('bg-gradient-to-br','from-blue-50','to-indigo-100','dark:from-slate-800','dark:to-slate-900');
+      } else {
+        el.style.backgroundImage = '';
+        if(!el.classList.contains('bg-gradient-to-br')){
+          el.classList.add('bg-gradient-to-br','from-blue-50','to-indigo-100','dark:from-slate-800','dark:to-slate-900');
+        }
+      }
+    });
+    // update preview box
+    const prevImg = document.getElementById('templatePreviewImg');
+    const prevBox = document.getElementById('templatePreviewBox');
+    const status = document.getElementById('templateStatus');
+    if(data && data.dataUrl && prevImg){
+      prevImg.src = data.dataUrl;
+      prevImg.classList.remove('hidden');
+      if(prevBox) prevBox.querySelector('span')?.classList.add('hidden');
+      if(status) status.textContent = `Status: template custom aktif (disimpan ${new Date(data.savedAt).toLocaleString('id-ID')})`;
+    } else {
+      if(prevImg) prevImg.classList.add('hidden');
+      if(prevBox) prevBox.querySelector('span')?.classList.remove('hidden');
+      if(status) status.textContent = 'Status: menggunakan background default.';
+    }
+  }
+
+  // hook ke renderCertificate
+  const _origRenderCertificate = window.renderCertificate;
+  window.renderCertificate = function(p, prefix){
+    _origRenderCertificate(p, prefix);
+    setTimeout(loadCertificateTemplate, 10);
+  };
+
+  document.getElementById('certTemplateInput')?.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      document.getElementById('templatePreviewImg').src = dataUrl;
+      document.getElementById('templatePreviewImg').classList.remove('hidden');
+      document.getElementById('templatePreviewBox').querySelector('span')?.classList.add('hidden');
+      document.getElementById('templateStatus').textContent = 'Preview siap. Klik Simpan & Terapkan.';
+      // simpan sementara
+      sessionStorage.setItem('temp_cert_template', dataUrl);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('btnSaveTemplate')?.addEventListener('click', ()=>{
+    const temp = sessionStorage.getItem('temp_cert_template');
+    if(!temp){ showToast('Pilih file dulu','warn'); return; }
+    const payload = { dataUrl: temp, savedAt: new Date().toISOString() };
+    localStorage.setItem(TEMPLATE_KEY, JSON.stringify(payload));
+    sessionStorage.removeItem('temp_cert_template');
+    loadCertificateTemplate();
+    showToast('Template sertifikat disimpan','success');
+  });
+
+  document.getElementById('btnResetTemplate')?.addEventListener('click', ()=>{
+    if(confirm('Reset ke background default?')){
+      localStorage.removeItem(TEMPLATE_KEY);
+      loadCertificateTemplate();
+      showToast('Template direset','info');
+    }
+  });
+
+  document.getElementById('btnDownloadTemplate')?.addEventListener('click', ()=>{
+    const data = JSON.parse(localStorage.getItem(TEMPLATE_KEY) || 'null');
+    if(!data){ showToast('Belum ada template custom','warn'); return; }
+    const a = document.createElement('a');
+    a.href = data.dataUrl;
+    a.download = 'template-sertifikat-sjnam.png';
+    a.click();
+  });
+
+  // load saat awal
+  document.addEventListener('DOMContentLoaded', loadCertificateTemplate);
+
+
   async function downloadCertificate(previewElId, filenamePrefix, certNo){
     const el = document.getElementById(previewElId);
-    if(typeof html2canvas === 'undefined'){ showToast('Fitur download belum siap','error'); return null; }
+    if(typeof html2canvas === 'undefined'){ showToast('html2canvas belum load, coba refresh','error'); return null; }
     const canvas = await html2canvas(el, {scale:2});
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
@@ -6298,13 +6423,10 @@ document.addEventListener('DOMContentLoaded', function(){ document.getElementByI
     const station = stations.find(s=>s.code===origin);
     const offset = station ? (station.utcOffset || 7) : 7;
     const now = new Date();
-    const nowUtc = new Date(now.getTime() + now.getTimezoneOffset()*60000);
     const [h,m] = stdUtc.split(':').map(Number);
-    const stdDate = new Date(nowUtc);
-    stdDate.setUTCHours(h, m, 0, 0);
-    // Convert to local
-    const localStd = new Date(stdDate.getTime() + offset*3600000);
-    const diffMs = now.getTime() - localStd.getTime() + (now.getTimezoneOffset()*60000) + offset*3600000;
+    const stdUtcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, m, 0));
+    const localStd = new Date(stdUtcDate.getTime() + offset*3600000);
+    const diffMs = now.getTime() - localStd.getTime();
     const diffMin = Math.floor(diffMs / 60000);
     return diffMin > 0 ? diffMin + ' min' : 'On Time';
   }
@@ -6328,7 +6450,7 @@ document.getElementById('toggleTrainingMenu')?.addEventListener('click', ()=>{
 })();
 </script>
 <!-- PDF Viewer Modal -->
-<div id="pdfModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+<div id="pdfModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
   <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl">
     <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
       <h3 class="font-bold text-lg">Basic Service Indoctrination</h3>
@@ -6346,4 +6468,10 @@ window.addEventListener('error', function(e){
   if(window.showToast) showToast('Error: '+e.message, 'error');
 });
 </script>
+
+// cleanup intervals on unload
+window.addEventListener('beforeunload', ()=>{
+  if(window.autoSyncTimer) clearTimeout(window.autoSyncTimer);
+});
+
 </body></html>
