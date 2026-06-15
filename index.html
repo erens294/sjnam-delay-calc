@@ -4882,14 +4882,20 @@ renderDfsTable();
 // ⚡ CLOUD SYNC — SUPABASE REALTIME
 // =================================================================
 const CLOUD_KEY = 'sjn_cloud_config_v1';
-let cloudConfig = { supabaseUrl: '', supabaseKey: '', autoSync: false };
+// === AUTO-CONNECT SUPABASE (hidden) ===
+const _u = atob('aHR0cHM6Ly91enhmcmhvZHZoZWNjbHF1ZGF4Yi5zdXBhYmFzZS5jbw==');
+const _k = atob('ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2SW5WNmVHWnlhRzlrZG1obFkyTnNjWFZrWVhoaUlpd2ljbTlzWlNJNkltRnViMjRpTENKcFlYUWlPakUzT0RBNU1EQTNPVGNzSW1WNGNDSTZNakE1TmpRM05qYzVOMzAuV2JSeGJsY1loWkFES3FrN3BiVG5FSXNKQ2x3cEVjSmNfR3ZYdTlGRUJUNA==');
+const DEFAULT_SUPABASE_URL = _u;
+const DEFAULT_SUPABASE_KEY = _k;
+
+let cloudConfig = { supabaseUrl: DEFAULT_SUPABASE_URL, supabaseKey: DEFAULT_SUPABASE_KEY, autoSync: true };
 try {
   const c = JSON.parse(localStorage.getItem(CLOUD_KEY)||'{}');
   // migrasi dari format lama (apiKey/binId) ke format baru
   cloudConfig = {
-    supabaseUrl: c.supabaseUrl || c.apiKey || '',
-    supabaseKey: c.supabaseKey || c.binId || '',
-    autoSync: c.autoSync || false
+    supabaseUrl: c.supabaseUrl || c.apiKey || DEFAULT_SUPABASE_URL,
+    supabaseKey: c.supabaseKey || c.binId || DEFAULT_SUPABASE_KEY,
+    autoSync: true // paksa auto-sync ON
   };
 } catch(e){}
 
@@ -4982,9 +4988,9 @@ async function cloudPush(silent=false){
 }
 
 // DOWNLOAD dari Supabase
-async function cloudPull(){
+async function cloudPull(silent = false){
   const sb = getSupabaseClient();
-  if(!sb){ showToast('Masukkan URL & Key Supabase dulu','error'); return; }
+  if(!sb){ if(!silent) showToast('Masukkan URL & Key Supabase dulu','error'); return; }
 
   updateSyncStatus('syncing');
   try {
@@ -5000,10 +5006,13 @@ async function cloudPull(){
     const rec = rows.payload;
     const savedAt = rows.updated_at ? new Date(rows.updated_at).toLocaleString('id-ID') : '-';
 
-    const ok = await showConfirm('⚡ Tarik Data dari Supabase',
-      `Data cloud: ${(rec.data||[]).length} delay records, ${(rec.dfsData||[]).length} DFS, disimpan ${savedAt}.\n\nData lokal saat ini akan DIGANTI. Lanjutkan?`
-    );
-    if(!ok){ updateSyncStatus('connected'); return; }
+    // Jika tidak silent, minta konfirmasi seperti sebelumnya
+    if(!silent){
+      const ok = await showConfirm('⚡ Tarik Data dari Supabase',
+        `Data cloud: ${(rec.data||[]).length} delay records, ${(rec.dfsData||[]).length} DFS, disimpan ${savedAt}.\n\nData lokal saat ini akan DIGANTI. Lanjutkan?`
+      );
+      if(!ok){ updateSyncStatus('connected'); return; }
+    }
 
     _cloudPullInProgress = true;
     if(Array.isArray(rec.data)) { data = rec.data; saveData(); }
@@ -5030,11 +5039,12 @@ async function cloudPull(){
 
     updateSyncStatus('connected');
     cloudLog('✅ Data berhasil diambil dari Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
-    showToast('⚡ Data Supabase berhasil dimuat! ('+data.length+' records)','success');
+    if(!silent) showToast('⚡ Data Supabase berhasil dimuat! ('+data.length+' records)','success');
+    else showToast('⚡ Auto-sync: soal/data terbaru dimuat','success');
   } catch(err){
     updateSyncStatus('error');
     cloudLog('❌ Gagal download: '+err.message, 'error');
-    showToast('Gagal tarik data: '+err.message,'error');
+    if(!silent) showToast('Gagal download: '+err.message,'error');
   }
 }
 
@@ -5193,6 +5203,15 @@ $('#cloudBinId').addEventListener('change', e=>{ cloudConfig.supabaseKey = e.tar
 
 // Jalankan init
 initCloudUI();
+
+// === AUTO PULL SAAT LOAD ===
+setTimeout(async ()=>{
+  if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
+    console.log('[Auto-Sync] Menarik data terbaru dari Supabase...');
+    await cloudPull(true); // silent = true, langsung tarik soal/data terbaru
+    if(cloudConfig.autoSync) startRealtimeSubscription();
+  }
+}, 1200);
 
 console.log('[SJNAM Pro v5-Supabase] Ready ✈️⚡ | Ctrl+S Simpan | Ctrl+N Reset');
 
