@@ -61,6 +61,11 @@
 .step-dot.pending{background:#e2e8f0;color:#64748b}
 .dark .step-dot.pending{background:#334155;color:#94a3b8}
 @keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.4)}50%{box-shadow:0 0 0 6px rgba(37,99,235,0)}}
+/* === SYNC LIGHT HIJAU KELAP-KELIP === */
+.sync-light{position:fixed;top:16px;right:16px;width:14px;height:14px;background:#22c55e;border-radius:50%;opacity:0;z-index:9999;pointer-events:none;box-shadow:0 0 0 rgba(34,197,94,0.7);transition:opacity .2s}
+.sync-light.active{animation:blink-green 1s ease-in-out 3}
+@keyframes blink-green{0%,100%{opacity:0;box-shadow:0 0 0 0 rgba(34,197,94,0)}25%,75%{opacity:1;box-shadow:0 0 12px 4px rgba(34,197,94,0.8)}50%{opacity:1;box-shadow:0 0 20px 8px rgba(34,197,94,0.6)}}
+
 .flight-status-badge{padding:.35rem .8rem;border-radius:8px;font-size:.78rem;font-weight:600}
 .status-delay{background:#fef3c7;color:#92400e}
 .status-postponed{background:#ede9fe;color:#5b21b6}
@@ -157,7 +162,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 </script>
 
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
+<body><div id="syncLight" class="sync-light" title="Data diperbarui dari device lain"></div> class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
 
 
 <!-- SIDEBAR -->
@@ -5081,6 +5086,16 @@ async function cloudPull(silent = false){
   }
 }
 
+
+function blinkSyncLight(){
+  const el = document.getElementById('syncLight');
+  if(!el) return;
+  el.classList.remove('active');
+  void el.offsetWidth; // restart animation
+  el.classList.add('active');
+  setTimeout(()=>el.classList.remove('active'), 3200);
+}
+
 // REALTIME SUBSCRIPTION — dengarkan perubahan dari device lain
 function startRealtimeSubscription(){
   const sb = getSupabaseClient();
@@ -5094,7 +5109,7 @@ function startRealtimeSubscription(){
         if(_cloudPullInProgress) return;
         const rec = payload.new?.payload;
         if(!rec) return;
-        cloudLog('🔄 Update masuk dari device lain — memuat ulang data...', 'info');
+        cloudLog('🔄 Update masuk dari device lain — memuat ulang data...', 'info'); // log tetap, toast diganti
         _cloudPullInProgress = true;
         if(Array.isArray(rec.data)) { data = rec.data; saveData(); }
         if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; saveStations(); }
@@ -5115,7 +5130,7 @@ function startRealtimeSubscription(){
         renderDfsTable();
         if(typeof window.refreshTrainingViews === 'function') window.refreshTrainingViews();
         if(typeof window.renderBankStations === 'function') window.renderBankStations();
-        showToast('⚡ Data diperbarui dari device lain!', 'info');
+        blinkSyncLight(); // ganti toast dengan lampu hijau
       }
     )
     .subscribe((status) => {
