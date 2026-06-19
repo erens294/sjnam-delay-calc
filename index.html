@@ -7747,18 +7747,18 @@ window.addEventListener('beforeunload', ()=>{
 <!-- Role Access Management System -->
 <script>
 // ==================== ROLE & PERMISSION SYSTEM ====================
-const DEFAULT_ROLES = {
+{
   admin: {
     label: "Administrator",
-    permissions: ["dashboard", "input", "approval", "reports", "users", "role_settings"]
+    permissions: ["dashboard", "input", "approval", "reports", "users", "role_settings", "training_soal", "training_materi", "training_jadwal"]
   },
   supervisor: {
     label: "Supervisor", 
-    permissions: ["dashboard", "input", "approval", "reports"]
+    permissions: ["dashboard", "input", "approval", "reports", "training_materi", "training_jadwal"]
   },
   staff: {
     label: "Staff",
-    permissions: ["dashboard", "input"]
+    permissions: ["dashboard", "input", "training_materi"]
   },
   viewer: {
     label: "Viewer",
@@ -7773,7 +7773,11 @@ const MENU_MAP = {
   approval: { label: "Approval", selector: "[data-menu='approval']", tabId: "tab-approval" },
   reports: { label: "Laporan", selector: "[data-menu='reports']", tabId: "tab-reports" },
   users: { label: "Kelola User", selector: "[data-menu='users']", tabId: "tab-users" },
-  role_settings: { label: "Pengaturan Role", selector: "[data-menu='role_settings']", tabId: "tab-role-settings" }
+  role_settings: { label: "Pengaturan Role", selector: "[data-menu='role_settings']", tabId: "tab-role-settings" },
+  // Sub-tabs sebagai menu terpisah
+  training_soal: { label: "Soal Training", selector: "[data-menu='training_soal']", tabId: "tab-training-soal", parent: "training" },
+  training_materi: { label: "Materi Training", selector: "[data-menu='training_materi']", tabId: "tab-training-materi", parent: "training" },
+  training_jadwal: { label: "Jadwal Training", selector: "[data-menu='training_jadwal']", tabId: "tab-training-jadwal", parent: "training" }
 }
 
 // Get current user role from localStorage or default
@@ -7800,7 +7804,7 @@ function canAccess(menuId) {
 }
 
 // Apply role-based visibility to all menus
-function applyRoleAccess() {
+ {
   const role = getCurrentRole()
   const roles = getRolesConfig()
   const permissions = roles[role]?.permissions || []
@@ -7821,9 +7825,19 @@ function applyRoleAccess() {
     if (tabElement) {
       tabElement.style.display = hasAccess ? '' : 'none'
     }
+    
+    // If parent menu has no visible children, hide parent too
+    if (menu.parent) {
+      const siblings = Object.values(MENU_MAP).filter(m => m.parent === menu.parent)
+      const hasVisibleSibling = siblings.some(s => permissions.includes(Object.keys(MENU_MAP).find(k => MENU_MAP[k] === s)))
+      const parentEl = document.querySelector(`[data-menu='${menu.parent}']`)
+      if (parentEl && !hasVisibleSibling) {
+        parentEl.style.display = 'none'
+      }
+    }
   })
   
-  // Update role indicator if exists
+  // Update role indicator
   const roleIndicator = document.getElementById('current-role-indicator')
   if (roleIndicator) {
     roleIndicator.textContent = roles[role]?.label || role
