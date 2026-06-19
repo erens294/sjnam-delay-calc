@@ -374,6 +374,14 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
 <!-- ============= TAB ADMIN (User Management) ============= -->
 <section id="tab-admin" class="tab-pane">
+  <!-- TAB SWITCHER ADMIN -->
+  <div class="flex gap-2 mb-4 border-b border-slate-200 dark:border-slate-700">
+    <button data-admin-subtab="users" class="admin-subtab-btn active px-4 py-2 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 whitespace-nowrap">👥 Manajemen User</button>
+    <button data-admin-subtab="perms" class="admin-subtab-btn px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">🔐 Atur Akses Role</button>
+  </div>
+
+  <!-- SUB-TAB: USER MANAGEMENT -->
+  <div id="adminSubUsers" class="admin-subtab-pane">
   <div class="card p-5 md:p-6">
     <div class="flex items-center justify-between mb-5">
       <div>
@@ -399,6 +407,34 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       </table>
     </div>
   </div>
+  </div><!-- end adminSubUsers -->
+
+  <!-- SUB-TAB: PERMISSION MANAGEMENT -->
+  <div id="adminSubPerms" class="admin-subtab-pane hidden">
+    <div class="card p-5 md:p-6">
+      <h2 class="text-lg font-bold mb-1">🔐 Pengaturan Akses Role</h2>
+      <p class="text-xs text-slate-500 mb-5">Atur tab / fitur apa saja yang dapat dilihat oleh Co-Admin, User, dan Peserta. Admin selalu memiliki akses penuh.</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-800">
+            <tr class="text-center">
+              <th class="p-3 text-left font-semibold">Fitur / Tab</th>
+              <th class="p-3 font-semibold text-blue-700 dark:text-blue-300">Co-Admin</th>
+              <th class="p-3 font-semibold text-emerald-700 dark:text-emerald-300">User</th>
+              <th class="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Peserta</th>
+            </tr>
+          </thead>
+          <tbody id="permTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+            <!-- Dirender oleh JS -->
+          </tbody>
+        </table>
+      </div>
+      <div class="flex justify-end mt-4 gap-2">
+        <button id="btnResetPerms" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-sm font-semibold rounded-xl">↩ Reset Default</button>
+        <button id="btnSavePerms" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">💾 Simpan Pengaturan</button>
+      </div>
+    </div>
+  </div><!-- end adminSubPerms -->
 </section>
 
 <section id="tab-input" class="tab-pane">
@@ -579,6 +615,13 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 <!-- ============= TAB DATA ============= -->
 <section id="tab-data" class="tab-pane">
   <div class="card p-4 md:p-5">
+    <!-- UNDO TOOLBAR -->
+    <div id="undoToolbar" class="hidden flex items-center gap-2 mb-3 p-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl">
+      <span class="text-xs text-amber-700 dark:text-amber-300 flex-1">⚠️ <span id="undoMsg">Aksi terakhir dapat dibatalkan</span></span>
+      <button id="btnUndo" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg flex items-center gap-1">
+        ↩ Undo (<span id="undoCount">0</span>)
+      </button>
+    </div>
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 flex-1">
         <input type="text" id="searchInput" placeholder="🔍 Cari flight / route..." class="input text-sm">
@@ -2688,9 +2731,23 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
     <!-- STEP 2: QUIZ -->
     <div id="pesertaStep2" class="wizard-step card p-5 md:p-6">
-      <div class="flex items-center justify-between mb-1">
+      <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
         <h2 class="text-lg font-bold">Soal Training</h2>
-        <span class="badge bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" id="pesertaQuizProgress">0 / 0</span>
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Timer Total -->
+          <div id="quizTotalTimerWrap" class="hidden flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-xs text-slate-500">⏱ Sisa Waktu:</span>
+            <span id="quizTotalTimer" class="font-mono font-bold text-blue-600 dark:text-blue-300 text-sm">--:--</span>
+          </div>
+          <span class="badge bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" id="pesertaQuizProgress">0 / 0</span>
+        </div>
+      </div>
+      <!-- Timer Per-Soal -->
+      <div id="quizPerSoalTimerWrap" class="hidden mb-3 flex items-center gap-2">
+        <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div id="quizPerSoalBar" class="h-2 bg-blue-500 rounded-full transition-all" style="width:100%"></div>
+        </div>
+        <span id="quizPerSoalTimer" class="font-mono text-xs font-bold text-slate-600 dark:text-slate-300 min-w-[40px] text-right">--s</span>
       </div>
       <p class="text-xs text-slate-500 mb-5">Jawab seluruh soal pilihan ganda di bawah ini, lalu klik Selesai.</p>
       <div id="pesertaQuizContainer" class="space-y-4"></div>
@@ -7180,4 +7237,510 @@ window.addEventListener('beforeunload', ()=>{
 })();
 </script>
 
+
+<script>
+// ===================================================================
+// FEATURE 1: ADMIN PERMISSION RULES
+// ===================================================================
+(function(){
+  const PERM_KEY = 'sjnam_role_perms_v1';
+
+  // Feature list: { id, label, default: {coAdmin, user, peserta} }
+  const FEATURES = [
+    { id:'tab-home',       label:'🏠 Tab Home',            def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-input',      label:'✈️ Tab Input',            def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-data',       label:'📊 Tab Data',             def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-dashboard',  label:'📈 Tab Dashboard',        def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-request',    label:'📝 Tab Approval',         def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-stations',   label:'🗺️ Tab Station',          def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank',         def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-materi',     label:'📚 Tab Materi Training',  def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-soal',       label:'📝 Tab Soal Training',    def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false} },
+    { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false} },
+    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false} },
+    { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false} },
+    { id:'feat-mulai',     label:'🚀 Mulai Training Peserta',def:{coAdmin:true, user:true,  peserta:true} },
+  ];
+
+  function loadPerms(){
+    try { return JSON.parse(localStorage.getItem(PERM_KEY)) || null; } catch(e){ return null; }
+  }
+  function savePerms(p){ localStorage.setItem(PERM_KEY, JSON.stringify(p)); }
+  function getDefaultPerms(){
+    const p = {};
+    FEATURES.forEach(f=>{ p[f.id] = {...f.def}; });
+    return p;
+  }
+  function getPerms(){ return loadPerms() || getDefaultPerms(); }
+  window.getRolePerms = getPerms;
+
+  // RENDER permission table
+  function renderPermTable(){
+    const tbody = document.getElementById('permTableBody');
+    if(!tbody) return;
+    const perms = getPerms();
+    tbody.innerHTML = FEATURES.map(f=>{
+      const p = perms[f.id] || f.def;
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+        <td class="p-3 font-medium">${f.label}</td>
+        <td class="p-3 text-center">
+          <input type="checkbox" data-feat="${f.id}" data-role="coAdmin" ${p.coAdmin?'checked':''} class="perm-chk w-4 h-4 accent-blue-600">
+        </td>
+        <td class="p-3 text-center">
+          <input type="checkbox" data-feat="${f.id}" data-role="user" ${p.user?'checked':''} class="perm-chk w-4 h-4 accent-emerald-600">
+        </td>
+        <td class="p-3 text-center">
+          <input type="checkbox" data-feat="${f.id}" data-role="peserta" ${p.peserta?'checked':''} class="perm-chk w-4 h-4 accent-indigo-600">
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  window.renderPermTable = renderPermTable;
+
+  // Save perms button
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.id === 'btnSavePerms'){
+      const chks = document.querySelectorAll('.perm-chk');
+      const perms = getPerms();
+      chks.forEach(chk=>{
+        const feat = chk.dataset.feat;
+        const role = chk.dataset.role;
+        if(!perms[feat]) perms[feat] = {};
+        perms[feat][role] = chk.checked;
+      });
+      savePerms(perms);
+      showToast('Pengaturan akses berhasil disimpan!', 'success');
+      // Re-apply permissions for currently logged in user
+      if(typeof applyPermissions === 'function') applyPermissions();
+    }
+    if(e.target && e.target.id === 'btnResetPerms'){
+      if(confirm('Reset semua pengaturan akses ke default?')){
+        savePerms(getDefaultPerms());
+        renderPermTable();
+        showToast('Pengaturan akses direset ke default', 'success');
+        if(typeof applyPermissions === 'function') applyPermissions();
+      }
+    }
+  });
+
+  // Admin sub-tab switching
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-admin-subtab]');
+    if(!btn) return;
+    const target = btn.dataset.adminSubtab;
+    document.querySelectorAll('.admin-subtab-btn').forEach(b=>{
+      b.classList.remove('active','border-blue-600','text-blue-600');
+      b.classList.add('border-transparent','text-slate-500');
+    });
+    btn.classList.add('active','border-blue-600','text-blue-600');
+    btn.classList.remove('border-transparent','text-slate-500');
+    document.querySelectorAll('.admin-subtab-pane').forEach(p=>p.classList.add('hidden'));
+    const pane = document.getElementById(target==='users'?'adminSubUsers':'adminSubPerms');
+    if(pane){
+      pane.classList.remove('hidden');
+      if(target==='perms') renderPermTable();
+    }
+  });
+
+  // PATCH applyPermissions to use role perms config
+  const _origApplyPermissions = window.applyPermissions;
+  window.applyPermissions = function(){
+    if(!window.currentUser) return;
+    const role = window.currentUser.role;
+    const isAdmin = role === 'Admin';
+    const isCoAdmin = role === 'Co-Admin';
+    const isUser = role === 'User';
+    const isPeserta = role === 'Peserta';
+
+    if(isAdmin){
+      // Admin selalu full akses — jalankan original
+      if(_origApplyPermissions) _origApplyPermissions();
+      return;
+    }
+
+    // Determine which roleKey to check
+    let roleKey = isCoAdmin ? 'coAdmin' : isUser ? 'user' : 'peserta';
+    const perms = getPerms();
+
+    function canSee(featId){ return perms[featId] ? perms[featId][roleKey] : false; }
+
+    // Map feature id to DOM elements
+    const tabMap = {
+      'tab-home':       document.querySelector('[data-tab="home"]'),
+      'tab-input':      document.querySelector('[data-tab="input"]'),
+      'tab-data':       document.querySelector('[data-tab="data"]'),
+      'tab-dashboard':  document.querySelector('[data-tab="dashboard"]'),
+      'tab-request':    document.querySelector('[data-tab="request"]'),
+      'tab-stations':   document.querySelector('[data-tab="stations"]'),
+      'tab-dfs':        document.querySelector('[data-tab="dfs"]'),
+      'tab-materi':     document.querySelector('[data-tab="materi"]'),
+      'tab-soal':       document.querySelector('[data-tab="soal"]'),
+      'tab-sertifikat': document.querySelector('[data-tab="sertifikat"]'),
+      'tab-admin':      document.getElementById('tabAdminBtn'),
+      'tab-settings':   document.querySelector('[data-tab="settings"]'),
+    };
+
+    Object.entries(tabMap).forEach(([featId, el])=>{
+      if(el) el.style.display = canSee(featId) ? '' : 'none';
+    });
+
+    // Menu groups
+    const adminMenuGroup = document.getElementById('toggleAdminMenu')?.closest('div');
+    const trainingMenuGroup = document.getElementById('toggleTrainingMenu')?.closest('div');
+    const homeMenuGroup = document.getElementById('toggleHomeMenu')?.closest('div');
+    if(adminMenuGroup) adminMenuGroup.style.display = (canSee('tab-admin')||canSee('tab-settings')) ? '' : 'none';
+    if(homeMenuGroup) homeMenuGroup.style.display = (canSee('tab-home')||canSee('tab-input')||canSee('tab-data')||canSee('tab-dashboard')||canSee('tab-request')||canSee('tab-stations')||canSee('tab-dfs')) ? '' : 'none';
+    if(trainingMenuGroup) trainingMenuGroup.style.display = (canSee('tab-materi')||canSee('tab-soal')||canSee('feat-mulai')||canSee('tab-sertifikat')) ? '' : 'none';
+
+    const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
+    if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = canSee('feat-mulai') ? '' : 'none';
+
+    // Functional features with delay
+    setTimeout(()=>{
+      const elImport = document.getElementById('fileImportJson')?.closest('label');
+      if(elImport) elImport.style.display = canSee('feat-import') ? '' : 'none';
+      const elHapusSemua = document.getElementById('btnHapusSemua');
+      if(elHapusSemua) elHapusSemua.style.display = canSee('feat-delete') ? '' : 'none';
+      const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
+      if(btnBankSoalTab) btnBankSoalTab.style.display = (isCoAdmin||canSee('tab-soal')) ? '' : 'none';
+      const btnClearPeserta = document.getElementById('btnClearPeserta');
+      if(btnClearPeserta) btnClearPeserta.style.display = canSee('feat-delete') ? '' : 'none';
+      const btnSyncService = document.getElementById('btnSyncService');
+      if(btnSyncService) btnSyncService.style.display = canSee('tab-soal') ? '' : 'none';
+      const btnStartPeserta = document.getElementById('btnStartPeserta');
+      if(btnStartPeserta) btnStartPeserta.style.display = canSee('feat-mulai') ? '' : 'none';
+      // Read-only mode for user
+      window.currentUserReadOnly = !canSee('feat-edit');
+    }, 120);
+
+    window.currentUserCanDelete = canSee('feat-delete');
+    window.currentUserCanAdd = isCoAdmin ? true : canSee('feat-edit');
+    if(typeof renderUserTable === 'function') renderUserTable();
+
+    // Peserta auto redirect
+    if(isPeserta && canSee('feat-mulai')){
+      setTimeout(()=>{ document.getElementById('btnStartPeserta')?.click(); }, 200);
+    }
+  };
+
+})();
+
+// ===================================================================
+// FEATURE 2: COUNTDOWN TIMER (per-soal + total)
+// ===================================================================
+(function(){
+  let quizTotalSeconds = 0;
+  let quizTotalInterval = null;
+  let perSoalSeconds = 0;
+  let perSoalMax = 0;
+  let perSoalInterval = null;
+  let onPerSoalExpire = null;
+
+  window.startQuizTimers = function(opts){
+    // opts: { totalSeconds, perSoalSeconds, onTotalExpire, onPerSoalExpire }
+    stopQuizTimers();
+    const totalWrap = document.getElementById('quizTotalTimerWrap');
+    const perWrap = document.getElementById('quizPerSoalTimerWrap');
+
+    // Total Timer
+    if(opts.totalSeconds > 0){
+      quizTotalSeconds = opts.totalSeconds;
+      if(totalWrap) totalWrap.classList.remove('hidden');
+      updateTotalTimerDisplay();
+      quizTotalInterval = setInterval(()=>{
+        quizTotalSeconds--;
+        updateTotalTimerDisplay();
+        if(quizTotalSeconds <= 0){
+          clearInterval(quizTotalInterval);
+          if(opts.onTotalExpire) opts.onTotalExpire();
+        }
+      }, 1000);
+    }
+
+    // Per-soal timer
+    if(opts.perSoalSeconds > 0){
+      perSoalMax = opts.perSoalSeconds;
+      perSoalSeconds = opts.perSoalSeconds;
+      onPerSoalExpire = opts.onPerSoalExpire || null;
+      if(perWrap) perWrap.classList.remove('hidden');
+      updatePerSoalDisplay();
+      startPerSoalCountdown();
+    }
+  };
+
+  window.resetPerSoalTimer = function(){
+    clearInterval(perSoalInterval);
+    perSoalSeconds = perSoalMax;
+    updatePerSoalDisplay();
+    if(perSoalMax > 0) startPerSoalCountdown();
+  };
+
+  window.stopQuizTimers = function(){
+    clearInterval(quizTotalInterval);
+    clearInterval(perSoalInterval);
+    quizTotalInterval = null;
+    perSoalInterval = null;
+    const totalWrap = document.getElementById('quizTotalTimerWrap');
+    const perWrap = document.getElementById('quizPerSoalTimerWrap');
+    if(totalWrap) totalWrap.classList.add('hidden');
+    if(perWrap) perWrap.classList.add('hidden');
+  };
+
+  function updateTotalTimerDisplay(){
+    const el = document.getElementById('quizTotalTimer');
+    if(!el) return;
+    const m = Math.floor(quizTotalSeconds / 60);
+    const s = quizTotalSeconds % 60;
+    el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    el.className = 'font-mono font-bold text-sm ' + (quizTotalSeconds <= 60 ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-blue-600 dark:text-blue-300');
+  }
+
+  function updatePerSoalDisplay(){
+    const el = document.getElementById('quizPerSoalTimer');
+    const bar = document.getElementById('quizPerSoalBar');
+    if(el) el.textContent = perSoalSeconds + 's';
+    if(bar){
+      const pct = perSoalMax > 0 ? (perSoalSeconds / perSoalMax * 100) : 100;
+      bar.style.width = pct + '%';
+      bar.className = 'h-2 rounded-full transition-all ' + (pct > 50 ? 'bg-blue-500' : pct > 20 ? 'bg-amber-500' : 'bg-red-500');
+    }
+  }
+
+  function startPerSoalCountdown(){
+    clearInterval(perSoalInterval);
+    perSoalInterval = setInterval(()=>{
+      perSoalSeconds--;
+      updatePerSoalDisplay();
+      if(perSoalSeconds <= 0){
+        clearInterval(perSoalInterval);
+        if(onPerSoalExpire) onPerSoalExpire();
+      }
+    }, 1000);
+  }
+
+  // PATCH: hook into existing quiz start / question navigation
+  // We patch renderPesertaQuiz to start timers after rendering
+  const _waitForTraining = setInterval(()=>{
+    if(typeof window.renderPesertaQuiz !== 'function') return;
+    clearInterval(_waitForTraining);
+    const _origRender = window.renderPesertaQuiz;
+    window.renderPesertaQuiz = function(){
+      _origRender.apply(this, arguments);
+      // Start timers based on trainingData settings
+      const td = window.trainingData;
+      const settings = (td && td.settings) ? td.settings : {};
+      const totalSecs = (parseInt(settings.examDurationMinutes)||0) * 60;
+      const perSoalSecs = parseInt(settings.perSoalSeconds) || 0;
+      if(totalSecs > 0 || perSoalSecs > 0){
+        window.startQuizTimers({
+          totalSeconds: totalSecs,
+          perSoalSeconds: perSoalSecs,
+          onTotalExpire: ()=>{
+            showToast('⏰ Waktu habis! Jawaban otomatis dikumpulkan.', 'error');
+            setTimeout(()=>{ document.getElementById('btnPesertaFinish')?.click(); }, 1500);
+          },
+          onPerSoalExpire: ()=>{
+            // auto scroll to next unanswered
+            showToast('⏰ Waktu per soal habis!', 'error');
+            window.resetPerSoalTimer && window.resetPerSoalTimer();
+          }
+        });
+      }
+    };
+  }, 300);
+
+  // Stop timers when quiz finishes
+  document.addEventListener('click', function(e){
+    if(e.target && (e.target.id === 'btnPesertaFinish' || e.target.id === 'btnPesertaRestart')){
+      window.stopQuizTimers && window.stopQuizTimers();
+    }
+  });
+})();
+
+// ===================================================================
+// FEATURE 2b: Add Timer Settings to Soal settings panel
+// ===================================================================
+(function(){
+  // Inject timer settings UI into soal bank header
+  const _inject = setInterval(()=>{
+    const soalHeader = document.getElementById('soalSubBank');
+    if(!soalHeader) return;
+    if(document.getElementById('examTimerSettings')) { clearInterval(_inject); return; }
+    clearInterval(_inject);
+
+    const settingsDiv = document.createElement('div');
+    settingsDiv.id = 'examTimerSettings';
+    settingsDiv.className = 'card p-4 mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800';
+    settingsDiv.innerHTML = `
+      <h3 class="font-semibold text-sm text-blue-700 dark:text-blue-300 mb-3">⏱ Pengaturan Timer Ujian</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium mb-1 text-slate-600 dark:text-slate-300">Durasi Total Ujian (menit, 0=nonaktif)</label>
+          <input type="number" id="inputExamDuration" min="0" max="180" value="0" class="input text-sm" placeholder="0 = tidak dibatasi">
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1 text-slate-600 dark:text-slate-300">Waktu Per Soal (detik, 0=nonaktif)</label>
+          <input type="number" id="inputPerSoalSeconds" min="0" max="300" value="0" class="input text-sm" placeholder="0 = tidak dibatasi">
+        </div>
+      </div>
+      <button id="btnSaveTimerSettings" class="mt-3 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg">💾 Simpan Pengaturan Timer</button>
+    `;
+    // Insert before soalContainer
+    const soalContainer = document.getElementById('soalContainer');
+    if(soalContainer) soalContainer.parentNode.insertBefore(settingsDiv, soalContainer);
+
+    // Load existing settings
+    const td = window.trainingData;
+    if(td && td.settings){
+      document.getElementById('inputExamDuration').value = td.settings.examDurationMinutes || 0;
+      document.getElementById('inputPerSoalSeconds').value = td.settings.perSoalSeconds || 0;
+    }
+
+    document.getElementById('btnSaveTimerSettings')?.addEventListener('click', ()=>{
+      const td = window.trainingData;
+      if(!td) return;
+      if(!td.settings) td.settings = {};
+      td.settings.examDurationMinutes = parseInt(document.getElementById('inputExamDuration').value) || 0;
+      td.settings.perSoalSeconds = parseInt(document.getElementById('inputPerSoalSeconds').value) || 0;
+      if(typeof window.saveTraining === 'function') window.saveTraining();
+      showToast('Pengaturan timer ujian disimpan!', 'success');
+    });
+  }, 400);
+})();
+
+// ===================================================================
+// FEATURE 3: UNDO STACK (max 10 actions) for Data tab
+// ===================================================================
+(function(){
+  const MAX_STACK = 10;
+  let undoStack = []; // array of {action, data, description}
+
+  window.pushUndo = function(description, data){
+    undoStack.unshift({ description, data: JSON.parse(JSON.stringify(data)) });
+    if(undoStack.length > MAX_STACK) undoStack = undoStack.slice(0, MAX_STACK);
+    updateUndoUI();
+  };
+
+  window.popUndo = function(){
+    return undoStack.shift() || null;
+  };
+
+  window.clearUndoStack = function(){
+    undoStack = [];
+    updateUndoUI();
+  };
+
+  function updateUndoUI(){
+    const toolbar = document.getElementById('undoToolbar');
+    const countEl = document.getElementById('undoCount');
+    const msgEl = document.getElementById('undoMsg');
+    if(!toolbar) return;
+    if(undoStack.length > 0){
+      toolbar.classList.remove('hidden');
+      if(countEl) countEl.textContent = undoStack.length;
+      if(msgEl && undoStack[0]) msgEl.textContent = `Aksi: "${undoStack[0].description}" — ${undoStack.length} aksi tersimpan`;
+    } else {
+      toolbar.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('btnUndo')?.addEventListener('click', function(){
+    const entry = window.popUndo();
+    if(!entry){
+      showToast('Tidak ada aksi yang bisa di-Undo', 'error');
+      return;
+    }
+    // Restore data
+    try {
+      const DB = 'sjn_delays_v4';
+      localStorage.setItem(DB, JSON.stringify(entry.data));
+      if(typeof renderData === 'function') renderData();
+      else if(typeof window.renderData === 'function') window.renderData();
+      showToast(`↩ Undo berhasil: "${entry.description}"`, 'success');
+    } catch(ex){
+      showToast('Undo gagal: ' + ex.message, 'error');
+    }
+    updateUndoUI();
+  });
+
+  // PATCH: intercept delete actions to push undo
+  const _waitDelete = setInterval(()=>{
+    if(typeof window.deleteRow !== 'function' && typeof window.hapusData !== 'function') return;
+    clearInterval(_waitDelete);
+
+    // Patch deleteRow if exists
+    if(typeof window.deleteRow === 'function'){
+      const _origDelete = window.deleteRow;
+      window.deleteRow = function(id){
+        const DB = 'sjn_delays_v4';
+        const current = JSON.parse(localStorage.getItem(DB) || '[]');
+        const item = current.find(r=>r.id===id);
+        window.pushUndo(`Hapus data ${item ? item.flightNo || item.id : id}`, current);
+        return _origDelete.apply(this, arguments);
+      };
+    }
+
+    // Patch hapusData / btnHapusSemua
+    const btnHapus = document.getElementById('btnHapusSemua');
+    if(btnHapus){
+      btnHapus.addEventListener('click', function(){
+        const DB = 'sjn_delays_v4';
+        const current = JSON.parse(localStorage.getItem(DB) || '[]');
+        if(current.length > 0) window.pushUndo(`Hapus Semua Data (${current.length} record)`, current);
+      }, true); // capture phase to run before other handlers
+    }
+  }, 500);
+
+  // Also patch single-delete buttons via event delegation
+  document.addEventListener('click', function(e){
+    // Detect delete button clicks in data table
+    const delBtn = e.target.closest('[data-del-id], .btn-del-row, [onclick*="deleteRow"], [onclick*="hapusRow"]');
+    if(!delBtn) return;
+    const DB = 'sjn_delays_v4';
+    const current = JSON.parse(localStorage.getItem(DB) || '[]');
+    if(current.length > 0){
+      // Try to get flight info
+      const idMatch = (delBtn.getAttribute('onclick')||'').match(/\d+/);
+      const id = idMatch ? idMatch[0] : null;
+      const item = id ? current.find(r=>String(r.id)===id) : null;
+      window.pushUndo(`Hapus data ${item ? (item.flightNo || item.id) : 'record'}`, current);
+    }
+  }, true);
+
+})();
+
+// ===================================================================
+// SYSTEM HEALTH CHECK: Fix duplicates & inconsistencies
+// ===================================================================
+(function(){
+  // Deduplicate render calls
+  let _renderDataPending = false;
+  const _origRender = window.renderData;
+  if(typeof _origRender === 'function'){
+    window.renderData = function(){
+      if(_renderDataPending) return;
+      _renderDataPending = true;
+      requestAnimationFrame(()=>{
+        _origRender.apply(this, arguments);
+        _renderDataPending = false;
+      });
+    };
+  }
+
+  // Fix: ensure sidebar panel stays in sync after admin perm changes
+  const _origSwitchTab = window.switchTab;
+  if(typeof _origSwitchTab === 'function'){
+    window.switchTab = function(name){
+      _origSwitchTab.apply(this, arguments);
+      // Re-render perm table when admin tab opened
+      if(name === 'admin') setTimeout(renderPermTable, 100);
+    };
+  }
+
+  console.log('[SJNAM Enhanced] All features loaded: Admin Rules, Timer, Undo Stack');
+})();
+</script>
 </body></html>
