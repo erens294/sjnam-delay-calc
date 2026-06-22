@@ -353,7 +353,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     </div>
     <div class="mt-4 pt-4 border-t border-neutral-800">
       <button id="toggleStcrMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="stcrMenuContent">
-        <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Stretchercase &amp; POB Menu</p>
+        <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Stretchercase &amp; POB Request</p>
         <svg id="iconStcrMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="stcrMenuContent" class="space-y-1" aria-hidden="false">
@@ -2843,7 +2843,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       </div>
       <div class="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700 text-sm space-y-1.5 text-slate-600 dark:text-slate-400">
         <div class="flex justify-between"><span class="font-medium">Versi:</span><span>v4.1 Pro + Cloud Sync</span></div>
-        <div class="flex justify-between"><span class="font-medium">Storage:</span><span>localStorage + Supabase Realtime</span></div>
+        <div class="flex justify-between"><span class="font-medium">Storage:</span><span>localStorage + Supabase Realtime (termasuk data STCR)</span></div>
         <div class="flex justify-between"><span class="font-medium">Total Data:</span><span id="settingsTotalData">0 record</span></div>
         <p class="text-xs mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">Dikembangkan untuk operasional SJNAM • Cloud Sync via Supabase</p>
       </div>
@@ -5533,7 +5533,9 @@ function getAllCloudData(){
   try { training = JSON.parse(localStorage.getItem('sjn_training_v1') || 'null'); } catch(e){}
   let users = null;
   try { users = JSON.parse(localStorage.getItem('sjnam_users_v1') || 'null'); } catch(e){}
-  return { data, stations, dfsData, settings, training, users, savedAt: new Date().toISOString(), version: 'v4.1' };
+  let stcrData = null;
+  try { stcrData = JSON.parse(localStorage.getItem('sjnam_stcr_data_v1') || 'null'); } catch(e){}
+  return { data, stations, dfsData, settings, training, users, stcrData, savedAt: new Date().toISOString(), version: 'v4.1' };
 }
 
 // UPLOAD ke Supabase (upsert dengan record_id = 'sjnam_main')
@@ -5605,6 +5607,14 @@ async function cloudPull(silent = false){
       localStorage.setItem('sjnam_users_v1', JSON.stringify(rec.users));
       if(typeof renderUserTable === 'function') renderUserTable();
     }
+    // Restore data STCR
+    if(Array.isArray(rec.stcrData) && rec.stcrData.length > 0){
+      localStorage.setItem('sjnam_stcr_data_v1', JSON.stringify(rec.stcrData));
+      if(window.STCR && typeof window.STCR.loadData === 'function'){
+        window.STCR.loadData();
+        if(typeof window.STCR.applyFilters === 'function') window.STCR.applyFilters();
+      }
+    }
     _cloudPullInProgress = false;
 
     renderTable();
@@ -5672,6 +5682,14 @@ function startRealtimeSubscription(){
           localStorage.setItem('sjnam_users_v1', JSON.stringify(rec.users));
           if(typeof renderUserTable === 'function') renderUserTable();
         }
+        // Restore data STCR dari realtime
+        if(Array.isArray(rec.stcrData) && rec.stcrData.length > 0){
+          localStorage.setItem('sjnam_stcr_data_v1', JSON.stringify(rec.stcrData));
+          if(window.STCR && typeof window.STCR.loadData === 'function'){
+            window.STCR.loadData();
+            if(typeof window.STCR.applyFilters === 'function') window.STCR.applyFilters();
+          }
+        }
         _cloudPullInProgress = false;
         renderTable();
         renderDashboard();
@@ -5715,6 +5733,7 @@ let _cloudPullInProgress = false;
         dfsData: JSON.parse(localStorage.getItem('sjn_dfs_v1')||'[]'),
         settings: JSON.parse(localStorage.getItem('sjnam_settings_v1')||'{}'),
         users: JSON.parse(localStorage.getItem('sjnam_users_v1')||'[]'),
+        stcrData: JSON.parse(localStorage.getItem('sjnam_stcr_data_v1')||'[]'),
         exportDate: now.toISOString(),
         exportType: 'daily_scheduled'
       };
@@ -7911,14 +7930,7 @@ document.getElementById('toggleTrainingMenu')?.addEventListener('click', ()=>{
   c.classList.toggle('collapsed', open);
   if(icon) icon.style.transform = open ? 'rotate(-90deg)' : 'rotate(0deg)';
 });
-// === STRETCHERCASE & POB MENU TOGGLE ===
-document.getElementById('toggleStcrMenu')?.addEventListener('click', ()=>{
-  const c = document.getElementById('stcrMenuContent');
-  const icon = document.getElementById('iconStcrMenu');
-  const open = !c.classList.contains('collapsed');
-  c.classList.toggle('collapsed', open);
-  if(icon) icon.style.transform = open ? 'rotate(-90deg)' : 'rotate(0deg)';
-});
+// NOTE: toggleStcrMenu sudah ditangani di sidebar DOMContentLoaded block di atas (dengan localStorage persistence). Tidak perlu listener duplikat di sini.
 })();
 </script>
 <!-- PDF Viewer Modal -->
@@ -8072,6 +8084,9 @@ window.addEventListener('beforeunload', ()=>{
     { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false} },
     { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false} },
     { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false} },
     { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false} },
     { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false} },
     { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false} },
@@ -8198,6 +8213,9 @@ window.addEventListener('beforeunload', ()=>{
       'tab-sertifikat': document.querySelector('[data-tab="sertifikat"]'),
       'tab-admin':      document.getElementById('tabAdminBtn'),
       'tab-settings':   document.querySelector('[data-tab="settings"]'),
+      'tab-stcr-dashboard': document.querySelector('[data-tab="stcr-dashboard"]'),
+      'tab-stcr-data':      document.querySelector('[data-tab="stcr-data"]'),
+      'tab-stcr-station':   document.querySelector('[data-tab="stcr-station"]'),
     };
 
     Object.entries(tabMap).forEach(([featId, el])=>{
@@ -8208,9 +8226,11 @@ window.addEventListener('beforeunload', ()=>{
     const adminMenuGroup = document.getElementById('toggleAdminMenu')?.closest('div');
     const trainingMenuGroup = document.getElementById('toggleTrainingMenu')?.closest('div');
     const homeMenuGroup = document.getElementById('toggleHomeMenu')?.closest('div');
+    const stcrMenuGroup2 = document.getElementById('toggleStcrMenu')?.closest('div');
     if(adminMenuGroup) adminMenuGroup.style.display = (canSee('tab-admin')||canSee('tab-settings')) ? '' : 'none';
     if(homeMenuGroup) homeMenuGroup.style.display = (canSee('tab-home')||canSee('tab-input')||canSee('tab-data')||canSee('tab-dashboard')||canSee('tab-request')||canSee('tab-stations')||canSee('tab-dfs')) ? '' : 'none';
     if(trainingMenuGroup) trainingMenuGroup.style.display = (canSee('tab-materi')||canSee('tab-soal')||canSee('feat-mulai')||canSee('tab-sertifikat')) ? '' : 'none';
+    if(stcrMenuGroup2) stcrMenuGroup2.style.display = (canSee('tab-stcr-dashboard')||canSee('tab-stcr-data')||canSee('tab-stcr-station')) ? '' : 'none';
 
     const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = canSee('feat-mulai') ? '' : 'none';
@@ -9236,6 +9256,59 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     formatDateDisplay,
     getData: () => ALL_DATA
   };
+
+  // ── STCR LOCALSTORAGE PERSISTENCE ──────────────────────────────────
+  // Key khusus untuk menyimpan data STCR agar tidak hilang saat refresh
+  const STCR_STORAGE_KEY = 'sjnam_stcr_data_v1';
+
+  function saveStcrData(){
+    try {
+      localStorage.setItem(STCR_STORAGE_KEY, JSON.stringify(ALL_DATA));
+    } catch(e){ console.warn('[STCR] Gagal simpan ke localStorage:', e); }
+    // Trigger Supabase sync jika tersedia
+    if(typeof triggerAutoSync === 'function') triggerAutoSync();
+  }
+
+  function loadStcrData(){
+    try {
+      const saved = localStorage.getItem(STCR_STORAGE_KEY);
+      if(saved){
+        const parsed = JSON.parse(saved);
+        if(Array.isArray(parsed) && parsed.length > 0){
+          ALL_DATA = parsed;
+          return true;
+        }
+      }
+    } catch(e){ console.warn('[STCR] Gagal load dari localStorage:', e); }
+    return false;
+  }
+
+  // Load dari localStorage saat pertama kali (override seed data jika ada data tersimpan)
+  (function(){
+    const hasLocalData = loadStcrData();
+    if(!hasLocalData){
+      // Tidak ada data tersimpan → gunakan seed data (sudah di-assign di atas)
+      console.log('[STCR] Menggunakan seed data (' + ALL_DATA.length + ' records)');
+    } else {
+      console.log('[STCR] Data dimuat dari localStorage (' + ALL_DATA.length + ' records)');
+    }
+  })();
+
+  // Patch saveEntry agar otomatis simpan ke localStorage setiap kali ada perubahan
+  const _origSaveEntry = saveEntry;
+  window.STCR.saveEntry = function(){
+    _origSaveEntry();
+    saveStcrData();
+  };
+  // Patch deleteEntry agar otomatis simpan
+  const _origDeleteEntry = deleteEntry;
+  window.STCR.deleteEntry = function(idx){
+    _origDeleteEntry(idx);
+    saveStcrData();
+  };
+  // Expose saveStcrData untuk dipakai modul cloud sync
+  window.STCR.saveData = saveStcrData;
+  window.STCR.loadData = loadStcrData;
 
   // Auto-init saat DOM siap (jaga-jaga bila tab dashboard adalah tab pertama yang aktif)
   if(document.readyState === 'loading'){
