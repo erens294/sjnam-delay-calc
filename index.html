@@ -2903,7 +2903,36 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <button id="btnCloudClear" class="px-4 py-2.5 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-xl transition">🗑 Hapus Config</button>
       </div>
 
-      <div id="cloudLog" class="hidden p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-mono text-slate-600 dark:text-slate-300 max-h-28 overflow-y-auto space-y-1"></div>
+      <!-- ⏱ PENGATURAN DELAY AUTO-SYNC -->
+      <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="text-sm font-semibold text-blue-700 dark:text-blue-300">⏱ Delay Auto-Sync:</span>
+          </div>
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <input type="number" id="syncDelayInput" min="3" max="300" step="1" value="15"
+              class="input text-sm font-mono w-24 text-center"
+              title="Jeda (detik) sebelum data dikirim ke Supabase setelah perubahan">
+            <span class="text-sm text-blue-600 dark:text-blue-400 font-medium">detik</span>
+          </div>
+          <button id="btnSaveSyncDelay" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition flex-shrink-0">
+            💾 Simpan
+          </button>
+          <span id="syncDelayStatus" class="text-xs text-slate-400 italic"></span>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <span class="text-xs text-blue-600 dark:text-blue-400">Preset cepat:</span>
+          <button onclick="document.getElementById('syncDelayInput').value=5" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">5 dtk</button>
+          <button onclick="document.getElementById('syncDelayInput').value=10" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">10 dtk</button>
+          <button onclick="document.getElementById('syncDelayInput').value=15" class="text-xs px-2 py-0.5 bg-blue-600 text-white rounded-lg font-mono transition">15 dtk ✓</button>
+          <button onclick="document.getElementById('syncDelayInput').value=30" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">30 dtk</button>
+          <button onclick="document.getElementById('syncDelayInput').value=60" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">60 dtk</button>
+          <button onclick="document.getElementById('syncDelayInput').value=120" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">2 mnt</button>
+        </div>
+        <p class="text-xs text-blue-500 dark:text-blue-400 mt-2">💡 Semakin kecil = lebih cepat sync, lebih banyak request. Min 3 dtk, maks 5 mnt. Default: <strong>15 detik</strong>.</p>
+      </div>
+
+      <div id="cloudLog" class="hidden mt-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-mono text-slate-600 dark:text-slate-300 max-h-28 overflow-y-auto space-y-1"></div>
 
       <div class="mt-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-700 dark:text-emerald-300">
         <strong>✅ Supabase Free Tier:</strong> 500MB database • 2GB transfer/bulan • Realtime aktif otomatis. 
@@ -5434,14 +5463,15 @@ const _k = atob('ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2l
 const DEFAULT_SUPABASE_URL = _u;
 const DEFAULT_SUPABASE_KEY = _k;
 
-let cloudConfig = { supabaseUrl: DEFAULT_SUPABASE_URL, supabaseKey: DEFAULT_SUPABASE_KEY, autoSync: true };
+let cloudConfig = { supabaseUrl: DEFAULT_SUPABASE_URL, supabaseKey: DEFAULT_SUPABASE_KEY, autoSync: true, syncDelaySec: 15 };
 try {
   const c = JSON.parse(localStorage.getItem(CLOUD_KEY)||'{}');
   // migrasi dari format lama (apiKey/binId) ke format baru
   cloudConfig = {
     supabaseUrl: c.supabaseUrl || c.apiKey || DEFAULT_SUPABASE_URL,
     supabaseKey: c.supabaseKey || c.binId || DEFAULT_SUPABASE_KEY,
-    autoSync: true // paksa auto-sync ON
+    autoSync: true, // paksa auto-sync ON
+    syncDelaySec: (c.syncDelaySec && c.syncDelaySec > 0) ? parseInt(c.syncDelaySec) : 15
   };
 } catch(e){}
 
@@ -5785,7 +5815,8 @@ function triggerAutoSync(){
   if(_cloudPullInProgress) return;
   if(!cloudConfig.autoSync || !cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) return;
   clearTimeout(_autoSyncTimer);
-  _autoSyncTimer = setTimeout(()=>cloudPush(true), 3000); // debounce 3 detik
+  const delayMs = ((cloudConfig.syncDelaySec && cloudConfig.syncDelaySec > 0) ? cloudConfig.syncDelaySec : 15) * 1000;
+  _autoSyncTimer = setTimeout(()=>cloudPush(true), delayMs); // debounce — default 15 detik, bisa diatur
 }
 
 // Patch save functions to trigger auto-sync
@@ -5797,6 +5828,9 @@ function saveDfsData(){ localStorage.setItem(DFS_KEY, JSON.stringify(dfsData)); 
 function initCloudUI(){
   if($('#cloudApiKey')) $('#cloudApiKey').value = cloudConfig.supabaseUrl || '';
   if($('#cloudBinId')) $('#cloudBinId').value = cloudConfig.supabaseKey || '';
+  // Set nilai delay input sesuai config tersimpan
+  const delayInp = document.getElementById('syncDelayInput');
+  if(delayInp) delayInp.value = cloudConfig.syncDelaySec || 15;
   updateAutoSyncBtn();
   if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
     updateSyncStatus('connected');
@@ -5886,8 +5920,41 @@ $('#btnCloudClear').addEventListener('click', async()=>{
 $('#cloudApiKey').addEventListener('change', e=>{ cloudConfig.supabaseUrl = e.target.value.trim(); saveCloudConfig(); });
 $('#cloudBinId').addEventListener('change', e=>{ cloudConfig.supabaseKey = e.target.value.trim(); saveCloudConfig(); });
 
+// ⏱ SYNC DELAY — simpan & terapkan
+function initSyncDelayUI(){
+  const inp = document.getElementById('syncDelayInput');
+  if(!inp) return;
+  inp.value = cloudConfig.syncDelaySec || 15;
+  // highlight preset aktif
+  updatePresetHighlight(inp.value);
+}
+function updatePresetHighlight(val){
+  // Reset semua preset ke style default, highlight yang aktif
+  const presets = [5,10,15,30,60,120];
+  // Tidak ada ID pada preset btn, skip highlight (sudah cukup dengan value di input)
+}
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'btnSaveSyncDelay'){
+    const inp = document.getElementById('syncDelayInput');
+    const statusEl = document.getElementById('syncDelayStatus');
+    let val = parseInt(inp ? inp.value : 15);
+    if(isNaN(val) || val < 3) val = 3;
+    if(val > 300) val = 300;
+    inp.value = val;
+    cloudConfig.syncDelaySec = val;
+    saveCloudConfig();
+    if(statusEl){
+      statusEl.textContent = '✅ Tersimpan! (' + val + ' dtk)';
+      setTimeout(()=>{ statusEl.textContent = ''; }, 3000);
+    }
+    const mins = val >= 60 ? ' = ' + (val/60).toFixed(1) + ' mnt' : '';
+    showToast('⏱ Delay auto-sync diubah ke ' + val + ' detik' + mins, 'success');
+  }
+});
+
 // Jalankan init
 initCloudUI();
+initSyncDelayUI();
 
 // === AUTO PULL SAAT LOAD ===
 setTimeout(async ()=>{
