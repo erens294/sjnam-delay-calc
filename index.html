@@ -343,9 +343,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <button data-tab="request" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Approval" type="button">
           <span class="text-lg w-6 text-center">📝</span> <span class="sidebar-text">Approval</span>
         </button>
-        <button data-tab="stations" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Station" type="button">
-          <span class="text-lg w-6 text-center">🗺️</span> <span class="sidebar-text">Station</span>
-        </button>
+
         <button data-tab="dfs" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="DFS Bank" type="button">
           <span class="text-lg w-6 text-center">🗂️</span> <span class="sidebar-text">DFS Bank</span>
         </button>
@@ -398,6 +396,9 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       <div id="adminMenuContent" class="space-y-1" aria-hidden="false">
         <button data-tab="admin" id="tabAdminBtn" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Admin" type="button">
           <span class="text-lg w-6 text-center">👥</span> <span class="sidebar-text">Admin</span>
+        </button>
+        <button data-tab="stations" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Station" type="button">
+          <span class="text-lg w-6 text-center">🗺️</span> <span class="sidebar-text">Station</span>
         </button>
         <button data-tab="settings" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Settings" type="button">
           <span class="text-lg w-6 text-center">⚙️</span> <span class="sidebar-text">Settings</span>
@@ -2584,7 +2585,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <h2 class="text-lg font-bold text-slate-800 dark:text-white">🏥 Stretchercase & POB — Dashboard</h2>
         <p class="text-xs text-slate-500 dark:text-slate-400">Sriwijaya Air & NAM Air — Medical Assistance Management</p>
       </div>
-      <span class="stcr-total-badge" id="stcrTotalBadge">Loading...</span>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="stcr-total-badge" id="stcrTotalBadge">Loading...</span>
+        <button id="btnStcrDashExportExcel" class="stcr-btn stcr-btn-primary" style="background:#16a34a;display:flex;align-items:center;gap:5px;font-size:12px;padding:6px 12px">📗 Export Excel</button>
+        <button id="btnStcrDashExportPdf" class="stcr-btn stcr-btn-primary" style="background:#dc2626;display:flex;align-items:center;gap:5px;font-size:12px;padding:6px 12px">📕 Export PDF</button>
+      </div>
     </div>
     <div class="stcr-filters">
       <div class="stcr-filter-group"><label>Tahun</label>
@@ -2658,9 +2663,17 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <select id="stcr-s-sort" class="stcr-sort-select" onchange="STCR.renderTable()">
           <option value="newest">Terbaru</option>
           <option value="oldest">Terlama</option>
+          <option value="stcr-desc">STCR Terbesar</option>
+          <option value="stcr-asc">STCR Terkecil</option>
+          <option value="pob-desc">POB Terbesar</option>
+          <option value="pob-asc">POB Terkecil</option>
+          <option value="airlines-sj">Airlines: SJ Dulu</option>
+          <option value="airlines-in">Airlines: IN Dulu</option>
         </select>
       </div>
       <button class="stcr-btn stcr-btn-add" onclick="STCR.openModal()">+ Input Data Baru</button>
+      <button id="btnStcrDataExportExcel" class="stcr-btn" style="background:#16a34a;color:#fff;display:flex;align-items:center;gap:5px;font-size:12px;padding:7px 12px">📗 Excel</button>
+      <button id="btnStcrDataExportPdf" class="stcr-btn" style="background:#dc2626;color:#fff;display:flex;align-items:center;gap:5px;font-size:12px;padding:7px 12px">📕 PDF</button>
     </div>
     <div class="stcr-table-box">
       <div class="stcr-table-header">
@@ -2692,10 +2705,26 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 <!-- SUB-TAB: STCR STATION -->
 <section id="tab-stcr-station" class="tab-pane stcr-page">
   <div class="stcr-main" style="padding-top:0">
-    <div class="mb-4">
-      <h2 class="text-lg font-bold text-slate-800 dark:text-white">📍 Stretchercase & POB — Per Stasiun</h2>
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="text-lg font-bold text-slate-800 dark:text-white">📍 Stretchercase & POB — Per Stasiun</h2>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <select id="stcr-st-sort" class="stcr-filter-group select" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:#fff;" onchange="STCR.renderStation()">
+          <option value="count-desc">Request: Terbesar → Terkecil</option>
+          <option value="count-asc">Request: Terkecil → Terbesar</option>
+          <option value="stcr-desc">STCR: Terbesar → Terkecil</option>
+          <option value="stcr-asc">STCR: Terkecil → Terbesar</option>
+          <option value="pob-desc">POB: Terbesar → Terkecil</option>
+          <option value="pob-asc">POB: Terkecil → Terbesar</option>
+          <option value="airlines-sj">Airlines: SJ Dulu</option>
+          <option value="airlines-in">Airlines: IN Dulu</option>
+        </select>
+        <button id="btnStcrStationExportExcel" class="stcr-btn" style="background:#16a34a;color:#fff;font-size:12px;padding:6px 12px">📗 Excel</button>
+        <button id="btnStcrStationExportPdf" class="stcr-btn" style="background:#dc2626;color:#fff;font-size:12px;padding:6px 12px">📕 PDF</button>
+      </div>
     </div>
-    <div class="stcr-summary-note">📌 Rekap request per stasiun keberangkatan.</div>
+    <div class="stcr-summary-note">📌 Rekap request per stasiun keberangkatan. Klik header kartu untuk mengurutkan.</div>
     <div class="stcr-station-grid" id="stcrStationGrid"></div>
   </div>
 </section>
@@ -8294,8 +8323,8 @@ window.addEventListener('beforeunload', ()=>{
     const trainingMenuGroup = document.getElementById('toggleTrainingMenu')?.closest('div');
     const homeMenuGroup = document.getElementById('toggleHomeMenu')?.closest('div');
     const stcrMenuGroup2 = document.getElementById('toggleStcrMenu')?.closest('div');
-    if(adminMenuGroup) adminMenuGroup.style.display = (canSee('tab-admin')||canSee('tab-settings')) ? '' : 'none';
-    if(homeMenuGroup) homeMenuGroup.style.display = (canSee('tab-home')||canSee('tab-input')||canSee('tab-data')||canSee('tab-dashboard')||canSee('tab-request')||canSee('tab-stations')||canSee('tab-dfs')) ? '' : 'none';
+    if(adminMenuGroup) adminMenuGroup.style.display = (canSee('tab-admin')||canSee('tab-settings')||canSee('tab-stations')) ? '' : 'none';
+    if(homeMenuGroup) homeMenuGroup.style.display = (canSee('tab-home')||canSee('tab-input')||canSee('tab-data')||canSee('tab-dashboard')||canSee('tab-request')||canSee('tab-dfs')) ? '' : 'none';
     if(trainingMenuGroup) trainingMenuGroup.style.display = (canSee('tab-materi')||canSee('tab-soal')||canSee('feat-mulai')||canSee('tab-sertifikat')) ? '' : 'none';
     if(stcrMenuGroup2) stcrMenuGroup2.style.display = (canSee('tab-stcr-dashboard')||canSee('tab-stcr-data')||canSee('tab-stcr-station')) ? '' : 'none';
 
@@ -8929,7 +8958,24 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     }
     rows.sort((a,b) => {
       const ka = sortKey(a.item), kb = sortKey(b.item);
-      return sortMode === 'oldest' ? (ka - kb) : (kb - ka);
+      if(sortMode === 'oldest') return ka - kb;
+      if(sortMode === 'stcr-desc') return (b.item.StretcherCase||0) - (a.item.StretcherCase||0);
+      if(sortMode === 'stcr-asc') return (a.item.StretcherCase||0) - (b.item.StretcherCase||0);
+      if(sortMode === 'pob-desc') return (b.item['Total POB']||0) - (a.item['Total POB']||0);
+      if(sortMode === 'pob-asc') return (a.item['Total POB']||0) - (b.item['Total POB']||0);
+      if(sortMode === 'airlines-sj') {
+        const aA = a.item.Airlines||'', bA = b.item.Airlines||'';
+        const aIsSJ = aA.toUpperCase().includes('SJ') ? 0 : 1;
+        const bIsSJ = bA.toUpperCase().includes('SJ') ? 0 : 1;
+        return aIsSJ - bIsSJ || kb - ka;
+      }
+      if(sortMode === 'airlines-in') {
+        const aA = a.item.Airlines||'', bA = b.item.Airlines||'';
+        const aIsIN = aA.toUpperCase().includes('IN') && !aA.toUpperCase().includes('SJ') ? 0 : 1;
+        const bIsIN = bA.toUpperCase().includes('IN') && !bA.toUpperCase().includes('SJ') ? 0 : 1;
+        return aIsIN - bIsIN || kb - ka;
+      }
+      return kb - ka; // newest default
     });
 
     return rows;
@@ -9006,15 +9052,30 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const stMap = {};
     ALL_DATA.forEach(d=>{
       const s = d.Station; if(!s) return;
-      if(!stMap[s]) stMap[s]={count:0,stcr:0,pob:0,revenue:0,aoc:d.AOC,aocs:new Set()};
+      if(!stMap[s]) stMap[s]={count:0,stcr:0,pob:0,revenue:0,aoc:d.AOC,aocs:new Set(),sjCount:0,inCount:0};
       stMap[s].count++;
       stMap[s].aocs.add(d.AOC);
+      if((d.AOC||'').toUpperCase()==='SJ') stMap[s].sjCount++;
+      if((d.AOC||'').toUpperCase()==='IN') stMap[s].inCount++;
       if(d.StretcherCase>0) stMap[s].stcr++;
       if(d['Total POB']>0) stMap[s].pob++;
       stMap[s].revenue += (d['Price POB']>0?d['Price POB']:0);
     });
     Object.values(stMap).forEach(v=>{v.aocs=[...v.aocs];});
-    const sorted = Object.entries(stMap).sort((a,b)=>b[1].count-a[1].count);
+
+    const sortSel = $id('stcr-st-sort');
+    const sortMode = sortSel ? sortSel.value : 'count-desc';
+
+    let sorted = Object.entries(stMap);
+    if(sortMode === 'count-desc') sorted.sort((a,b)=>b[1].count-a[1].count);
+    else if(sortMode === 'count-asc') sorted.sort((a,b)=>a[1].count-b[1].count);
+    else if(sortMode === 'stcr-desc') sorted.sort((a,b)=>b[1].stcr-a[1].stcr);
+    else if(sortMode === 'stcr-asc') sorted.sort((a,b)=>a[1].stcr-b[1].stcr);
+    else if(sortMode === 'pob-desc') sorted.sort((a,b)=>b[1].pob-a[1].pob);
+    else if(sortMode === 'pob-asc') sorted.sort((a,b)=>a[1].pob-b[1].pob);
+    else if(sortMode === 'airlines-sj') sorted.sort((a,b)=>b[1].sjCount-a[1].sjCount || b[1].count-a[1].count);
+    else if(sortMode === 'airlines-in') sorted.sort((a,b)=>b[1].inCount-a[1].inCount || b[1].count-a[1].count);
+
     el.innerHTML = sorted.map(([s,info])=>`
       <div class="stcr-station-card">
         <div class="stcr-station-name">${escapeHtml(s)}</div>
@@ -9023,6 +9084,10 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
           <div class="stcr-station-stat"><div class="stcr-station-stat-val">${info.count}</div><div class="stcr-station-stat-lbl">Request</div></div>
           <div class="stcr-station-stat"><div class="stcr-station-stat-val">${info.stcr}</div><div class="stcr-station-stat-lbl">STCR</div></div>
           <div class="stcr-station-stat"><div class="stcr-station-stat-val">${info.pob}</div><div class="stcr-station-stat-lbl">dg POB</div></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          ${info.sjCount>0?`<span style="background:#fee2e2;color:#b91c1c;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">SJ: ${info.sjCount}</span>`:''}
+          ${info.inCount>0?`<span style="background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">IN: ${info.inCount}</span>`:''}
         </div>
         ${info.revenue>0?`<div style="font-size:11px;color:var(--success);margin-top:8px;font-weight:700">${fmtCurrency(info.revenue)}</div>`:''}
       </div>
@@ -9382,6 +9447,186 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
+  }
+
+  // ── STCR EXPORT FUNCTIONS ────────────────────────────────────────────
+  function stcrExportExcelData(sourceData, sheetName, filename){
+    if(!window.XLSX){ alert('Library XLSX belum dimuat.'); return; }
+    try {
+      const exportRows = sourceData.map((d,i)=>({
+        'No': i+1,
+        'Tgl Request': d['Date of Request']||'',
+        'Tgl Flight': d['Date of Flight']||'',
+        'No. Request': d['App Service & Tehnik']||'',
+        'Airlines': d.Airlines||'',
+        'AOC': d.AOC||'',
+        'Request': d.Request||'',
+        'Flight No': d['Flight No']||'',
+        'Route': d.Route||'',
+        'From': d.From||'',
+        'To': d.To||'',
+        'Nama Pasien': d['Nama Pasien']||'',
+        'Diagnosa I': d['Diagnosa I']||'',
+        'Diagnosa II': d['Diagnosa II']||'',
+        'STCR': d.StretcherCase||0,
+        'POB Type1': d.POBType1||0,
+        'POB Type2': d.POBType2||0,
+        'Total POB': d['Total POB']||0,
+        'Revenue (Rp)': d['Price POB']||0,
+        'Station': d.Station||'',
+        'Keterangan': d.Remarks||''
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      XLSX.writeFile(wb, filename);
+    } catch(e){ alert('Gagal export Excel: '+e.message); }
+  }
+
+  function stcrExportStationExcel(filename){
+    if(!window.XLSX){ alert('Library XLSX belum dimuat.'); return; }
+    try {
+      const stMap = {};
+      ALL_DATA.forEach(d=>{
+        const s = d.Station; if(!s) return;
+        if(!stMap[s]) stMap[s]={station:s,count:0,stcr:0,pob:0,revenue:0,sj:0,inC:0};
+        stMap[s].count++;
+        if((d.AOC||'').toUpperCase()==='SJ') stMap[s].sj++;
+        if((d.AOC||'').toUpperCase()==='IN') stMap[s].inC++;
+        if(d.StretcherCase>0) stMap[s].stcr++;
+        if(d['Total POB']>0) stMap[s].pob++;
+        stMap[s].revenue += (d['Price POB']>0?d['Price POB']:0);
+      });
+      const rows = Object.values(stMap).sort((a,b)=>b.count-a.count).map((s,i)=>({
+        'No': i+1,
+        'Station': s.station,
+        'Total Request': s.count,
+        'STCR': s.stcr,
+        'Dengan POB': s.pob,
+        'SJ Request': s.sj,
+        'IN Request': s.inC,
+        'Revenue (Rp)': s.revenue
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Per Stasiun');
+      XLSX.writeFile(wb, filename);
+    } catch(e){ alert('Gagal export Excel: '+e.message); }
+  }
+
+  function stcrExportPdfData(sourceData, title, filename){
+    if(!window.jspdf){ alert('Library jsPDF belum dimuat.'); return; }
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+      doc.setFontSize(14); doc.setFont('helvetica','bold');
+      doc.text(title, 14, 14);
+      doc.setFontSize(9); doc.setFont('helvetica','normal');
+      doc.text('Dicetak: '+new Date().toLocaleString('id-ID'), 14, 20);
+
+      const tableData = sourceData.map((d,i)=>[
+        i+1,
+        d['Date of Flight']||'',
+        d['App Service & Tehnik']||'',
+        d.Airlines||'',
+        d.AOC||'',
+        d.Request||'',
+        d['Flight No']||'',
+        d.Route||'',
+        d['Nama Pasien']||'',
+        d.StretcherCase||0,
+        d['Total POB']||0,
+        d['Price POB']?(+d['Price POB']).toLocaleString('id-ID'):'—',
+        d.Station||''
+      ]);
+
+      doc.autoTable({
+        startY: 24,
+        head: [['#','Tgl Flight','No.Req','Airlines','AOC','Request','Flight No','Route','Pasien','STCR','POB','Revenue','Station']],
+        body: tableData,
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [11,30,58], textColor:255, fontStyle:'bold' },
+        alternateRowStyles: { fillColor: [240,246,250] }
+      });
+      doc.save(filename);
+    } catch(e){ alert('Gagal export PDF: '+e.message); }
+  }
+
+  function stcrExportStationPdf(filename){
+    if(!window.jspdf){ alert('Library jsPDF belum dimuat.'); return; }
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+      doc.setFontSize(14); doc.setFont('helvetica','bold');
+      doc.text('STCR Dashboard — Per Stasiun', 14, 14);
+      doc.setFontSize(9); doc.setFont('helvetica','normal');
+      doc.text('Dicetak: '+new Date().toLocaleString('id-ID'), 14, 20);
+
+      const stMap = {};
+      ALL_DATA.forEach(d=>{
+        const s = d.Station; if(!s) return;
+        if(!stMap[s]) stMap[s]={count:0,stcr:0,pob:0,revenue:0,sj:0,inC:0};
+        stMap[s].count++;
+        if((d.AOC||'').toUpperCase()==='SJ') stMap[s].sj++;
+        if((d.AOC||'').toUpperCase()==='IN') stMap[s].inC++;
+        if(d.StretcherCase>0) stMap[s].stcr++;
+        if(d['Total POB']>0) stMap[s].pob++;
+        stMap[s].revenue += (d['Price POB']>0?d['Price POB']:0);
+      });
+      const rows = Object.entries(stMap).sort((a,b)=>b[1].count-a[1].count).map(([s,v],i)=>[
+        i+1, s, v.count, v.stcr, v.pob, v.sj, v.inC, v.revenue?(+v.revenue).toLocaleString('id-ID'):'—'
+      ]);
+      doc.autoTable({
+        startY: 24,
+        head: [['#','Station','Total Req','STCR','POB','SJ','IN','Revenue (Rp)']],
+        body: rows,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [11,30,58], textColor:255, fontStyle:'bold' },
+        alternateRowStyles: { fillColor: [240,246,250] }
+      });
+      doc.save(filename);
+    } catch(e){ alert('Gagal export PDF: '+e.message); }
+  }
+
+  // Wire up export buttons after DOM ready
+  function wireStcrExportButtons(){
+    // Dashboard exports (export ALL_DATA)
+    const dashExcelBtn = $id('btnStcrDashExportExcel');
+    if(dashExcelBtn) dashExcelBtn.addEventListener('click', ()=>{
+      stcrExportExcelData(ALL_DATA, 'STCR Dashboard', 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    });
+    const dashPdfBtn = $id('btnStcrDashExportPdf');
+    if(dashPdfBtn) dashPdfBtn.addEventListener('click', ()=>{
+      stcrExportPdfData(ALL_DATA, 'STCR & POB — Dashboard', 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.pdf');
+    });
+
+    // Data Request exports (export filtered data)
+    const dataExcelBtn = $id('btnStcrDataExportExcel');
+    if(dataExcelBtn) dataExcelBtn.addEventListener('click', ()=>{
+      const rows = getTableFiltered().map(r=>r.item);
+      stcrExportExcelData(rows, 'Data Request', 'STCR_DataRequest_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    });
+    const dataPdfBtn = $id('btnStcrDataExportPdf');
+    if(dataPdfBtn) dataPdfBtn.addEventListener('click', ()=>{
+      const rows = getTableFiltered().map(r=>r.item);
+      stcrExportPdfData(rows, 'STCR & POB — Data Request', 'STCR_DataRequest_'+new Date().toISOString().slice(0,10)+'.pdf');
+    });
+
+    // Station exports
+    const stExcelBtn = $id('btnStcrStationExportExcel');
+    if(stExcelBtn) stExcelBtn.addEventListener('click', ()=>{
+      stcrExportStationExcel('STCR_PerStasiun_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    });
+    const stPdfBtn = $id('btnStcrStationExportPdf');
+    if(stPdfBtn) stPdfBtn.addEventListener('click', ()=>{
+      stcrExportStationPdf('STCR_PerStasiun_'+new Date().toISOString().slice(0,10)+'.pdf');
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wireStcrExportButtons);
+  } else {
+    wireStcrExportButtons();
   }
 })();
 
