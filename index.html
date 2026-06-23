@@ -3300,9 +3300,9 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       <div class="card p-5 md:p-6">
         <h3 class="font-bold text-sm mb-3 text-center">Pratinjau Sertifikat</h3>
         <div id="pesertaCertPreview" class="relative w-full aspect-[1.414/1] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-800 dark:to-slate-900 rounded-xl shadow-2xl overflow-hidden border-4 border-white dark:border-slate-700 mx-auto">
-          <div id="pesertaCertName" class="cert-field absolute cursor-move select-none font-bold text-black" style="left:50%;top:48%;transform:translate(-50%,-50%);font-size:28px;white-space:nowrap;">[Nama Peserta]</div>
-          <p id="pesertaCertNo" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:58%;transform:translate(-50%,-50%);font-size:14px;white-space:nowrap;">No: SJNAM-TRN-000000</p>
-          <p id="pesertaCertValidity" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:65%;transform:translate(-50%,-50%);font-size:12px;white-space:nowrap;">Berlaku s/d -</p>
+          <div id="pesertaCertName" class="cert-field absolute cursor-move select-none font-bold text-black" style="left:50%;top:57%;transform:translate(-50%,-50%);font-size:22px;white-space:nowrap;text-align:center;">[Nama Peserta]</div>
+          <p id="pesertaCertNo" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:48%;transform:translate(-50%,-50%);font-size:13px;white-space:nowrap;text-align:center;">No: SJNAM-TRN-000000</p>
+          <p id="pesertaCertValidity" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:66%;transform:translate(-50%,-50%);font-size:12px;white-space:nowrap;text-align:center;">Berlaku s/d -</p>
           <div id="pesertaCertBarcode" class="cert-field absolute cursor-move select-none" style="display:none;left:50%;top:38%;transform:translate(-50%,-50%);width:90px;height:90px;background:white;padding:3px;border-radius:6px;"></div>
         </div>
       </div>
@@ -3382,9 +3382,9 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         </div>
         <div>
           <div id="certReprintPreview" class="relative w-full aspect-[1.414/1] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-800 dark:to-slate-900 rounded-xl shadow-2xl overflow-hidden border-4 border-white dark:border-slate-700">
-            <div id="certReprintName" class="cert-field absolute cursor-move select-none font-bold text-black" style="left:50%;top:48%;transform:translate(-50%,-50%);font-size:28px;white-space:nowrap;">[Nama Peserta]</div>
-            <p id="certReprintNo" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:58%;transform:translate(-50%,-50%);font-size:14px;white-space:nowrap;">No: SJNAM-TRN-000000</p>
-            <p id="certReprintValidity" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:65%;transform:translate(-50%,-50%);font-size:12px;white-space:nowrap;">Berlaku s/d -</p>
+            <div id="certReprintName" class="cert-field absolute cursor-move select-none font-bold text-black" style="left:50%;top:57%;transform:translate(-50%,-50%);font-size:22px;white-space:nowrap;text-align:center;">[Nama Peserta]</div>
+            <p id="certReprintNo" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:48%;transform:translate(-50%,-50%);font-size:13px;white-space:nowrap;text-align:center;">No: SJNAM-TRN-000000</p>
+            <p id="certReprintValidity" class="cert-field absolute cursor-move select-none text-black" style="left:50%;top:66%;transform:translate(-50%,-50%);font-size:12px;white-space:nowrap;text-align:center;">Berlaku s/d -</p>
             <div id="certReprintBarcode" class="cert-field absolute cursor-move select-none" style="display:none;left:50%;top:38%;transform:translate(-50%,-50%);width:90px;height:90px;background:white;padding:3px;border-radius:6px;"></div>
           </div>
         </div>
@@ -7726,16 +7726,28 @@ function renderCertificate(p, prefix){
 
   function loadPositions(){
     const pos = JSON.parse(localStorage.getItem(POS_KEY) || '{}');
+    // Jika tidak ada posisi tersimpan, biarkan default dari HTML
+    if(Object.keys(pos).length === 0) {
+      // pasang draggable tanpa mengubah posisi
+      ['pesertaCertName','pesertaCertNo','pesertaCertValidity','certReprintName','certReprintNo','certReprintValidity'].forEach(id=>{
+        makeDraggable(document.getElementById(id), {resizeMode:'font'});
+      });
+      ['pesertaCertBarcode','certReprintBarcode'].forEach(id=>{
+        makeDraggable(document.getElementById(id), {resizeMode:'box'});
+      });
+      return;
+    }
     Object.keys(pos).forEach(id=>{
       const el = document.getElementById(id);
       if(el && pos[id]){
-        el.style.left = pos[id].left || el.style.left;
-        el.style.top = pos[id].top || el.style.top;
+        if(pos[id].left) el.style.left = pos[id].left;
+        if(pos[id].top) el.style.top = pos[id].top;
         if(pos[id].fontSize) el.style.fontSize = pos[id].fontSize;
         if(pos[id].width) el.style.width = pos[id].width;
         if(pos[id].height) el.style.height = pos[id].height;
-        el.style.transform = pos[id].transform || 'translate(-50%,-50%)';
-        if(pos[id].left && pos[id].left.includes('%')) el.style.transform = 'translate(0,0)';
+        // Jika posisi menggunakan % tanpa drag → pakai translate(-50%,-50%) untuk centering
+        if(pos[id].transform) el.style.transform = pos[id].transform;
+        else if(pos[id].left && pos[id].left.includes('%')) el.style.transform = 'translate(-50%,-50%)';
       }
     });
     // make draggable — teks (resize via font) + QR Barcode (resize via kotak)
@@ -7756,23 +7768,26 @@ function renderCertificate(p, prefix){
   async function downloadCertificate(previewElId, filenamePrefix, certNo){
     const el = document.getElementById(previewElId);
     if(typeof html2canvas === 'undefined'){ showToast('html2canvas belum load','error'); return null; }
-    showToast('Membuat PDF...','info');
-    const canvas = await html2canvas(el, {scale:3, useCORS:true, backgroundColor:'#ffffff'});
+    showToast('Membuat PDF (kualitas tinggi)...','info');
+    // scale:4 menghasilkan gambar 4× lebih besar → jernih saat dicetak
+    const canvas = await html2canvas(el, {
+      scale: 4,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      imageTimeout: 0,
+      logging: false
+    });
+    // Gunakan PNG untuk ketajaman teks & QR code maksimal
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
     const pdfW = pdf.internal.pageSize.getWidth();
     const pdfH = pdf.internal.pageSize.getHeight();
-    // fit image
-    const imgProps = pdf.getImageProperties(imgData);
-    const ratio = Math.min(pdfW/imgProps.width, pdfH/imgProps.height);
-    const w = imgProps.width * ratio;
-    const h = imgProps.height * ratio;
-    const x = (pdfW - w)/2;
-    const y = (pdfH - h)/2;
-    pdf.addImage(imgData, 'PNG', x, y, w, h);
+    // Isi penuh halaman tanpa margin
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, '', 'FAST');
     pdf.save(`${filenamePrefix}-${certNo}.pdf`);
-    showToast('PDF berhasil diunduh','success');
+    showToast('PDF berhasil diunduh ✅','success');
     return imgData;
   }
   window.downloadCertificate = downloadCertificate;
@@ -9578,7 +9593,10 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     editEntry,
     deleteEntry,
     formatDateDisplay,
-    getData: () => ALL_DATA
+    getData: () => ALL_DATA,
+    getFiltered,
+    getTableFiltered,
+    getStationFiltered
   };
 
   // ── STCR LOCALSTORAGE PERSISTENCE ──────────────────────────────────
@@ -9744,14 +9762,12 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     } catch(e){ alert('Gagal export PDF: '+e.message); }
   }
 
-  function stcrExportStationPdf(filename){
+  function stcrExportStationPdf(filename, filterDesc){
     if(!window.jspdf){ alert('Library jsPDF belum dimuat.'); return; }
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-      const yearEl = $id('stcr-st-year'), monthEl = $id('stcr-st-month');
-      const yearVal = yearEl ? yearEl.value : '', monthVal = monthEl ? monthEl.value : '';
-      const periodLabel = (monthVal||yearVal) ? ` (${[monthVal,yearVal].filter(Boolean).join(' ')})` : '';
+      const periodLabel = filterDesc || '';
       doc.setFontSize(14); doc.setFont('helvetica','bold');
       doc.text('STCR Dashboard — Per Stasiun'+periodLabel, 14, 14);
       doc.setFontSize(9); doc.setFont('helvetica','normal');
@@ -9784,15 +9800,28 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   }
 
   // Wire up export buttons after DOM ready
+  // Helper: bangun label filter aktif untuk judul PDF
+  function buildFilterLabel(ids){
+    const parts = [];
+    ids.forEach(id => {
+      const el = $id(id);
+      if(el && el.value) parts.push(el.value);
+    });
+    return parts.length ? ' (' + parts.join(', ') + ')' : '';
+  }
+
   function wireStcrExportButtons(){
-    // Dashboard exports (export ALL_DATA)
+    // Dashboard exports (export FILTERED data sesuai filter aktif)
     const dashExcelBtn = $id('btnStcrDashExportExcel');
     if(dashExcelBtn) dashExcelBtn.addEventListener('click', ()=>{
-      stcrExportExcelData(ALL_DATA, 'STCR Dashboard', 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.xlsx');
+      const filteredDash = getFiltered();
+      stcrExportExcelData(filteredDash, 'STCR Dashboard', 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.xlsx');
     });
     const dashPdfBtn = $id('btnStcrDashExportPdf');
     if(dashPdfBtn) dashPdfBtn.addEventListener('click', ()=>{
-      stcrExportPdfData(ALL_DATA, 'STCR & POB — Dashboard', 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.pdf');
+      const filteredDash = getFiltered();
+      const filterDesc = buildFilterLabel(['stcr-f-year','stcr-f-month','stcr-f-aoc','stcr-f-req','stcr-f-station']);
+      stcrExportPdfData(filteredDash, 'STCR & POB — Dashboard' + filterDesc, 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.pdf');
     });
 
     // Data Request exports (export filtered data)
@@ -9804,7 +9833,8 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const dataPdfBtn = $id('btnStcrDataExportPdf');
     if(dataPdfBtn) dataPdfBtn.addEventListener('click', ()=>{
       const rows = getTableFiltered().map(r=>r.item);
-      stcrExportPdfData(rows, 'STCR & POB — Data Request', 'STCR_DataRequest_'+new Date().toISOString().slice(0,10)+'.pdf');
+      const filterDesc = buildFilterLabel(['stcr-s-year','stcr-s-month','stcr-s-aoc','stcr-s-req','stcr-s-station']);
+      stcrExportPdfData(rows, 'STCR & POB — Data Request' + filterDesc, 'STCR_DataRequest_'+new Date().toISOString().slice(0,10)+'.pdf');
     });
 
     // Station exports
@@ -9814,7 +9844,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
     const stPdfBtn = $id('btnStcrStationExportPdf');
     if(stPdfBtn) stPdfBtn.addEventListener('click', ()=>{
-      stcrExportStationPdf('STCR_PerStasiun_'+new Date().toISOString().slice(0,10)+'.pdf');
+      stcrExportStationPdf('STCR_PerStasiun_'+new Date().toISOString().slice(0,10)+'.pdf', buildFilterLabel(['stcr-st-year','stcr-st-month']));
     });
   }
 
