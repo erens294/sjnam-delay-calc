@@ -2649,6 +2649,14 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
           <option value="">Semua</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
         </select>
       </div>
+      <div class="stcr-filter-group"><label>Bulan</label>
+        <select id="stcr-s-month" onchange="STCR.renderTable()">
+          <option value="">Semua</option>
+          <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option>
+          <option>May</option><option>Jun</option><option>Jul</option><option>Aug</option>
+          <option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
+        </select>
+      </div>
       <div class="stcr-filter-group"><label>AOC</label>
         <select id="stcr-s-aoc" onchange="STCR.renderTable()">
           <option value="">Semua</option><option value="SJ">SJ</option><option value="IN">IN</option>
@@ -2718,6 +2726,15 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <h2 class="text-lg font-bold text-slate-800 dark:text-white">📍 Stretchercase & POB — Per Stasiun</h2>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
+        <select id="stcr-st-year" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:#fff;" onchange="STCR.renderStation()">
+          <option value="">Semua Tahun</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+        </select>
+        <select id="stcr-st-month" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:#fff;" onchange="STCR.renderStation()">
+          <option value="">Semua Bulan</option>
+          <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option>
+          <option>May</option><option>Jun</option><option>Jul</option><option>Aug</option>
+          <option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
+        </select>
         <select id="stcr-st-sort" class="stcr-filter-group select" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);background:#fff;" onchange="STCR.renderStation()">
           <optgroup label="— Request —">
             <option value="count-desc">Request: Terbesar → Terkecil</option>
@@ -2733,18 +2750,13 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
             <option value="airlines-sj">Airlines: SJ Dulu</option>
             <option value="airlines-in">Airlines: IN Dulu</option>
           </optgroup>
-          <optgroup label="— Bulan & Tahun —">
-            <option value="month-asc">Bulan: Jan → Des (Terbaru Terakhir)</option>
-            <option value="month-desc">Bulan: Des → Jan (Terbaru Dulu)</option>
-            <option value="year-desc">Tahun: Terbaru Dulu</option>
-            <option value="year-asc">Tahun: Terlama Dulu</option>
-          </optgroup>
         </select>
+        <button class="stcr-btn stcr-btn-outline" style="font-size:12px;padding:6px 12px" onclick="STCR.resetStationFilters()">↺ Reset</button>
         <button id="btnStcrStationExportExcel" class="stcr-btn" style="background:#16a34a;color:#fff;font-size:12px;padding:6px 12px">📗 Excel</button>
         <button id="btnStcrStationExportPdf" class="stcr-btn" style="background:#dc2626;color:#fff;font-size:12px;padding:6px 12px">📕 PDF</button>
       </div>
     </div>
-    <div class="stcr-summary-note">📌 Rekap request per stasiun keberangkatan. Klik header kartu untuk mengurutkan.</div>
+    <div class="stcr-summary-note">📌 Rekap request per stasiun keberangkatan. Gunakan filter Tahun/Bulan untuk melihat rekap periode tertentu, atau urutkan dengan dropdown Sort.</div>
     <div class="stcr-station-grid" id="stcrStationGrid"></div>
   </div>
 </section>
@@ -3293,7 +3305,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         </div>
         <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
           <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer">
-            <input type="checkbox" id="toggleBarcode" class="w-4 h-4">
+            <input type="checkbox" id="toggleBarcode" class="w-4 h-4" checked>
             <span>Tampilkan Barcode QR</span>
           </label>
           <button id="btnResetTemplate" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-xs font-semibold rounded-lg">♻️ Reset</button>
@@ -7369,14 +7381,24 @@ function renderCertificate(p, prefix){
     if(noEl) noEl.textContent = `No: ${p.certNo}`;
     if(validityEl) validityEl.textContent = `Berlaku s/d ${fmtDate(p.expiredDate)}`;
 
-    // Barcode toggle
-    const showBarcode = localStorage.getItem('sjn_cert_barcode_v1') === '1';
-    if(barcodeEl){
-      barcodeEl.innerHTML = '';
-      // Remove tailwind 'hidden' class if present, use inline style only
-      barcodeEl.classList.remove('hidden');
-      barcodeEl.style.display = showBarcode ? 'block' : 'none';
-      if(showBarcode && window.QRCode){
+    // Barcode QR — aktif secara default. Hanya nonaktif jika admin
+    // secara eksplisit mematikannya lewat toggle (nilai tersimpan '0').
+    const showBarcode = localStorage.getItem('sjn_cert_barcode_v1') !== '0';
+    if(!barcodeEl){
+      return Promise.resolve();
+    }
+    barcodeEl.innerHTML = '';
+    barcodeEl.classList.remove('hidden');
+    barcodeEl.style.display = showBarcode ? 'block' : 'none';
+
+    let qrPromise = Promise.resolve();
+    if(showBarcode){
+      if(!window.QRCode){
+        // Library QR gagal dimuat (misal CDN diblokir) — beri tahu lewat console
+        // dan tampilkan placeholder agar masalah terlihat, bukan diam-diam hilang.
+        console.warn('[QR] Library QRCode tidak tersedia (CDN mungkin gagal dimuat).');
+        barcodeEl.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#b91c1c;text-align:center;line-height:1.2;padding:2px">QR gagal dimuat</div>';
+      } else {
         // QR berisi: Nama Peserta + Nomor Sertifikat untuk verifikasi
         const qrData = [
           'SJNAM SERTIFIKAT',
@@ -7384,14 +7406,18 @@ function renderCertificate(p, prefix){
           'No: ' + (p.certNo || ''),
           'Berlaku: ' + (p.expiredDate || '')
         ].join('\n');
-        QRCode.toCanvas(qrData, {width: 200, margin: 1, errorCorrectionLevel: 'M'}, function(err, canvas){
-          if(!err){
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            barcodeEl.appendChild(canvas);
-          } else {
-            console.warn('[QR] Error generating QR:', err);
-          }
+        qrPromise = new Promise((resolve)=>{
+          QRCode.toCanvas(qrData, {width: 200, margin: 1, errorCorrectionLevel: 'M'}, function(err, canvas){
+            if(!err){
+              canvas.style.width = '100%';
+              canvas.style.height = '100%';
+              barcodeEl.appendChild(canvas);
+            } else {
+              console.warn('[QR] Error generating QR:', err);
+              barcodeEl.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#b91c1c;text-align:center;line-height:1.2;padding:2px">QR gagal dibuat</div>';
+            }
+            resolve();
+          });
         });
       }
     }
@@ -7400,6 +7426,7 @@ function renderCertificate(p, prefix){
       const el = document.getElementById(prefix+s);
       if(el) el.style.display = 'none';
     });
+    return qrPromise;
   }
   window.renderCertificate = renderCertificate;
 
@@ -7450,9 +7477,9 @@ function renderCertificate(p, prefix){
       if(prevBox) prevBox.querySelector('span')?.classList.remove('hidden');
       if(status) status.textContent = 'Status: menggunakan background default.';
     }
-    // load barcode toggle
+    // load barcode toggle (default ON kecuali sudah pernah dimatikan secara eksplisit)
     const toggle = document.getElementById('toggleBarcode');
-    if(toggle) toggle.checked = localStorage.getItem(BARCODE_KEY) === '1';
+    if(toggle) toggle.checked = localStorage.getItem(BARCODE_KEY) !== '0';
     // load positions
     loadPositions();
   }
@@ -7461,8 +7488,9 @@ function renderCertificate(p, prefix){
   const _origRenderCertificate = window.renderCertificate;
   window.renderCertificate = function(p, prefix){
     window.lastCertData = {p, prefix};
-    _origRenderCertificate(p, prefix);
+    const qrDone = _origRenderCertificate(p, prefix) || Promise.resolve();
     setTimeout(loadCertificateTemplate, 10);
+    return qrDone;
   };
 
   function handleTemplateInput(inputId, storageKey){
@@ -8967,6 +8995,8 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const searchEl = $id('stcr-s-search');
     const search = (searchEl ? searchEl.value : '').toLowerCase();
     const year = $id('stcr-s-year').value;
+    const monthEl = $id('stcr-s-month');
+    const month = monthEl ? monthEl.value : '';
     const aoc = $id('stcr-s-aoc').value;
     const req = $id('stcr-s-req').value;
     const sortEl = $id('stcr-s-sort');
@@ -8976,6 +9006,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
     rows = rows.filter(({item:d}) => {
       if(year && String(d.Year)!==year) return false;
+      if(month && d.Month!==month) return false;
       if(aoc && d.AOC!==aoc) return false;
       if(req && d.Request!==req) return false;
       if(search){
@@ -9092,11 +9123,30 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   }
 
   // ── STATION ───────────────────────────────────────────────────────────
+  function getStationFiltered(){
+    const yearEl = $id('stcr-st-year');
+    const monthEl = $id('stcr-st-month');
+    const year = yearEl ? yearEl.value : '';
+    const month = monthEl ? monthEl.value : '';
+    return ALL_DATA.filter(d => {
+      if(year && String(d.Year)!==year) return false;
+      if(month && d.Month!==month) return false;
+      return true;
+    });
+  }
+
+  function resetStationFilters(){
+    ['stcr-st-year','stcr-st-month'].forEach(id => { const el = $id(id); if(el) el.value=''; });
+    renderStation();
+  }
+
   function renderStation(){
     const el = $id('stcrStationGrid');
     if(!el) return;
+    const sourceData = getStationFiltered();
+
     const stMap = {};
-    ALL_DATA.forEach(d=>{
+    sourceData.forEach(d=>{
       const s = d.Station; if(!s) return;
       if(!stMap[s]) stMap[s]={count:0,stcr:0,pob:0,revenue:0,aoc:d.AOC,aocs:new Set(),sjCount:0,inCount:0};
       stMap[s].count++;
@@ -9112,9 +9162,9 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const sortSel = $id('stcr-st-sort');
     const sortMode = sortSel ? sortSel.value : 'count-desc';
 
-    // For month/year sorts, we need the most-recent month/year per station
-    const stMonthMap = {}; // station -> {lastMonth, lastYear, firstMonth, firstYear}
-    ALL_DATA.forEach(d=>{
+    // Aktivitas terakhir per stasiun (mengikuti data yang sudah difilter)
+    const stMonthMap = {}; // station -> {lastMonth, lastYear}
+    sourceData.forEach(d=>{
       const s = d.Station; if(!s) return;
       const dateStr = d['Date of Flight'];
       if(!dateStr) return;
@@ -9122,12 +9172,9 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       if(isNaN(dt.getTime())) return;
       const mo = dt.getMonth()+1;
       const yr = dt.getFullYear();
-      if(!stMonthMap[s]) stMonthMap[s]={lastMonth:0, lastYear:0, firstMonth:13, firstYear:9999};
+      if(!stMonthMap[s]) stMonthMap[s]={lastMonth:0, lastYear:0};
       if(yr > stMonthMap[s].lastYear || (yr === stMonthMap[s].lastYear && mo > stMonthMap[s].lastMonth)){
         stMonthMap[s].lastMonth = mo; stMonthMap[s].lastYear = yr;
-      }
-      if(yr < stMonthMap[s].firstYear || (yr === stMonthMap[s].firstYear && mo < stMonthMap[s].firstMonth)){
-        stMonthMap[s].firstMonth = mo; stMonthMap[s].firstYear = yr;
       }
     });
 
@@ -9140,25 +9187,16 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     else if(sortMode === 'pob-asc') sorted.sort((a,b)=>a[1].pob-b[1].pob);
     else if(sortMode === 'airlines-sj') sorted.sort((a,b)=>b[1].sjCount-a[1].sjCount || b[1].count-a[1].count);
     else if(sortMode === 'airlines-in') sorted.sort((a,b)=>b[1].inCount-a[1].inCount || b[1].count-a[1].count);
-    else if(sortMode === 'month-asc') sorted.sort((a,b)=>{
-      const ma = stMonthMap[a[0]]?.firstMonth||0, mb2 = stMonthMap[b[0]]?.firstMonth||0;
-      return ma - mb2 || b[1].count-a[1].count;
-    });
-    else if(sortMode === 'month-desc') sorted.sort((a,b)=>{
-      const ma = stMonthMap[a[0]]?.lastMonth||0, mb2 = stMonthMap[b[0]]?.lastMonth||0;
-      return mb2 - ma || b[1].count-a[1].count;
-    });
-    else if(sortMode === 'year-desc') sorted.sort((a,b)=>{
-      const ya = stMonthMap[a[0]]?.lastYear||0, yb = stMonthMap[b[0]]?.lastYear||0;
-      return yb - ya || b[1].count-a[1].count;
-    });
-    else if(sortMode === 'year-asc') sorted.sort((a,b)=>{
-      const ya = stMonthMap[a[0]]?.firstYear||9999, yb = stMonthMap[b[0]]?.firstYear||9999;
-      return ya - yb || b[1].count-a[1].count;
-    });
+    else sorted.sort((a,b)=>b[1].count-a[1].count);
 
     const MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const showMonthYear = ['month-asc','month-desc','year-asc','year-desc'].includes(sortMode);
+
+    if(sorted.length === 0){
+      el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);font-size:13px">
+        Tidak ada data untuk periode/filter yang dipilih.
+      </div>`;
+      return;
+    }
 
     el.innerHTML = sorted.map(([s,info])=>{
       const mInfo = stMonthMap[s] || {};
@@ -9167,7 +9205,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       <div class="stcr-station-card">
         <div class="stcr-station-name">${escapeHtml(s)}</div>
         <div class="stcr-station-aoc">${info.aocs.includes('SJ')&&info.aocs.includes('IN')?'🔴 SJ · 🔵 IN':info.aoc==='SJ'?'🔴 Sriwijaya Air':'🔵 NAM Air'}</div>
-        ${showMonthYear && lastLabel ? `<div style="font-size:10px;color:var(--sky);font-weight:600;margin-bottom:4px">📅 Aktivitas terakhir: ${lastLabel}</div>` : ''}
+        ${lastLabel ? `<div style="font-size:10px;color:var(--sky);font-weight:600;margin-bottom:4px">📅 Aktivitas terakhir: ${lastLabel}</div>` : ''}
         <div class="stcr-station-stats">
           <div class="stcr-station-stat"><div class="stcr-station-stat-val">${info.count}</div><div class="stcr-station-stat-lbl">Request</div></div>
           <div class="stcr-station-stat"><div class="stcr-station-stat-val">${info.stcr}</div><div class="stcr-station-stat-lbl">STCR</div></div>
@@ -9465,6 +9503,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     resetFilters,
     renderTable,
     renderStation,
+    resetStationFilters,
     openModal,
     closeModal,
     updateAOC,
@@ -9575,7 +9614,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     if(!window.XLSX){ alert('Library XLSX belum dimuat.'); return; }
     try {
       const stMap = {};
-      ALL_DATA.forEach(d=>{
+      getStationFiltered().forEach(d=>{
         const s = d.Station; if(!s) return;
         if(!stMap[s]) stMap[s]={station:s,count:0,stcr:0,pob:0,revenue:0,sj:0,inC:0};
         stMap[s].count++;
@@ -9645,13 +9684,16 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+      const yearEl = $id('stcr-st-year'), monthEl = $id('stcr-st-month');
+      const yearVal = yearEl ? yearEl.value : '', monthVal = monthEl ? monthEl.value : '';
+      const periodLabel = (monthVal||yearVal) ? ` (${[monthVal,yearVal].filter(Boolean).join(' ')})` : '';
       doc.setFontSize(14); doc.setFont('helvetica','bold');
-      doc.text('STCR Dashboard — Per Stasiun', 14, 14);
+      doc.text('STCR Dashboard — Per Stasiun'+periodLabel, 14, 14);
       doc.setFontSize(9); doc.setFont('helvetica','normal');
       doc.text('Dicetak: '+new Date().toLocaleString('id-ID'), 14, 20);
 
       const stMap = {};
-      ALL_DATA.forEach(d=>{
+      getStationFiltered().forEach(d=>{
         const s = d.Station; if(!s) return;
         if(!stMap[s]) stMap[s]={count:0,stcr:0,pob:0,revenue:0,sj:0,inC:0};
         stMap[s].count++;
