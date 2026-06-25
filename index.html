@@ -6028,6 +6028,25 @@ try {
 let _supabaseClient = null;
 let _realtimeChannel = null;
 
+// === SMART SYNC STATE ===
+let _lastCloudUpdatedAt = null;    // updated_at terakhir yang berhasil di-pull dari cloud
+let _lastPushedHash = null;        // hash payload terakhir yang berhasil di-push
+// Deklarasi di sini agar tersedia untuk semua fungsi di bawah (fix hoisting bug)
+let _autoSyncTimer = null;
+let _cloudPullInProgress = false;
+
+// Hash ringan untuk deteksi perubahan data (tanpa kirim ke mana-mana)
+function _hashPayload(payload){
+  try {
+    const str = JSON.stringify(payload);
+    let h = 0;
+    for(let i = 0; i < str.length; i++){
+      h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+    }
+    return h.toString(36);
+  } catch(e){ return null; }
+}
+
 function saveCloudConfig(){
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudConfig));
 }
@@ -6146,19 +6165,29 @@ function getAllCloudData(){
 }
 
 // UPLOAD ke Supabase (upsert dengan record_id = 'sjnam_main')
+// Smart Push: hanya upload jika data benar-benar berubah dari push terakhir
 async function cloudPush(silent=false){
   const sb = getSupabaseClient();
   if(!sb){ if(!silent) showToast('Masukkan URL & Key Supabase dulu','error'); return false; }
 
+  const payload = getAllCloudData();
+  const currentHash = _hashPayload(payload);
+
+  // Jika hash sama dengan push terakhir → tidak ada perubahan, skip
+  if(silent && currentHash && currentHash === _lastPushedHash){
+    cloudLog('⏭️ Smart Push: tidak ada perubahan data, skip upload', 'info');
+    return true;
+  }
+
   updateSyncStatus('syncing');
   try {
-    const payload = getAllCloudData();
     const { error } = await sb
       .from('sjnam_sync')
       .upsert({ id: 'sjnam_main', payload: payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 
     if(error) throw new Error(error.message);
 
+    _lastPushedHash = currentHash; // simpan hash setelah push berhasil
     updateSyncStatus('connected');
     cloudLog('✅ Data tersimpan ke Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
     if(!silent) showToast('⚡ Supabase Sync berhasil! ('+data.length+' records)','success');
@@ -6173,12 +6202,14 @@ async function cloudPush(silent=false){
 }
 
 // DOWNLOAD dari Supabase
+// Smart Pull: cek updated_at cloud terlebih dahulu; pull hanya jika cloud lebih baru
 async function cloudPull(silent = false){
   const sb = getSupabaseClient();
   if(!sb){ if(!silent) showToast('Masukkan URL & Key Supabase dulu','error'); return; }
 
   updateSyncStatus('syncing');
   try {
+    // === SMART PULL: satu query untuk updated_at + payload (eliminasi race condition) ===
     const { data: rows, error } = await sb
       .from('sjnam_sync')
       .select('payload, updated_at')
@@ -6188,8 +6219,17 @@ async function cloudPull(silent = false){
     if(error) throw new Error(error.message);
     if(!rows) throw new Error('Data tidak ditemukan di Supabase');
 
+    const cloudUpdatedAt = rows.updated_at;
+
+    // Jika silent (auto-sync) dan cloud tidak lebih baru dari pull terakhir → skip
+    if(silent && _lastCloudUpdatedAt && cloudUpdatedAt && cloudUpdatedAt <= _lastCloudUpdatedAt){
+      cloudLog('⏭️ Smart Pull: tidak ada pembaruan dari device lain, skip pull', 'info');
+      updateSyncStatus('connected');
+      return;
+    }
+
     const rec = rows.payload;
-    const savedAt = rows.updated_at ? new Date(rows.updated_at).toLocaleString('id-ID') : '-';
+    const savedAt = cloudUpdatedAt ? new Date(cloudUpdatedAt).toLocaleString('id-ID') : '-';
 
     // Jika tidak silent, minta konfirmasi seperti sebelumnya
     if(!silent){
@@ -6242,6 +6282,9 @@ async function cloudPull(silent = false){
       if(typeof window.loadCertificateTemplate === 'function') window.loadCertificateTemplate();
       if(typeof window.ctbRenderAll === 'function') window.ctbRenderAll();
     }
+    // Simpan timestamp & hash SEBELUM melepas flag, agar triggerAutoSync tidak push balik
+    _lastCloudUpdatedAt = cloudUpdatedAt;
+    _lastPushedHash = _hashPayload(getAllCloudData());
     _cloudPullInProgress = false;
 
     renderTable();
@@ -6253,8 +6296,8 @@ async function cloudPull(silent = false){
 
     updateSyncStatus('connected');
     cloudLog('✅ Data berhasil diambil dari Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
-    if(!silent) blinkBlueLight(); // ganti toast Data Supabase dimuat dengan lampu biru
-    else blinkBlueLight(); // ganti toast Auto-sync dengan lampu biru
+    if(!silent) blinkBlueLight();
+    else blinkBlueLight();
   } catch(err){
     updateSyncStatus('error');
     cloudLog('❌ Gagal download: '+err.message, 'error');
@@ -6337,6 +6380,10 @@ function startRealtimeSubscription(){
           if(typeof window.loadCertificateTemplate === 'function') window.loadCertificateTemplate();
           if(typeof window.ctbRenderAll === 'function') window.ctbRenderAll();
         }
+        // Perbarui timestamp & hash SEBELUM melepas flag, agar triggerAutoSync yang
+        // mungkin terpanggil saat _cloudPullInProgress = false tidak langsung push balik
+        if(payload.new?.updated_at) _lastCloudUpdatedAt = payload.new.updated_at;
+        _lastPushedHash = _hashPayload(getAllCloudData());
         _cloudPullInProgress = false;
         renderTable();
         renderDashboard();
@@ -6344,7 +6391,7 @@ function startRealtimeSubscription(){
         renderDfsTable();
         if(typeof window.refreshTrainingViews === 'function') window.refreshTrainingViews();
         if(typeof window.renderBankStations === 'function') window.renderBankStations();
-        blinkSyncLight(); // ganti toast dengan lampu hijau
+        blinkSyncLight();
       }
     )
     .subscribe((status) => {
@@ -6356,8 +6403,6 @@ function startRealtimeSubscription(){
 }
 
 // Auto-sync: patch saveData, saveStations, saveDfsData untuk trigger cloud sync otomatis
-let _autoSyncTimer = null;
-let _cloudPullInProgress = false;
 
 // ===== PENJADWALAN BACKUP HARIAN =====
 (function setupDailyBackup(){
