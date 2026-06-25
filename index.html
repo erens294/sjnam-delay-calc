@@ -607,7 +607,10 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
   <div id="adminSubPerms" class="admin-subtab-pane hidden">
     <div class="card p-5 md:p-6">
       <h2 class="text-lg font-bold mb-1">🔐 Pengaturan Akses Role</h2>
-      <p class="text-xs text-slate-500 mb-5">Atur tab / fitur apa saja yang dapat dilihat oleh Co-Admin, User, dan Peserta. Admin selalu memiliki akses penuh.</p>
+      <p class="text-xs text-slate-500 mb-2">Atur tab / fitur apa saja yang dapat dilihat oleh Co-Admin, User, dan Peserta. Admin selalu memiliki akses penuh.</p>
+      <div id="permsAdminOnlyNotice" class="hidden mb-4 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-300 font-semibold">
+        ⚠️ Hanya Admin yang dapat mengubah pengaturan akses. Anda hanya bisa melihat (read-only).
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-slate-50 dark:bg-slate-800">
@@ -3515,11 +3518,31 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <p id="templateStatus" class="text-xs text-slate-500">Status: belum ada template custom.</p>
       </div>
       <div>
-        <label class="text-xs font-semibold">Preview Aktif</label>
-        <div id="templatePreviewBox" class="mt-1 aspect-[1.414/1] w-full bg-slate-100 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden relative">
-          <span class="text-[11px] text-slate-400">Preview kosong</span>
-          <img id="templatePreviewImg" class="absolute inset-0 w-full h-full object-cover hidden" alt="preview">
+        <label class="text-xs font-semibold">Preview Template</label>
+        <!-- Template 1 – Sriwijaya Air -->
+        <div class="mb-2 mt-1">
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">✈ Template 1 — Sriwijaya Air</span>
+            <span id="sjTemplateAvailBadge" class="text-[10px] text-slate-400 italic"></span>
+          </div>
+          <div id="templatePreviewBox1" class="aspect-[1.414/1] w-full bg-slate-100 dark:bg-slate-800 rounded-xl border border-dashed border-blue-300 dark:border-blue-700 flex items-center justify-center overflow-hidden relative">
+            <span class="text-[11px] text-slate-400">Belum ada Template 1</span>
+            <img id="templatePreviewImg1" class="absolute inset-0 w-full h-full object-cover hidden" alt="preview template 1">
+          </div>
         </div>
+        <!-- Template 2 – NAM Air -->
+        <div>
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">✈ Template 2 — NAM Air</span>
+            <span id="namTemplateAvailBadge" class="text-[10px] text-slate-400 italic"></span>
+          </div>
+          <div id="templatePreviewBox2" class="aspect-[1.414/1] w-full bg-slate-100 dark:bg-slate-800 rounded-xl border border-dashed border-red-300 dark:border-red-700 flex items-center justify-center overflow-hidden relative">
+            <span class="text-[11px] text-slate-400">Belum ada Template 2</span>
+            <img id="templatePreviewImg2" class="absolute inset-0 w-full h-full object-cover hidden" alt="preview template 2">
+          </div>
+        </div>
+        <!-- keep legacy ids for backward compat -->
+        <div id="templatePreviewBox" class="hidden"><img id="templatePreviewImg" class="hidden" alt=""></div>
       </div>
     </div>
   </div>
@@ -3528,7 +3551,23 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="flex items-start justify-between mb-3">
       <div>
         <h2 class="text-lg font-bold flex items-center gap-2">✏️ Custom Text Block</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Tambah teks bebas ke sertifikat — seperti judul, subjudul, keterangan. Bisa diduplikasi, diedit, digeser, dan dihapus. Teks akan muncul di semua preview sertifikat.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Tambah teks bebas ke sertifikat — seperti judul, subjudul, keterangan. Bisa diduplikasi, diedit, digeser, dan dihapus.</p>
+        <!-- Airline selector for CTB -->
+        <div class="flex items-center gap-2 mt-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Berlaku untuk:</span>
+          <label class="flex items-center gap-1 text-xs cursor-pointer">
+            <input type="radio" name="ctbAirline" id="ctbAirlineSJ" value="sriwijaya" class="accent-blue-600" checked>
+            <span class="px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 text-[11px]">✈ Sriwijaya Air</span>
+          </label>
+          <label class="flex items-center gap-1 text-xs cursor-pointer">
+            <input type="radio" name="ctbAirline" id="ctbAirlineNAM" value="nam" class="accent-red-600">
+            <span class="px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700 text-[11px]">✈ NAM Air</span>
+          </label>
+          <label class="flex items-center gap-1 text-xs cursor-pointer">
+            <input type="radio" name="ctbAirline" id="ctbAirlineBoth" value="both" class="accent-emerald-600">
+            <span class="px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-700 text-[11px]">✈ Kedua Airlines</span>
+          </label>
+        </div>
       </div>
       <button id="btnAddCustomText" class="flex-shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow">＋ Tambah Teks</button>
     </div>
@@ -6149,8 +6188,14 @@ function getAllCloudData(){
   // Toggle tampil/sembunyi barcode pada sertifikat
   const certBarcode = localStorage.getItem('sjn_cert_barcode_v1');
   // Custom text block tambahan pada sertifikat
-  let certCustomTexts = null;
+  let certCustomTexts = null; // legacy — kept for compat
   try { certCustomTexts = JSON.parse(localStorage.getItem('sjn_cert_custom_texts_v1') || 'null'); } catch(e){}
+  let certCustomTextsSJ = null;
+  try { certCustomTextsSJ = JSON.parse(localStorage.getItem('sjn_cert_custom_texts_sj_v1') || 'null'); } catch(e){}
+  let certCustomTextsNAM = null;
+  try { certCustomTextsNAM = JSON.parse(localStorage.getItem('sjn_cert_custom_texts_nam_v1') || 'null'); } catch(e){}
+  let certCustomTextsBoth = null;
+  try { certCustomTextsBoth = JSON.parse(localStorage.getItem('sjn_cert_custom_texts_both_v1') || 'null'); } catch(e){}
   // Paraf / tanda tangan pada sertifikat
   let certParaf = null;
   try { certParaf = JSON.parse(localStorage.getItem('sjn_cert_paraf_v1') || 'null'); } catch(e){}
@@ -6159,19 +6204,40 @@ function getAllCloudData(){
   return {
     data, stations, dfsData, settings, training, users, stcrData,
     rolePerms, certTemplate1, certTemplate2, certTemplateActive, certPositions, certBarcode, certCustomTexts,
+    certCustomTextsSJ, certCustomTextsNAM, certCustomTextsBoth,
     certParaf, certParafShow,
-    savedAt: new Date().toISOString(), version: 'v4.2'
+    savedAt: new Date().toISOString(), version: 'v4.3'
   };
+}
+
+// Generate/get a persistent device ID for this browser
+(function _initDeviceId(){
+  if(!localStorage.getItem('sjnam_device_id')){
+    localStorage.setItem('sjnam_device_id', 'dev_'+Date.now()+'_'+Math.random().toString(36).slice(2,8));
+  }
+})();
+function getDeviceId(){ return localStorage.getItem('sjnam_device_id') || 'unknown'; }
+
+// Merge two arrays by a unique key (id or App Service & Tehnik) — last-write-wins per item
+function _mergeArrays(base, incoming, keyFn){
+  if(!Array.isArray(base)) base = [];
+  if(!Array.isArray(incoming)) return base;
+  const map = new Map();
+  base.forEach(item=>{ const k = keyFn(item); if(k) map.set(k, item); });
+  // incoming overrides existing items and adds new ones
+  incoming.forEach(item=>{ const k = keyFn(item); if(k) map.set(k, item); });
+  return Array.from(map.values());
 }
 
 // UPLOAD ke Supabase (upsert dengan record_id = 'sjnam_main')
 // Smart Push: hanya upload jika data benar-benar berubah dari push terakhir
+// Conflict-safe: jika cloud lebih baru dari pull terakhir kita, merge array data dulu
 async function cloudPush(silent=false){
   const sb = getSupabaseClient();
   if(!sb){ if(!silent) showToast('Masukkan URL & Key Supabase dulu','error'); return false; }
 
-  const payload = getAllCloudData();
-  const currentHash = _hashPayload(payload);
+  const localPayload = getAllCloudData();
+  const currentHash = _hashPayload(localPayload);
 
   // Jika hash sama dengan push terakhir → tidak ada perubahan, skip
   if(silent && currentHash && currentHash === _lastPushedHash){
@@ -6181,13 +6247,44 @@ async function cloudPush(silent=false){
 
   updateSyncStatus('syncing');
   try {
+    // === CONFLICT CHECK: baca updated_at cloud dulu ===
+    let mergedPayload = localPayload;
+    const { data: cloudRow } = await sb.from('sjnam_sync').select('payload, updated_at').eq('id','sjnam_main').maybeSingle();
+    if(cloudRow && cloudRow.updated_at && _lastCloudUpdatedAt && cloudRow.updated_at > _lastCloudUpdatedAt){
+      // Cloud lebih baru dari pull terakhir kita → ada perubahan dari device lain
+      // Merge array data (delay, DFS, STCR, peserta training) agar tidak kehilangan data
+      const cloudPayload = cloudRow.payload || {};
+      const delayKeyFn = r => (r['App Service & Tehnik'] || r.id || JSON.stringify(r));
+      const pesertaKeyFn = r => (r.id || r.username || JSON.stringify(r));
+      mergedPayload = {
+        ...localPayload,
+        data:     _mergeArrays(cloudPayload.data,     localPayload.data,     delayKeyFn),
+        dfsData:  _mergeArrays(cloudPayload.dfsData,  localPayload.dfsData,  delayKeyFn),
+        stcrData: _mergeArrays(cloudPayload.stcrData, localPayload.stcrData, delayKeyFn),
+      };
+      // Merge peserta training jika ada
+      if(localPayload.training && cloudPayload.training){
+        mergedPayload.training = {...localPayload.training};
+        if(Array.isArray(localPayload.training.peserta) && Array.isArray(cloudPayload.training.peserta)){
+          mergedPayload.training.peserta = _mergeArrays(cloudPayload.training.peserta, localPayload.training.peserta, pesertaKeyFn);
+        }
+      }
+      cloudLog('🔀 Konflik terdeteksi — data digabung otomatis (merge). Cloud: '+cloudRow.updated_at, 'info');
+      if(!silent) showToast('🔀 Merge: data dari 2 device digabung otomatis', 'info');
+    }
+
+    // Tambahkan device id ke payload untuk tracing
+    mergedPayload._pushedBy = getDeviceId();
+    mergedPayload._pushedAt = new Date().toISOString();
+
     const { error } = await sb
       .from('sjnam_sync')
-      .upsert({ id: 'sjnam_main', payload: payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      .upsert({ id: 'sjnam_main', payload: mergedPayload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 
     if(error) throw new Error(error.message);
 
-    _lastPushedHash = currentHash; // simpan hash setelah push berhasil
+    _lastPushedHash = _hashPayload(mergedPayload);
+    _lastCloudUpdatedAt = mergedPayload._pushedAt;
     updateSyncStatus('connected');
     cloudLog('✅ Data tersimpan ke Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
     if(!silent) showToast('⚡ Supabase Sync berhasil! ('+data.length+' records)','success');
@@ -6240,6 +6337,7 @@ async function cloudPull(silent = false){
     }
 
     _cloudPullInProgress = true;
+    try {
     if(Array.isArray(rec.data)) { data = rec.data; saveData(); }
     if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; saveStations(); }
     if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; saveDfsData(); }
@@ -6266,7 +6364,7 @@ async function cloudPull(silent = false){
     if(rec.rolePerms){
       localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
       if(typeof window.renderPermTable === 'function') window.renderPermTable();
-      if(typeof applyPermissions === 'function') applyPermissions();
+      if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
     }
     // Restore template & elemen sertifikat (gambar, posisi, toggle barcode, custom text)
     let certChanged = false;
@@ -6276,6 +6374,9 @@ async function cloudPull(silent = false){
     if(rec.certPositions){ localStorage.setItem('sjn_cert_positions_v1', JSON.stringify(rec.certPositions)); certChanged = true; }
     if(rec.certBarcode !== undefined && rec.certBarcode !== null){ localStorage.setItem('sjn_cert_barcode_v1', rec.certBarcode); certChanged = true; }
     if(rec.certCustomTexts){ localStorage.setItem('sjn_cert_custom_texts_v1', JSON.stringify(rec.certCustomTexts)); certChanged = true; }
+    if(rec.certCustomTextsSJ)   { localStorage.setItem('sjn_cert_custom_texts_sj_v1',   JSON.stringify(rec.certCustomTextsSJ));   certChanged = true; }
+    if(rec.certCustomTextsNAM)  { localStorage.setItem('sjn_cert_custom_texts_nam_v1',  JSON.stringify(rec.certCustomTextsNAM));  certChanged = true; }
+    if(rec.certCustomTextsBoth) { localStorage.setItem('sjn_cert_custom_texts_both_v1', JSON.stringify(rec.certCustomTextsBoth)); certChanged = true; }
     if(rec.certParaf){ localStorage.setItem('sjn_cert_paraf_v1', JSON.stringify(rec.certParaf)); certChanged = true; }
     if(rec.certParafShow !== undefined && rec.certParafShow !== null){ localStorage.setItem('sjn_cert_paraf_show_v1', rec.certParafShow); certChanged = true; }
     if(certChanged){
@@ -6285,7 +6386,9 @@ async function cloudPull(silent = false){
     // Simpan timestamp & hash SEBELUM melepas flag, agar triggerAutoSync tidak push balik
     _lastCloudUpdatedAt = cloudUpdatedAt;
     _lastPushedHash = _hashPayload(getAllCloudData());
-    _cloudPullInProgress = false;
+    } finally {
+    _cloudPullInProgress = false;  // always reset — prevents deadlock on error
+    }
 
     renderTable();
     renderDashboard();
@@ -6299,6 +6402,7 @@ async function cloudPull(silent = false){
     if(!silent) blinkBlueLight();
     else blinkBlueLight();
   } catch(err){
+    _cloudPullInProgress = false; // also reset on outer catch
     updateSyncStatus('error');
     cloudLog('❌ Gagal download: '+err.message, 'error');
     if(!silent) showToast('Gagal download: '+err.message,'error');
@@ -6338,8 +6442,9 @@ function startRealtimeSubscription(){
         if(_cloudPullInProgress) return;
         const rec = payload.new?.payload;
         if(!rec) return;
-        cloudLog('🔄 Update masuk dari device lain — memuat ulang data...', 'info'); // log tetap, toast diganti
+        cloudLog('🔄 Update masuk dari device lain ('+( rec._pushedBy||'?')+') — memuat ulang data...', 'info');
         _cloudPullInProgress = true;
+        try {
         if(Array.isArray(rec.data)) { data = rec.data; saveData(); }
         if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; saveStations(); }
         if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; saveDfsData(); }
@@ -6364,7 +6469,7 @@ function startRealtimeSubscription(){
         if(rec.rolePerms){
           localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
           if(typeof window.renderPermTable === 'function') window.renderPermTable();
-          if(typeof applyPermissions === 'function') applyPermissions();
+          if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
         }
         // Restore template & elemen sertifikat dari realtime
         let certChangedRt = false;
@@ -6374,17 +6479,20 @@ function startRealtimeSubscription(){
         if(rec.certPositions){ localStorage.setItem('sjn_cert_positions_v1', JSON.stringify(rec.certPositions)); certChangedRt = true; }
         if(rec.certBarcode !== undefined && rec.certBarcode !== null){ localStorage.setItem('sjn_cert_barcode_v1', rec.certBarcode); certChangedRt = true; }
         if(rec.certCustomTexts){ localStorage.setItem('sjn_cert_custom_texts_v1', JSON.stringify(rec.certCustomTexts)); certChangedRt = true; }
+        if(rec.certCustomTextsSJ)   { localStorage.setItem('sjn_cert_custom_texts_sj_v1',   JSON.stringify(rec.certCustomTextsSJ));   certChangedRt = true; }
+        if(rec.certCustomTextsNAM)  { localStorage.setItem('sjn_cert_custom_texts_nam_v1',  JSON.stringify(rec.certCustomTextsNAM));  certChangedRt = true; }
+        if(rec.certCustomTextsBoth) { localStorage.setItem('sjn_cert_custom_texts_both_v1', JSON.stringify(rec.certCustomTextsBoth)); certChangedRt = true; }
         if(rec.certParaf){ localStorage.setItem('sjn_cert_paraf_v1', JSON.stringify(rec.certParaf)); certChangedRt = true; }
         if(rec.certParafShow !== undefined && rec.certParafShow !== null){ localStorage.setItem('sjn_cert_paraf_show_v1', rec.certParafShow); certChangedRt = true; }
         if(certChangedRt){
           if(typeof window.loadCertificateTemplate === 'function') window.loadCertificateTemplate();
           if(typeof window.ctbRenderAll === 'function') window.ctbRenderAll();
         }
-        // Perbarui timestamp & hash SEBELUM melepas flag, agar triggerAutoSync yang
-        // mungkin terpanggil saat _cloudPullInProgress = false tidak langsung push balik
         if(payload.new?.updated_at) _lastCloudUpdatedAt = payload.new.updated_at;
         _lastPushedHash = _hashPayload(getAllCloudData());
-        _cloudPullInProgress = false;
+        } finally {
+        _cloudPullInProgress = false; // always reset — prevents deadlock
+        }
         renderTable();
         renderDashboard();
         renderStations();
@@ -6843,8 +6951,15 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   document.getElementById('userPanel').classList.add('flex');
   document.getElementById('userNameDisplay').textContent = user.name;
   document.getElementById('userRoleDisplay').textContent = user.role;
+  // Also update sidebar user panel
+  const _sideNameEl = document.getElementById('userNameDisplaySide');
+  const _sideRoleEl = document.getElementById('userRoleDisplaySide');
+  if(_sideNameEl) _sideNameEl.textContent = user.name;
+  if(_sideRoleEl) _sideRoleEl.textContent = user.role;
+  if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
   
-  applyPermissions();
+  // By login time all <script> blocks have loaded — the dynamic patch is in place.
+  (window.applyPermissions || applyPermissions)();
   restoreSession();
   showToast('Selamat datang, ' + user.name + '!', 'success');
 });
@@ -7089,22 +7204,22 @@ function renderUserTable(){
   const tbody = document.getElementById('userTableBody');
   if(!tbody || !currentUser) return;
   
-  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  let allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  let displayUsers = allUsers;
   const canDelete = window.currentUserCanDelete;
   const canEdit = window.currentUserCanAdd;
   // Filter berdasarkan role
-  if(currentUser){
-    if(currentUser.role === 'Co-Admin'){
-      // Co-Admin tidak bisa melihat akun Admin
-      users = users.filter(u => u.role !== 'Admin');
-    } else if(currentUser.role === 'User' || currentUser.role === 'Peserta'){
-      // User dan Peserta tidak boleh lihat siapapun
-      users = [];
-    }
+  if(currentUser.role === 'Co-Admin'){
+    // Co-Admin tidak bisa melihat akun Admin atau Co-Admin lain
+    displayUsers = allUsers.filter(u => u.role !== 'Admin' && !(u.role === 'Co-Admin' && u.id !== currentUser.id));
+  } else if(currentUser.role === 'User' || currentUser.role === 'Peserta'){
+    // User dan Peserta tidak boleh lihat siapapun
+    displayUsers = [];
   }
-  const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+  // Peserta count always from FULL list so number is accurate
+  const pesertaCount = allUsers.filter(u=>u.role==='Peserta').length;
   
-  tbody.innerHTML = users.map(u => `
+  tbody.innerHTML = displayUsers.map(u => `
     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
       <td class="p-3 font-mono text-xs">${u.username}</td>
       <td class="p-3">${u.name}</td>
@@ -7137,9 +7252,19 @@ document.getElementById('btnAddUser')?.addEventListener('click', function(){
   if(!username) return;
   const name = prompt('Nama lengkap:');
   if(!name) return;
-  const role = prompt('Role (Admin / Co-Admin / User / Peserta):', 'Peserta');
+  // Co-Admin cannot create Admin accounts
+  const isCallerAdmin   = currentUser.role === 'Admin';
+  const allowedRoles    = isCallerAdmin ? 'Admin / Co-Admin / User / Peserta' : 'Co-Admin / User / Peserta';
+  const defaultRole     = 'Peserta';
+  const role = prompt(`Role (${allowedRoles}):`, defaultRole);
+  if(!role){ return; }
   if(!['Admin','Co-Admin','User','Peserta'].includes(role)){
-    showToast('Role tidak valid', 'error');
+    showToast('Role tidak valid. Pilih: ' + allowedRoles, 'error');
+    return;
+  }
+  // Co-Admin cannot assign Admin role
+  if(!isCallerAdmin && role === 'Admin'){
+    showToast('Co-Admin tidak dapat membuat akun Admin', 'error');
     return;
   }
   const password = prompt('Password awal:', '123456');
@@ -7191,26 +7316,21 @@ function editUser(id){
     showToast('Co-Admin tidak dapat mengubah akun Admin', 'error');
     return;
   }
+  // Co-Admin tidak bisa mengedit akun sesama Co-Admin (hanya Admin yang bisa)
+  if(currentUser && currentUser.role === 'Co-Admin' && user.role === 'Co-Admin' && user.id !== currentUser.id){
+    showToast('Co-Admin tidak dapat mengubah akun Co-Admin lain. Hubungi Admin.', 'error');
+    return;
+  }
   
   const newName = prompt('Nama:', user.name);
-  if(newName) user.name = newName;
+  if(newName === null) return; // user cancelled
+  if(newName.trim()) user.name = newName.trim();
   
   const newPass = prompt('Password baru (kosongkan jika tidak diubah):');
-  if(newPass){
-    // SHA-256 hash (async, update langsung)
-    sha256(newPass).then(h=>{ 
-      user.password = h; 
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-      if(typeof triggerAutoSync === 'function') triggerAutoSync();
-      renderUserTable();
-      showToast('Password berhasil diubah (SHA-256)', 'success');
-    });
-    return; // Return early, promise akan selesaikan update
-  }
   
   if(currentUser.role === 'Admin'){
     const newRole = prompt('Role (Admin/Co-Admin/User/Peserta):', user.role);
-    if(['Admin','Co-Admin','User','Peserta'].includes(newRole)){
+    if(newRole !== null && ['Admin','Co-Admin','User','Peserta'].includes(newRole)){
       if(newRole === 'Peserta' && user.role !== 'Peserta'){
         const pesertaCount = users.filter(u=>u.role==='Peserta').length;
         if(pesertaCount >= 150){
@@ -7222,12 +7342,28 @@ function editUser(id){
         user.role = newRole;
       }
     }
+    // Admin can also toggle active/inactive
+    if(user.username !== currentUser.username){ // cannot deactivate self
+      const toggleActive = confirm(`Status akun saat ini: ${user.active ? 'Aktif' : 'Nonaktif'}.\nKlik OK untuk ${user.active ? 'NONAKTIFKAN' : 'AKTIFKAN'} akun ini.`);
+      if(toggleActive) user.active = !user.active;
+    }
   }
   
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  if(typeof triggerAutoSync === 'function') triggerAutoSync();
-  renderUserTable();
-  showToast('User diperbarui', 'success');
+  // Handle password change (async due to SHA-256)
+  if(newPass && newPass.trim()){
+    sha256(newPass.trim()).then(h=>{
+      user.password = h;
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+      if(typeof triggerAutoSync === 'function') triggerAutoSync();
+      renderUserTable();
+      showToast('User diperbarui (password di-hash SHA-256)', 'success');
+    });
+  } else {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    if(typeof triggerAutoSync === 'function') triggerAutoSync();
+    renderUserTable();
+    showToast('User diperbarui', 'success');
+  }
 }
 
 // Delete user
@@ -7262,24 +7398,39 @@ function deleteUser(id){
 // Persist tab across refresh
 const originalSwitchTab = window.switchTab;
 window.switchTab = function(tab){
-  // Check permission for Peserta role - hanya boleh akses wizard training
-  if(currentUser && currentUser.role === 'Peserta'){
+  const _cu = window.currentUser || currentUser;
+
+  // Peserta: only training wizard is allowed (always hardcoded — cannot be granted other tabs)
+  if(_cu && _cu.role === 'Peserta'){
     if(tab !== 'soal-peserta'){
-      // Diam-diam block tanpa toast (mengurangi spam notifikasi)
-      return;
+      return; // silent block
     }
   }
-  // Check permission for User role
-  if(currentUser && currentUser.role === 'User'){
-    const allowed = ['home','input','data','dashboard','soal','soal-peserta','stcr-dashboard','stcr-data','stcr-station'];
-    if(!allowed.includes(tab)){
-      return; // Silent block
+
+  // Non-Admin/Co-Admin: check against dynamic permissions if available
+  if(_cu && (_cu.role === 'User' || _cu.role === 'Peserta')){
+    const perms = (typeof window.getRolePerms === 'function') ? window.getRolePerms() : null;
+    if(perms){
+      const roleKey = _cu.role === 'User' ? 'user' : 'peserta';
+      const featId  = 'tab-' + tab;
+      const allowed = perms[featId] ? perms[featId][roleKey] : false;
+      // Always allow soal-peserta (training wizard tab — not in perm table but always allowed)
+      if(tab !== 'soal-peserta' && !allowed){
+        return; // silent block per dynamic perms
+      }
+    } else {
+      // Fallback when dynamic perms not yet loaded: use safe defaults for User
+      if(_cu.role === 'User'){
+        const userDefault = ['home','input','data','dashboard','soal','soal-peserta','stcr-dashboard','stcr-data','stcr-station'];
+        if(!userDefault.includes(tab)) return;
+      }
     }
   }
+
   // Call original
   if(originalSwitchTab) originalSwitchTab(tab);
-  // Save current tab
-  localStorage.setItem(CURRENT_TAB_KEY, tab);
+  // Save current tab (don't persist training wizard tab — confusing on reload)
+  if(tab !== 'soal-peserta') localStorage.setItem(CURRENT_TAB_KEY, tab);
   // Sync sidebar active state
   if(typeof syncSidebarActive === 'function') syncSidebarActive(tab);
 };
@@ -7287,18 +7438,20 @@ window.switchTab = function(tab){
 // Restore session on load
 function restoreSession(){
   if(currentUser && currentUser.role === 'Peserta'){
-    setTimeout(()=> window.switchTab('soal-peserta'), 100);
+    // Peserta: always go to training wizard, with enough delay for perms to apply
+    setTimeout(()=> window.switchTab('soal-peserta'), 250);
     return;
   }
   const savedTab = localStorage.getItem(CURRENT_TAB_KEY) || 'home';
-  // Delay to ensure DOM ready
+  // Use 250ms delay — permission DOM changes (including the 120ms setTimeout inside
+  // applyPermissions) must complete before we check tab visibility.
   setTimeout(() => {
     if(document.querySelector(`[data-tab="${savedTab}"]`)?.style.display !== 'none'){
       window.switchTab(savedTab);
     } else {
       window.switchTab('home');
     }
-  }, 100);
+  }, 250);
 }
 
 // Check session on page load
@@ -7314,8 +7467,18 @@ function restoreSession(){
       document.getElementById('userPanel').classList.add('flex');
       document.getElementById('userNameDisplay').textContent = currentUser.name;
       document.getElementById('userRoleDisplay').textContent = currentUser.role;
-      applyPermissions();
-      restoreSession();
+      // Also update sidebar user panel
+      const sideNameEl = document.getElementById('userNameDisplaySide');
+      const sideRoleEl = document.getElementById('userRoleDisplaySide');
+      if(sideNameEl) sideNameEl.textContent = currentUser.name;
+      if(sideRoleEl) sideRoleEl.textContent = currentUser.role;
+      if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
+      // IMPORTANT: defer so that the dynamic FEATURE-1 permission patch (installed by a later
+      // <script> block) is already in place before we call window.applyPermissions().
+      setTimeout(()=>{
+        (window.applyPermissions || applyPermissions)();
+        restoreSession();
+      }, 0);
     } catch(e){
       localStorage.removeItem(SESSION_KEY);
     }
@@ -8108,21 +8271,41 @@ function renderCertificate(p, prefix){
       applyTemplateToEl(el, data);
     });
 
-    // Update preview box (thumbnail Admin) — selalu pakai template aktif manual
-    const prevImg = document.getElementById('templatePreviewImg');
-    const prevBox = document.getElementById('templatePreviewBox');
+    // Update dual preview boxes (Template 1 = SJ, Template 2 = NAM)
     const status  = document.getElementById('templateStatus');
+    const t1Data  = JSON.parse(localStorage.getItem(TEMPLATE_KEY1) || 'null');
+    const t2Data  = JSON.parse(localStorage.getItem(TEMPLATE_KEY2) || 'null');
+    function _applyAdminPreview(imgId, boxId, badgeId, tmplData){
+      const img  = document.getElementById(imgId);
+      const box  = document.getElementById(boxId);
+      const badge = document.getElementById(badgeId);
+      if(!img || !box) return;
+      if(tmplData && tmplData.dataUrl){
+        img.src = tmplData.dataUrl;
+        img.classList.remove('hidden');
+        box.querySelector('span')?.classList.add('hidden');
+        if(badge) badge.textContent = `✅ ${new Date(tmplData.savedAt).toLocaleDateString('id-ID')}`;
+      } else {
+        img.classList.add('hidden');
+        box.querySelector('span')?.classList.remove('hidden');
+        if(badge) badge.textContent = '⚠️ belum upload';
+      }
+    }
+    _applyAdminPreview('templatePreviewImg1','templatePreviewBox1','sjTemplateAvailBadge', t1Data);
+    _applyAdminPreview('templatePreviewImg2','templatePreviewBox2','namTemplateAvailBadge', t2Data);
+    // Legacy single-preview (hidden but kept for compat)
+    const prevImg = document.getElementById('templatePreviewImg');
     const active  = localStorage.getItem(TEMPLATE_ACTIVE) || '1';
     const { data: adminData } = getTemplateForAirlines(undefined);
-    if(adminData && adminData.dataUrl && prevImg){
-      prevImg.src = adminData.dataUrl;
-      prevImg.classList.remove('hidden');
-      if(prevBox) prevBox.querySelector('span')?.classList.add('hidden');
-      if(status) status.textContent = `Status: Template ${active} aktif (disimpan ${new Date(adminData.savedAt).toLocaleString('id-ID')})`;
-    } else {
-      if(prevImg) prevImg.classList.add('hidden');
-      if(prevBox) prevBox.querySelector('span')?.classList.remove('hidden');
-      if(status) status.textContent = 'Status: menggunakan background default.';
+    if(adminData && adminData.dataUrl && prevImg){ prevImg.src = adminData.dataUrl; prevImg.classList.remove('hidden'); }
+    if(status){
+      const hasBoth = t1Data && t2Data;
+      const hasT1   = !!t1Data;
+      const hasT2   = !!t2Data;
+      if(hasBoth) status.textContent = `Status: Template 1 (SJ) & Template 2 (NAM) tersimpan. Template aktif: ${active}.`;
+      else if(hasT1) status.textContent = 'Status: Template 1 (SJ) tersimpan. Template 2 (NAM) belum upload.';
+      else if(hasT2) status.textContent = 'Status: Template 2 (NAM) tersimpan. Template 1 (SJ) belum upload.';
+      else status.textContent = 'Status: belum ada template. Upload Template 1 untuk Sriwijaya Air & Template 2 untuk NAM Air.';
     }
 
     // Update badge airlines pada UI sertifikat jika ada lastCertData
@@ -8210,6 +8393,11 @@ function renderCertificate(p, prefix){
     const namAvail = document.getElementById('namTemplateAvail');
     if(sjAvail)  sjAvail.textContent  = t1 ? `✅ tersedia (${new Date(t1.savedAt).toLocaleDateString('id-ID')})` : '⚠️ belum upload';
     if(namAvail) namAvail.textContent = t2 ? `✅ tersedia (${new Date(t2.savedAt).toLocaleDateString('id-ID')})` : '⚠️ belum upload';
+    // update new dual-preview badge slots too
+    const sjBadge  = document.getElementById('sjTemplateAvailBadge');
+    const namBadge = document.getElementById('namTemplateAvailBadge');
+    if(sjBadge)  sjBadge.textContent  = t1 ? `✅ ${new Date(t1.savedAt).toLocaleDateString('id-ID')}` : '⚠️ belum upload';
+    if(namBadge) namBadge.textContent = t2 ? `✅ ${new Date(t2.savedAt).toLocaleDateString('id-ID')}` : '⚠️ belum upload';
   }
 
   // Tampilkan badge di atas preview yang menunjukkan template mana yang dipakai
@@ -8245,7 +8433,7 @@ function renderCertificate(p, prefix){
     return qrDone;
   };
 
-  function handleTemplateInput(inputId, storageKey){
+  function handleTemplateInput(inputId, storageKey, previewImgId, previewBoxId){
     document.getElementById(inputId)?.addEventListener('change', (e)=>{
       const file = e.target.files[0];
       if(!file) return;
@@ -8253,16 +8441,22 @@ function renderCertificate(p, prefix){
       reader.onload = ev => {
         const dataUrl = ev.target.result;
         sessionStorage.setItem('temp_'+storageKey, dataUrl);
-        document.getElementById('templatePreviewImg').src = dataUrl;
-        document.getElementById('templatePreviewImg').classList.remove('hidden');
-        document.getElementById('templatePreviewBox').querySelector('span')?.classList.add('hidden');
-        document.getElementById('templateStatus').textContent = 'Preview siap. Klik Simpan.';
+        // show in the correct per-airline preview slot
+        const img = document.getElementById(previewImgId);
+        const box = document.getElementById(previewBoxId);
+        if(img){ img.src = dataUrl; img.classList.remove('hidden'); }
+        if(box) box.querySelector('span')?.classList.add('hidden');
+        // also update legacy single-preview while user hasn't saved yet
+        const legacyImg = document.getElementById('templatePreviewImg');
+        if(legacyImg){ legacyImg.src = dataUrl; legacyImg.classList.remove('hidden'); }
+        const status = document.getElementById('templateStatus');
+        if(status) status.textContent = 'Preview siap. Klik Simpan.';
       };
       reader.readAsDataURL(file);
     });
   }
-  handleTemplateInput('certTemplateInput1', TEMPLATE_KEY1);
-  handleTemplateInput('certTemplateInput2', TEMPLATE_KEY2);
+  handleTemplateInput('certTemplateInput1', TEMPLATE_KEY1, 'templatePreviewImg1', 'templatePreviewBox1');
+  handleTemplateInput('certTemplateInput2', TEMPLATE_KEY2, 'templatePreviewImg2', 'templatePreviewBox2');
 
   // === PARAF (SIGNATURE) UPLOAD ===
   const PARAF_TEMP_KEY = 'temp_'+PARAF_KEY;
@@ -9131,27 +9325,41 @@ window.addEventListener('beforeunload', ()=>{
     const tbody = document.getElementById('permTableBody');
     if(!tbody) return;
     const perms = getPerms();
+    // Show read-only notice for non-Admin
+    const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+    const isViewerAdmin = _cu && _cu.role === 'Admin';
+    const notice = document.getElementById('permsAdminOnlyNotice');
+    const saveBtn = document.getElementById('btnSavePerms');
+    const resetBtn = document.getElementById('btnResetPerms');
+    if(notice) notice.classList.toggle('hidden', isViewerAdmin);
+    if(saveBtn){ saveBtn.disabled = !isViewerAdmin; saveBtn.style.opacity = isViewerAdmin ? '' : '0.4'; saveBtn.style.cursor = isViewerAdmin ? '' : 'not-allowed'; }
+    if(resetBtn){ resetBtn.disabled = !isViewerAdmin; resetBtn.style.opacity = isViewerAdmin ? '' : '0.4'; resetBtn.style.cursor = isViewerAdmin ? '' : 'not-allowed'; }
     tbody.innerHTML = FEATURES.map(f=>{
       const p = perms[f.id] || f.def;
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
         <td class="p-3 font-medium">${f.label}</td>
         <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="coAdmin" ${p.coAdmin?'checked':''} class="perm-chk w-4 h-4 accent-blue-600">
+          <input type="checkbox" data-feat="${f.id}" data-role="coAdmin" ${p.coAdmin?'checked':''} class="perm-chk w-4 h-4 accent-blue-600" ${isViewerAdmin?'':'disabled'}>
         </td>
         <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="user" ${p.user?'checked':''} class="perm-chk w-4 h-4 accent-emerald-600">
+          <input type="checkbox" data-feat="${f.id}" data-role="user" ${p.user?'checked':''} class="perm-chk w-4 h-4 accent-emerald-600" ${isViewerAdmin?'':'disabled'}>
         </td>
         <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="peserta" ${p.peserta?'checked':''} class="perm-chk w-4 h-4 accent-indigo-600">
+          <input type="checkbox" data-feat="${f.id}" data-role="peserta" ${p.peserta?'checked':''} class="perm-chk w-4 h-4 accent-indigo-600" ${isViewerAdmin?'':'disabled'}>
         </td>
       </tr>`;
     }).join('');
   }
   window.renderPermTable = renderPermTable;
 
-  // Save perms button
+  // Save perms button — ONLY Admin can change role permissions
   document.addEventListener('click', function(e){
     if(e.target && e.target.id === 'btnSavePerms'){
+      const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+      if(!_cu || _cu.role !== 'Admin'){
+        showToast('Hanya Admin yang dapat mengubah pengaturan akses role', 'error');
+        return;
+      }
       const chks = document.querySelectorAll('.perm-chk');
       const perms = getPerms();
       chks.forEach(chk=>{
@@ -9163,14 +9371,19 @@ window.addEventListener('beforeunload', ()=>{
       savePerms(perms);
       showToast('Pengaturan akses berhasil disimpan!', 'success');
       // Re-apply permissions for currently logged in user
-      if(typeof applyPermissions === 'function') applyPermissions();
+      if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
     }
     if(e.target && e.target.id === 'btnResetPerms'){
+      const _cu2 = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+      if(!_cu2 || _cu2.role !== 'Admin'){
+        showToast('Hanya Admin yang dapat mereset pengaturan akses role', 'error');
+        return;
+      }
       if(confirm('Reset semua pengaturan akses ke default?')){
         savePerms(getDefaultPerms());
         renderPermTable();
         showToast('Pengaturan akses direset ke default', 'success');
-        if(typeof applyPermissions === 'function') applyPermissions();
+        if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
       }
     }
   });
@@ -9275,7 +9488,11 @@ window.addEventListener('beforeunload', ()=>{
     }, 120);
 
     window.currentUserCanDelete = canSee('feat-delete');
-    window.currentUserCanAdd = canSee('feat-edit') || (isCoAdmin && canSee('tab-admin'));
+    // currentUserCanAdd controls user-management (Add/Edit user buttons) — separate from data editing
+    // Co-Admin can manage users if they have tab-admin access; User/Peserta never
+    window.currentUserCanAdd = isCoAdmin ? canSee('tab-admin') : false;
+    // currentUserCanEdit controls data record editing (delay records, DFS, etc.)
+    window.currentUserReadOnly = !canSee('feat-edit'); // also set immediately (not just in setTimeout)
     if(typeof renderUserTable === 'function') renderUserTable();
 
     // Peserta auto redirect
@@ -10858,20 +11075,48 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 (function(){
   'use strict';
 
-  const CTB_KEY = 'sjn_cert_custom_texts_v1';
-  let blocks = [];       // [{id, text, left, top, fontSize, fontFamily, fontWeight, fontStyle, textDecoration, textAlign, color, bgColor, maxWidth}]
-  let selectedId = null; // id block yang sedang diedit
-  let blockCounter = 0;  // untuk generate id unik
+  const CTB_KEY      = 'sjn_cert_custom_texts_v1';   // legacy — kept for migration
+  const CTB_KEY_SJ   = 'sjn_cert_custom_texts_sj_v1';
+  const CTB_KEY_NAM  = 'sjn_cert_custom_texts_nam_v1';
+  const CTB_KEY_BOTH = 'sjn_cert_custom_texts_both_v1';
+
+  let blocks = [];       // current set displayed
+  let selectedId = null;
+  let blockCounter = 0;
+
+  // Airline currently selected in the CTB panel
+  function ctbActiveAirline(){
+    const el = document.querySelector('input[name="ctbAirline"]:checked');
+    return el ? el.value : 'sriwijaya'; // 'sriwijaya' | 'nam' | 'both'
+  }
+
+  // Resolve the storage key for a given airline value
+  function ctbKey(airline){ 
+    if(airline==='nam')  return CTB_KEY_NAM;
+    if(airline==='both') return CTB_KEY_BOTH;
+    return CTB_KEY_SJ;
+  }
 
   // ----- Persistensi -----
   function saveBlocks(){
-    try { localStorage.setItem(CTB_KEY, JSON.stringify(blocks)); } catch(e){}
+    try { localStorage.setItem(ctbKey(ctbActiveAirline()), JSON.stringify(blocks)); } catch(e){}
     if(typeof triggerAutoSync === 'function') triggerAutoSync();
   }
-  function loadBlocks(){
+  function loadBlocks(airline){
+    airline = airline || ctbActiveAirline();
     try {
-      const raw = localStorage.getItem(CTB_KEY);
-      if(raw){ blocks = JSON.parse(raw); blockCounter = blocks.reduce((mx,b)=>Math.max(mx, parseInt(b.id.replace('ctb_',''))||0),0); }
+      // try new per-airline key first; fall back to legacy key (one-time migration)
+      const raw = localStorage.getItem(ctbKey(airline));
+      if(raw){ blocks = JSON.parse(raw); }
+      else {
+        // legacy migration: if sriwijaya slot is empty, import from old shared key
+        if(airline==='sriwijaya'){
+          const legacy = localStorage.getItem(CTB_KEY);
+          blocks = legacy ? JSON.parse(legacy) : [];
+          if(blocks.length) localStorage.setItem(CTB_KEY_SJ, JSON.stringify(blocks)); // migrate
+        } else { blocks = []; }
+      }
+      blockCounter = blocks.reduce((mx,b)=>Math.max(mx, parseInt(b.id.replace('ctb_',''))||0),0);
     } catch(e){ blocks = []; }
   }
 
@@ -10884,16 +11129,52 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     return ['pesertaCertPreview','certReprintPreview'].map(id=>document.getElementById(id)).filter(Boolean);
   }
 
+  // Get the airlines for a specific preview container
+  function airlinesForContainer(containerId){
+    const p = window.lastCertData && window.lastCertData.p;
+    if(!p) return undefined;
+    return p.airlines; // 'sriwijaya' | 'nam'
+  }
+
+  // Load blocks for a specific airlines value (for rendering into cert preview)
+  function blocksForAirlines(airlines){
+    // Load 'both' blocks always, plus airline-specific
+    let bothBlocks = [];
+    let alBlocks   = [];
+    try { bothBlocks = JSON.parse(localStorage.getItem(CTB_KEY_BOTH)||'[]')||[]; } catch(e){}
+    if(airlines==='nam'){
+      try { alBlocks = JSON.parse(localStorage.getItem(CTB_KEY_NAM)||'[]')||[]; } catch(e){}
+    } else {
+      // sriwijaya (or undefined → show SJ by default)
+      try {
+        alBlocks = JSON.parse(localStorage.getItem(CTB_KEY_SJ)||'null');
+        if(!alBlocks){
+          // legacy migration
+          alBlocks = JSON.parse(localStorage.getItem(CTB_KEY)||'[]')||[];
+        }
+      } catch(e){ alBlocks=[]; }
+    }
+    return [...bothBlocks, ...alBlocks];
+  }
+
   // ----- Render semua block ke preview -----
+  // In admin panel (CTB editor): renders blocks for the currently-selected airline tab
+  // In cert preview containers: renders the correct airline's blocks
   function renderAllBlocks(){
     allPreviews().forEach(container=>{
-      // hapus element lama
       container.querySelectorAll('.ctb-el').forEach(e=>e.remove());
-      // render ulang
-      blocks.forEach(b=> renderBlockInContainer(b, container));
+      // Determine which blocks apply to this container
+      const airlines = airlinesForContainer(container.id);
+      const containerBlocks = (airlines !== undefined)
+        ? blocksForAirlines(airlines)
+        : blocks; // in admin mode (no cert loaded), show current panel airline's blocks
+      containerBlocks.forEach(b=> renderBlockInContainer(b, container));
     });
     renderList();
   }
+
+  // Expose a version that refreshes all containers (called after cert load)
+  window.ctbRenderAll = renderAllBlocks;
 
   function styleEl(el, b){
     el.style.position       = 'absolute';
@@ -11131,9 +11412,20 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
   // ----- Init -----
   function init(){
-    loadBlocks();
+    loadBlocks('sriwijaya'); // default to SJ on load
     renderAllBlocks();
-    window.ctbRenderAll = renderAllBlocks; // expose untuk tab switch hook
+    window.ctbRenderAll = renderAllBlocks;
+
+    // Airline selector: switch block set when radio changes
+    document.querySelectorAll('input[name="ctbAirline"]').forEach(radio=>{
+      radio.addEventListener('change', ()=>{
+        // save current blocks before switching
+        selectedId = null;
+        const ed=document.getElementById('customTextEditor'); if(ed) ed.classList.add('hidden');
+        loadBlocks(ctbActiveAirline());
+        renderAllBlocks();
+      });
+    });
 
     document.getElementById('btnAddCustomText')?.addEventListener('click', ()=> addBlock(null));
 
