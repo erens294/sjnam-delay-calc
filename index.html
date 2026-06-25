@@ -270,6 +270,8 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 .stcr-action-edit:hover{background:#bfdbfe;}
 .stcr-action-delete{background:#FEE2E2;color:#B91C1C;}
 .stcr-action-delete:hover{background:#fecaca;}
+.stcr-action-cancel{background:#FEF3C7;color:#92400E;}
+.stcr-action-cancel:hover{background:#fde68a;}
 .stcr-filter-group select.stcr-sort-select{min-width:150px;}
 
 
@@ -1021,6 +1023,24 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="card p-5">
       <h3 class="font-semibold mb-3">🥧 Distribusi Cost by Airlines</h3>
       <div class="max-w-xs mx-auto"><div class="relative h-[240px] max-w-xs mx-auto"><canvas id="chartCostAirlines"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Charts Row 4: YoY & MoM (selalu data keseluruhan, tidak terpengaruh filter Periode/Airlines) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold">📅 Perbandingan Year on Year (YoY)</h3>
+        <span class="text-xs text-slate-400" title="Chart ini selalu menampilkan seluruh data, tidak terpengaruh filter Periode/Airlines">🔒 Semua Data</span>
+      </div>
+      <div class="relative h-[260px]"><canvas id="chartYoY"></canvas></div>
+    </div>
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold">📆 Perbandingan Month on Month (MoM)</h3>
+        <span class="text-xs text-slate-400" title="Chart ini selalu menampilkan seluruh data, tidak terpengaruh filter Periode/Airlines">🔒 Semua Data</span>
+      </div>
+      <div class="relative h-[260px]"><canvas id="chartMoM"></canvas></div>
     </div>
   </div>
 </section>
@@ -2683,6 +2703,10 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="stcr-charts-row">
       <div class="stcr-chart-box"><h3>💰 Revenue POB per Bulan (Rp)</h3><canvas id="stcrRevenueChart"></canvas></div>
       <div class="stcr-chart-box"><h3>🏢 Top 10 Stasiun</h3><canvas id="stcrStationChart"></canvas></div>
+    </div>
+    <div class="stcr-charts-row">
+      <div class="stcr-chart-box"><h3>📅 Perbandingan Year on Year (YoY) <span style="font-size:10px;color:#94a3b8;font-weight:400" title="Selalu seluruh data, tidak terpengaruh filter">🔒 Semua Data</span></h3><canvas id="stcrYoYChart"></canvas></div>
+      <div class="stcr-chart-box"><h3>📆 Perbandingan Month on Month (MoM) <span style="font-size:10px;color:#94a3b8;font-weight:400" title="Selalu seluruh data, tidak terpengaruh filter">🔒 Semua Data</span></h3><canvas id="stcrMoMChart"></canvas></div>
     </div>
   </div>
 </section>
@@ -4965,6 +4989,117 @@ function renderDashboard(){
       }
     });
   }
+
+  // YoY & MoM — selalu pakai seluruh data (tidak terpengaruh filter Periode/Airlines)
+  renderYoYMoM(isDark, gridColor, tickColor);
+}
+
+// Chart YoY (Year on Year) & MoM (Month on Month) — Home Dashboard
+// Menggunakan variabel global `data` (seluruh data, tanpa filter periode/airlines)
+window._yoyChart = window._yoyChart || null;
+window._momChart = window._momChart || null;
+function renderYoYMoM(isDark, gridColor, tickColor){
+  const MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // ---- YoY: jumlah flight per tahun ----
+  const yearMap={};
+  data.forEach(d=>{
+    if(!d.tanggal) return;
+    const y=d.tanggal.slice(0,4);
+    if(!yearMap[y]) yearMap[y]={count:0,delay:0};
+    yearMap[y].count+=1;
+    yearMap[y].delay+=Math.max(0,d.delayMenit);
+  });
+  const years=Object.keys(yearMap).sort();
+  const yoyCounts=years.map(y=>yearMap[y].count);
+  // Pertumbuhan % dari tahun sebelumnya (untuk tooltip)
+  const yoyGrowth=years.map((y,i)=>{
+    if(i===0) return null;
+    const prev=yearMap[years[i-1]].count;
+    if(!prev) return null;
+    return Math.round((yearMap[y].count-prev)/prev*100);
+  });
+
+  if(window._yoyChart) window._yoyChart.destroy();
+  const yoyCanvas=document.getElementById('chartYoY');
+  if(yoyCanvas && years.length){
+    window._yoyChart=new Chart(yoyCanvas,{
+      type:'bar',
+      data:{
+        labels:years,
+        datasets:[{label:'Jumlah Flight per Tahun',data:yoyCounts,backgroundColor:'#7c3aed',borderRadius:6}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>{
+            const g=yoyGrowth[ctx.dataIndex];
+            const base=`Flight: ${ctx.parsed.y}`;
+            return g===null ? base : `${base} (${g>=0?'+':''}${g}% vs tahun sebelumnya)`;
+          }}},
+          datalabels:{display:true,color:isDark?'#e2e8f0':'#1e293b',font:{size:10,weight:'bold'},anchor:'end',align:'top',formatter:(v,ctx)=>{
+            const g=yoyGrowth[ctx.dataIndex];
+            return g===null ? String(v) : `${v} (${g>=0?'+':''}${g}%)`;
+          }}
+        },
+        scales:{
+          y:{grid:{color:gridColor},ticks:{color:tickColor}},
+          x:{grid:{display:false},ticks:{color:tickColor}}
+        }
+      }
+    });
+  }
+
+  // ---- MoM: jumlah flight per bulan (12 bulan terakhir berdasarkan data, urut kronologis) ----
+  const monthMap={};
+  data.forEach(d=>{
+    if(!d.tanggal) return;
+    const ym=d.tanggal.slice(0,7); // YYYY-MM
+    if(!monthMap[ym]) monthMap[ym]=0;
+    monthMap[ym]+=1;
+  });
+  const sortedYm=Object.keys(monthMap).sort();
+  const last12=sortedYm.slice(-12);
+  const momLabels=last12.map(ym=>{const[y,m]=ym.split('-');return MONTH_NAMES[parseInt(m)-1]+' '+y.slice(2);});
+  const momCounts=last12.map(ym=>monthMap[ym]);
+  const momGrowth=last12.map((ym,i)=>{
+    if(i===0) return null;
+    const prev=monthMap[last12[i-1]];
+    if(!prev) return null;
+    return Math.round((monthMap[ym]-prev)/prev*100);
+  });
+
+  if(window._momChart) window._momChart.destroy();
+  const momCanvas=document.getElementById('chartMoM');
+  if(momCanvas && last12.length){
+    window._momChart=new Chart(momCanvas,{
+      type:'bar',
+      data:{
+        labels:momLabels,
+        datasets:[{label:'Jumlah Flight per Bulan',data:momCounts,backgroundColor:'#0ea5e9',borderRadius:6}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>{
+            const g=momGrowth[ctx.dataIndex];
+            const base=`Flight: ${ctx.parsed.y}`;
+            return g===null ? base : `${base} (${g>=0?'+':''}${g}% vs bulan sebelumnya)`;
+          }}},
+          datalabels:{display:true,color:isDark?'#e2e8f0':'#1e293b',font:{size:9,weight:'bold'},anchor:'end',align:'top',formatter:(v,ctx)=>{
+            const g=momGrowth[ctx.dataIndex];
+            return g===null ? String(v) : `${v} (${g>=0?'+':''}${g}%)`;
+          }}
+        },
+        scales:{
+          y:{grid:{color:gridColor},ticks:{color:tickColor}},
+          x:{grid:{display:false},ticks:{color:tickColor,maxRotation:45,minRotation:30,font:{size:10}}}
+        }
+      }
+    });
+  }
 }
 
 // Dashboard PDF Export - Full screenshot capture
@@ -6658,6 +6793,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
   
   document.getElementById('loginOverlay').style.display = 'none';
+  document.body.style.overflow = '';
   document.getElementById('userPanel').classList.remove('hidden');
   document.getElementById('userPanel').classList.add('flex');
   document.getElementById('userNameDisplay').textContent = user.name;
@@ -9640,6 +9776,90 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
         datalabels:{display:true,color:'#fff',font:{size:10,weight:'bold'},anchor:'end',align:'start',formatter:v=>v>0?v:''}
       },scales:{x:{ticks:{font:{size:11}}}}}
     });
+
+    // YoY & MoM — selalu pakai ALL_DATA (seluruh data), tidak terpengaruh filter dashboard
+    renderYoYMoMStcr();
+  }
+
+  // Chart YoY (Year on Year) & MoM (Month on Month) — STCR Dashboard
+  // Menggunakan ALL_DATA (seluruh data request, tanpa filter Tahun/Bulan/AOC/Request/Stasiun)
+  function renderYoYMoMStcr(){
+    const yoyCanvas = $id('stcrYoYChart');
+    const momCanvas = $id('stcrMoMChart');
+    if(!yoyCanvas || !momCanvas) return;
+
+    // ---- YoY: jumlah request per tahun ----
+    const yearMap = {};
+    ALL_DATA.forEach(d=>{
+      const y = d.Year;
+      if(!y) return;
+      yearMap[y] = (yearMap[y]||0) + 1;
+    });
+    const years = Object.keys(yearMap).sort();
+    const yoyCounts = years.map(y=>yearMap[y]);
+    const yoyGrowth = years.map((y,i)=>{
+      if(i===0) return null;
+      const prev = yearMap[years[i-1]];
+      if(!prev) return null;
+      return Math.round((yearMap[y]-prev)/prev*100);
+    });
+
+    destroyChart('yoyChart');
+    charts.yoyChart = new Chart(yoyCanvas,{
+      type:'bar',
+      data:{labels:years,datasets:[{label:'Jumlah Request per Tahun',data:yoyCounts,backgroundColor:'#7C3AED',borderRadius:6}]},
+      options:{responsive:true,plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          const g=yoyGrowth[ctx.dataIndex];
+          const base=`Request: ${ctx.parsed.y}`;
+          return g===null ? base : `${base} (${g>=0?'+':''}${g}% vs tahun sebelumnya)`;
+        }}},
+        datalabels:{display:true,color:'#3b0764',font:{size:10,weight:'bold'},anchor:'end',align:'top',formatter:(v,ctx)=>{
+          const g=yoyGrowth[ctx.dataIndex];
+          return g===null ? String(v) : `${v} (${g>=0?'+':''}${g}%)`;
+        }}
+      },scales:{x:{ticks:{font:{size:11}}}}}
+    });
+
+    // ---- MoM: jumlah request per bulan (12 bulan terakhir, kronologis) ----
+    const monthMap = {};
+    ALL_DATA.forEach(d=>{
+      if(!d.Year || !d.Month) return;
+      const ym = `${d.Year}-${d.Month}`;
+      monthMap[ym] = (monthMap[ym]||0) + 1;
+    });
+    const sortedYm = Object.keys(monthMap).sort((a,b)=>{
+      const [ya,ma] = a.split('-'), [yb,mb] = b.split('-');
+      return (ya-yb)||(MONTHS.indexOf(ma)-MONTHS.indexOf(mb));
+    });
+    const last12 = sortedYm.slice(-12);
+    const momLabels = last12.map(ym=>ym.replace('-',' '));
+    const momCounts = last12.map(ym=>monthMap[ym]);
+    const momGrowth = last12.map((ym,i)=>{
+      if(i===0) return null;
+      const prev = monthMap[last12[i-1]];
+      if(!prev) return null;
+      return Math.round((monthMap[ym]-prev)/prev*100);
+    });
+
+    destroyChart('momChart');
+    charts.momChart = new Chart(momCanvas,{
+      type:'bar',
+      data:{labels:momLabels,datasets:[{label:'Jumlah Request per Bulan',data:momCounts,backgroundColor:'#0EA5E9',borderRadius:6}]},
+      options:{responsive:true,plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          const g=momGrowth[ctx.dataIndex];
+          const base=`Request: ${ctx.parsed.y}`;
+          return g===null ? base : `${base} (${g>=0?'+':''}${g}% vs bulan sebelumnya)`;
+        }}},
+        datalabels:{display:true,color:'#0c4a6e',font:{size:9,weight:'bold'},anchor:'end',align:'top',formatter:(v,ctx)=>{
+          const g=momGrowth[ctx.dataIndex];
+          return g===null ? String(v) : `${v} (${g>=0?'+':''}${g}%)`;
+        }}
+      },scales:{x:{ticks:{maxRotation:45,font:{size:10}}}}}
+    });
   }
 
   // ── TABLE ─────────────────────────────────────────────────────────────
@@ -9755,6 +9975,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
         <td>${d.Remarks?`<span class="stcr-cancel-note">${escapeHtml(d.Remarks)}</span>`:''}</td>
         <td class="stcr-action-cell">
           <button class="stcr-action-btn stcr-action-edit" onclick="STCR.editEntry(${idx})">✏️ Edit</button>
+          <button class="stcr-action-btn stcr-action-cancel" onclick="STCR.cancelEntry(${idx})">🚫 Batal</button>
           <button class="stcr-action-btn stcr-action-delete" onclick="STCR.deleteEntry(${idx})">🗑️ Hapus</button>
         </td>
       </tr>`;
@@ -10012,6 +10233,32 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     showNotif('🗑️ Data request berhasil dihapus');
   }
 
+  // Membatalkan request: set StretcherCase, POBType1, POBType2 (& nilai turunannya) ke 0
+  // Data tidak dihapus, hanya di-nol-kan dan diberi catatan "Cancel" pada Remarks.
+  function cancelEntry(idx){
+    const d = ALL_DATA[idx];
+    if(!d) return;
+    const label = (d['Nama Pasien'] || d['Flight No'] || 'data ini');
+    if(!confirm(`Batalkan request untuk "${label}"? STCR, POB Type1, dan POB Type2 akan menjadi 0.`)) return;
+    d.StretcherCase = 0;
+    d.POBType1 = 0;
+    d.POBType2 = 0;
+    d['Total POB'] = 0;
+    d['Price POB Type1'] = 0;
+    d['Price POB Type2'] = 0;
+    d['Price POB'] = 0;
+    if(!/cancel/i.test(d.Remarks||'')){
+      d.Remarks = (d.Remarks ? d.Remarks.trim() + ' — ' : '') + 'Cancel';
+    }
+    updateTotalBadge();
+    rebuildStationOptions();
+    applyFilters();
+    renderTable();
+    const stationTab = $id('tab-stcr-station');
+    if(stationTab && stationTab.classList.contains('active')) renderStation();
+    showNotif('🚫 Request berhasil dibatalkan (STCR/POB di-nol-kan)');
+  }
+
   function showNotif(text, isError){
     const notif = document.createElement('div');
     notif.style.cssText = `position:fixed;bottom:24px;right:24px;background:${isError?'#dc2626':'#16a34a'};color:#fff;padding:14px 20px;border-radius:10px;font-weight:600;font-size:13px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.2);`;
@@ -10167,6 +10414,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     saveEntry,
     editEntry,
     deleteEntry,
+    cancelEntry,
     formatDateDisplay,
     getData: () => ALL_DATA,
     getFiltered,
@@ -10221,6 +10469,12 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   const _origDeleteEntry = deleteEntry;
   window.STCR.deleteEntry = function(idx){
     _origDeleteEntry(idx);
+    saveStcrData();
+  };
+  // Patch cancelEntry agar otomatis simpan
+  const _origCancelEntry = cancelEntry;
+  window.STCR.cancelEntry = function(idx){
+    _origCancelEntry(idx);
     saveStcrData();
   };
   // Expose saveStcrData untuk dipakai modul cloud sync
