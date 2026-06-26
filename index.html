@@ -83,13 +83,13 @@
 }
 
 /* Smooth accordion */
-#homeMenuContent, #adminMenuContent, #trainingMenuContent, #stcrMenuContent {
+#homeMenuContent, #adminMenuContent, #trainingMenuContent, #stcrMenuContent, #drygoodsMenuContent {
   overflow: hidden;
   transition: max-height 0.3s ease, opacity 0.25s ease;
   max-height: 1200px;
   opacity: 1;
 }
-#homeMenuContent.collapsed, #adminMenuContent.collapsed, #trainingMenuContent.collapsed, #stcrMenuContent.collapsed {
+#homeMenuContent.collapsed, #adminMenuContent.collapsed, #trainingMenuContent.collapsed, #stcrMenuContent.collapsed, #drygoodsMenuContent.collapsed {
   max-height: 0;
   opacity: 0;
 }
@@ -324,7 +324,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 <script>
 // AUTO SAMPLE DATA - prevent empty charts
 (function(){
-  const DB='sjn_delays_v4';
+  const DB='sjn_delay_pro_v4';
   try{
     const existing = JSON.parse(localStorage.getItem(DB)||'[]');
     if(existing.length<5){
@@ -449,6 +449,25 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         </button>
       </div>
     </div>
+
+    <!-- DRYGOODS GroupTab -->
+    <div class="mt-4 pt-4 border-t border-neutral-800">
+      <button id="toggleDrygoodsMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="drygoodsMenuContent">
+        <p class="sidebar-text text-[11px] uppercase tracking-wider text-amber-600 font-semibold">Drygoods</p>
+        <svg id="iconDrygoodsMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div id="drygoodsMenuContent" class="space-y-1" aria-hidden="false">
+        <button data-tab="drygoods-data" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Data Stok Drygoods" type="button">
+          <span class="text-lg w-6 text-center">📦</span> <span class="sidebar-text">Data Stok</span>
+        </button>
+        <button data-tab="drygoods-dashboard" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Dashboard Drygoods" type="button">
+          <span class="text-lg w-6 text-center">📊</span> <span class="sidebar-text">Dashboard</span>
+        </button>
+        <button data-tab="drygoods-ifs" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="IFS Station" type="button">
+          <span class="text-lg w-6 text-center">🏢</span> <span class="sidebar-text">IFS Station</span>
+        </button>
+      </div>
+    </div>
 </nav>
   
   <div class="p-3 border-t border-neutral-800">
@@ -526,6 +545,10 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="flex-1"></div>
+      <button id="btnDarkToggle" title="Mode Gelap/Terang" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 mr-2">
+        <svg id="iconDark" class="hidden" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg id="iconLight" class="hidden" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
       <div id="userPanel" class="hidden items-center gap-2">
         <div class="hidden md:flex items-center gap-3 mr-3 text-xs text-slate-500 dark:text-slate-400">
           <span id="clockWib"></span>
@@ -827,10 +850,15 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       </button>
     </div>
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 flex-1">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-2 flex-1">
         <input type="text" id="searchInput" placeholder="🔍 Cari flight / route..." class="input text-sm">
         <input type="date" id="filterTglFrom" class="input text-sm" title="Dari tanggal">
         <input type="date" id="filterTglTo" class="input text-sm" title="Sampai tanggal">
+        <select id="filterAirline" class="input text-sm" title="Filter Airline">
+          <option value="">Semua Airline</option>
+          <option value="SJ">Sriwijaya Air (SJ)</option>
+          <option value="IN">NAM Air (IN)</option>
+        </select>
         <div class="relative">
           <button type="button" id="btnKatFilter" class="input text-sm text-left flex justify-between items-center">
             <span id="katFilterLabel">Semua Kategori</span>
@@ -1006,6 +1034,29 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="card p-5">
       <h3 class="font-semibold mb-3">🔵 Flight Status Distribution</h3>
       <div class="max-w-xs mx-auto"><div class="relative h-[240px] max-w-xs mx-auto"><canvas id="chartStatus"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Top 3 Delay Terbesar -->
+  <div class="card p-5 mb-5">
+    <h3 class="font-semibold mb-3">🏆 Top 3 Delay Terbesar</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+            <th class="px-3 py-2">#</th>
+            <th class="px-3 py-2">Tanggal</th>
+            <th class="px-3 py-2">No. Flight</th>
+            <th class="px-3 py-2">Rute</th>
+            <th class="px-3 py-2">Durasi Delay</th>
+            <th class="px-3 py-2">Kategori</th>
+            <th class="px-3 py-2">Status</th>
+            <th class="px-3 py-2 text-center">Qty Pax</th>
+            <th class="px-3 py-2 text-right">Est. Cost</th>
+          </tr>
+        </thead>
+        <tbody id="topDelayBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+      </table>
     </div>
   </div>
 
@@ -3708,6 +3759,354 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
   </div>
 </section>
 
+<!-- ============= TAB DRYGOODS — DATA STOK ============= -->
+<section id="tab-drygoods-data" class="tab-pane">
+  <div class="card p-5 md:p-6 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 class="text-lg font-bold flex items-center gap-2">📦 Kartu Stok Drygoods</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Entry transaksi In/Out barang-barang Drygoods per station. Gunakan sub-tab station di bawah.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <select id="dgActiveStation" class="input text-sm" style="min-width:130px">
+          <option value="ALL">— Semua Station —</option>
+          <option value="CGK">CGK</option>
+          <option value="UPG">UPG</option>
+          <option value="SUB">SUB</option>
+          <option value="DPS">DPS</option>
+          <option value="SRG">SRG</option>
+          <option value="DJJ">DJJ</option>
+        </select>
+        <button id="btnDgAddTrx" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Transaksi Baru</button>
+        <button id="btnDgExportExcel" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl">⬇️ Export Excel</button>
+      </div>
+    </div>
+
+    <!-- Station Sub-tabs -->
+    <div class="flex gap-1 flex-wrap border-b border-slate-200 dark:border-slate-700 mb-4 overflow-x-auto" id="dgStationTabs">
+      <button data-dg-station="ALL" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 whitespace-nowrap">🌐 Semua</button>
+      <button data-dg-station="CGK" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ CGK</button>
+      <button data-dg-station="UPG" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ UPG</button>
+      <button data-dg-station="SUB" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ SUB</button>
+      <button data-dg-station="DPS" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ DPS</button>
+      <button data-dg-station="SRG" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ SRG</button>
+      <button data-dg-station="DJJ" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ DJJ</button>
+      <button id="btnDgAddStation" class="px-3 py-2 text-sm font-semibold text-slate-400 hover:text-blue-600 whitespace-nowrap">＋ Station</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <input id="dgSearchTrx" type="text" placeholder="🔍 Cari nama barang / keterangan..." class="input text-sm flex-1 min-w-[200px]">
+      <select id="dgFilterType" class="input text-sm">
+        <option value="">Semua Jenis</option>
+        <option value="IN">IN (Masuk)</option>
+        <option value="OUT">OUT (Keluar)</option>
+      </select>
+      <input id="dgFilterDateFrom" type="date" class="input text-sm" title="Tanggal Dari">
+      <input id="dgFilterDateTo" type="date" class="input text-sm" title="Tanggal Hingga">
+      <button id="btnDgResetFilter" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-semibold rounded-xl">Reset</button>
+    </div>
+
+    <!-- Tabel Stok -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-100 dark:bg-slate-800">
+          <tr>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Tgl</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Station</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Nama Barang</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Kode</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Jenis</th>
+            <th class="px-3 py-2.5 text-right font-semibold text-xs uppercase">Qty</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Satuan</th>
+            <th class="px-3 py-2.5 text-right font-semibold text-xs uppercase">Saldo</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Keterangan</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Input By</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="dgTrxTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+          <tr><td colspan="11" class="text-center py-8 text-slate-400 text-sm">Belum ada data transaksi.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between mt-3 text-xs text-slate-500">
+      <span id="dgTrxInfo">0 transaksi</span>
+      <div class="flex gap-2" id="dgTrxPagination"></div>
+    </div>
+  </div>
+
+  <!-- Summary Saldo per Barang -->
+  <div class="card p-5 md:p-6">
+    <h3 class="font-bold text-base mb-3">📋 Ringkasan Saldo Stok per Barang</h3>
+    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-100 dark:bg-slate-800">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold text-xs uppercase">Nama Barang</th>
+            <th class="px-3 py-2 text-left font-semibold text-xs uppercase">Kode</th>
+            <th class="px-3 py-2 text-left font-semibold text-xs uppercase">Station</th>
+            <th class="px-3 py-2 text-right font-semibold text-xs uppercase">Total IN</th>
+            <th class="px-3 py-2 text-right font-semibold text-xs uppercase">Total OUT</th>
+            <th class="px-3 py-2 text-right font-semibold text-xs uppercase">Saldo</th>
+            <th class="px-3 py-2 text-left font-semibold text-xs uppercase">Satuan</th>
+            <th class="px-3 py-2 text-center font-semibold text-xs uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody id="dgSaldoTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+          <tr><td colspan="8" class="text-center py-6 text-slate-400 text-sm">Belum ada data stok.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============= TAB DRYGOODS — DASHBOARD ============= -->
+<section id="tab-drygoods-dashboard" class="tab-pane">
+  <div class="card p-5 md:p-6 mb-4">
+    <h2 class="text-lg font-bold mb-1">📊 Dashboard Drygoods</h2>
+    <p class="text-xs text-slate-500 mb-4">Ringkasan pergerakan stok drygoods seluruh station.</p>
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6" id="dgKpiGrid">
+      <div class="kpi-card border-l-blue-500">
+        <div class="text-xs text-slate-500 mb-1">Total Jenis Barang</div>
+        <div class="text-2xl font-bold text-blue-600" id="dgKpiItems">0</div>
+      </div>
+      <div class="kpi-card border-l-emerald-500">
+        <div class="text-xs text-slate-500 mb-1">Total Transaksi IN</div>
+        <div class="text-2xl font-bold text-emerald-600" id="dgKpiIn">0</div>
+      </div>
+      <div class="kpi-card border-l-red-500">
+        <div class="text-xs text-slate-500 mb-1">Total Transaksi OUT</div>
+        <div class="text-2xl font-bold text-red-600" id="dgKpiOut">0</div>
+      </div>
+      <div class="kpi-card border-l-amber-500">
+        <div class="text-xs text-slate-500 mb-1">Station Aktif</div>
+        <div class="text-2xl font-bold text-amber-600" id="dgKpiStations">0</div>
+      </div>
+    </div>
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="card p-4">
+        <h3 class="font-semibold text-sm mb-3">Pergerakan Stok per Bulan</h3>
+        <canvas id="dgChartMonthly" height="220"></canvas>
+      </div>
+      <div class="card p-4">
+        <h3 class="font-semibold text-sm mb-3">Top 10 Barang — Konsumsi Tertinggi</h3>
+        <canvas id="dgChartTopItems" height="220"></canvas>
+      </div>
+      <div class="card p-4">
+        <h3 class="font-semibold text-sm mb-3">Distribusi per Station</h3>
+        <canvas id="dgChartStation" height="220"></canvas>
+      </div>
+      <div class="card p-4">
+        <h3 class="font-semibold text-sm mb-3">Barang Stok Rendah (Saldo &lt; 10)</h3>
+        <div id="dgLowStockList" class="space-y-2 max-h-56 overflow-y-auto text-sm">
+          <p class="text-slate-400">Tidak ada item stok rendah.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============= TAB DRYGOODS — IFS STATION ============= -->
+<section id="tab-drygoods-ifs" class="tab-pane">
+  <div class="card p-5 md:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 class="text-lg font-bold">🏢 IFS Station — Data Karyawan</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Data karyawan per station: Nama, NIP, Station, dan Expired Kontrak.</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="btnDgAddEmployee" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Tambah Karyawan</button>
+        <button id="btnDgExportEmployee" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl">⬇️ Export Excel</button>
+      </div>
+    </div>
+
+    <!-- Filter Station IFS -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <select id="dgIfsFilterStation" class="input text-sm">
+        <option value="">— Semua Station —</option>
+        <option value="CGK">CGK</option>
+        <option value="UPG">UPG</option>
+        <option value="SUB">SUB</option>
+        <option value="DPS">DPS</option>
+        <option value="SRG">SRG</option>
+        <option value="DJJ">DJJ</option>
+      </select>
+      <input id="dgIfsSearch" type="text" placeholder="🔍 Cari nama / NIP..." class="input text-sm flex-1 min-w-[200px]">
+      <select id="dgIfsFilterStatus" class="input text-sm">
+        <option value="">Semua Status</option>
+        <option value="active">Aktif</option>
+        <option value="expiring">Akan Habis (≤30 hari)</option>
+        <option value="expired">Sudah Expired</option>
+      </select>
+    </div>
+
+    <!-- KPI Karyawan -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-blue-600" id="dgEmpKpiTotal">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Total Karyawan</div>
+      </div>
+      <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-emerald-600" id="dgEmpKpiActive">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Kontrak Aktif</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-amber-600" id="dgEmpKpiExpiring">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Akan Expired ≤30hr</div>
+      </div>
+      <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-red-600" id="dgEmpKpiExpired">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Sudah Expired</div>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-100 dark:bg-slate-800">
+          <tr>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">No</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Nama Karyawan</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">NIP</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Station</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Jabatan</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Tgl Masuk</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Expired Kontrak</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Status</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="dgEmployeeTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+          <tr><td colspan="9" class="text-center py-8 text-slate-400 text-sm">Belum ada data karyawan.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between mt-3 text-xs text-slate-500">
+      <span id="dgEmpInfo">0 karyawan</span>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL TRANSAKSI DRYGOODS -->
+<div id="dgTrxModal" class="modal-overlay hidden">
+  <div class="modal-box max-w-lg">
+    <h3 id="dgTrxModalTitle" class="text-lg font-bold mb-4">Tambah Transaksi Stok</h3>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Tanggal <span class="text-red-500">*</span></label>
+          <input type="date" id="dgTrxDate" class="input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Station <span class="text-red-500">*</span></label>
+          <select id="dgTrxStation" class="input">
+            <option value="">-- Pilih --</option>
+            <option value="CGK">CGK</option>
+            <option value="UPG">UPG</option>
+            <option value="SUB">SUB</option>
+            <option value="DPS">DPS</option>
+            <option value="SRG">SRG</option>
+            <option value="DJJ">DJJ</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Nama Barang <span class="text-red-500">*</span></label>
+          <input type="text" id="dgTrxItem" class="input" placeholder="e.g. Gelas Plastik" list="dgItemSuggestions" autocomplete="off">
+          <datalist id="dgItemSuggestions"></datalist>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Kode Barang</label>
+          <input type="text" id="dgTrxCode" class="input" placeholder="e.g. GP-001">
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Jenis <span class="text-red-500">*</span></label>
+          <select id="dgTrxType" class="input">
+            <option value="IN">IN (Masuk)</option>
+            <option value="OUT">OUT (Keluar)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Qty <span class="text-red-500">*</span></label>
+          <input type="number" id="dgTrxQty" class="input" min="1" placeholder="0">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Satuan</label>
+          <input type="text" id="dgTrxUnit" class="input" placeholder="pcs / box / lusin">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Keterangan</label>
+        <input type="text" id="dgTrxRemark" class="input" placeholder="Keterangan transaksi...">
+      </div>
+    </div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button id="dgTrxModalCancel" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-medium rounded-lg">Batal</button>
+      <button id="dgTrxModalSave" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KARYAWAN DRYGOODS -->
+<div id="dgEmpModal" class="modal-overlay hidden">
+  <div class="modal-box max-w-lg">
+    <h3 id="dgEmpModalTitle" class="text-lg font-bold mb-4">Tambah Karyawan</h3>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+          <input type="text" id="dgEmpName" class="input" placeholder="Nama karyawan">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">NIP <span class="text-red-500">*</span></label>
+          <input type="text" id="dgEmpNip" class="input" placeholder="Nomor Induk Pegawai">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Station <span class="text-red-500">*</span></label>
+          <select id="dgEmpStation" class="input">
+            <option value="">-- Pilih --</option>
+            <option value="CGK">CGK</option>
+            <option value="UPG">UPG</option>
+            <option value="SUB">SUB</option>
+            <option value="DPS">DPS</option>
+            <option value="SRG">SRG</option>
+            <option value="DJJ">DJJ</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Jabatan</label>
+          <input type="text" id="dgEmpPosition" class="input" placeholder="Jabatan / posisi">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Tanggal Masuk</label>
+          <input type="date" id="dgEmpJoinDate" class="input">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Expired Kontrak <span class="text-red-500">*</span></label>
+          <input type="date" id="dgEmpExpired" class="input">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Catatan</label>
+        <input type="text" id="dgEmpNote" class="input" placeholder="Catatan tambahan...">
+      </div>
+    </div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button id="dgEmpModalCancel" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-medium rounded-lg">Batal</button>
+      <button id="dgEmpModalSave" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
 </main>
 
 <!-- TOAST -->
@@ -6139,11 +6538,20 @@ function updateSyncStatus(status){
 // === MERGE HELPERS - anti tabrakan ===
 function mergeById(localArr=[], remoteArr=[]){
   const map = new Map();
+  // Remote goes first (lower priority), local goes second (higher priority = overwrites)
   [...remoteArr,...localArr].forEach(it=>{
     if(!it || !it.id) return;
     const cur = map.get(it.id);
-    if(!cur || new Date(it.createdAt||it.updatedAt||0) > new Date(cur.createdAt||cur.updatedAt||0)){
+    if(!cur){
+      // First occurrence: always add
       map.set(it.id, it);
+    } else {
+      // Compare timestamps: whichever is newer wins; if no timestamps, local wins (localArr processed last)
+      const itTime  = new Date(it.updatedAt  || it.createdAt  || 0).getTime();
+      const curTime = new Date(cur.updatedAt || cur.createdAt || 0).getTime();
+      if(itTime >= curTime){
+        map.set(it.id, it);
+      }
     }
   });
   return Array.from(map.values());
@@ -6173,6 +6581,9 @@ function getAllCloudData(){
   try { users = JSON.parse(localStorage.getItem('sjnam_users_v1') || 'null'); } catch(e){}
   let stcrData = null;
   try { stcrData = JSON.parse(localStorage.getItem('sjnam_stcr_data_v1') || 'null'); } catch(e){}
+  // Drygoods data
+  let drygoodsData = null;
+  try { drygoodsData = JSON.parse(localStorage.getItem('sjnam_drygoods_v1') || 'null'); } catch(e){}
   // Hak akses per-role (Co-Admin/User/Peserta)
   let rolePerms = null;
   try { rolePerms = JSON.parse(localStorage.getItem('sjnam_role_perms_v1') || 'null'); } catch(e){}
@@ -6202,7 +6613,7 @@ function getAllCloudData(){
   const certParafShow = localStorage.getItem('sjn_cert_paraf_show_v1');
 
   return {
-    data, stations, dfsData, settings, training, users, stcrData,
+    data, stations, dfsData, settings, training, users, stcrData, drygoodsData,
     rolePerms, certTemplate1, certTemplate2, certTemplateActive, certPositions, certBarcode, certCustomTexts,
     certCustomTextsSJ, certCustomTextsNAM, certCustomTextsBoth,
     certParaf, certParafShow,
@@ -6338,9 +6749,9 @@ async function cloudPull(silent = false){
 
     _cloudPullInProgress = true;
     try {
-    if(Array.isArray(rec.data)) { data = rec.data; saveData(); }
-    if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; saveStations(); }
-    if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; saveDfsData(); }
+    if(Array.isArray(rec.data)) { data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); /* no triggerAutoSync */ }
+    if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(stations)); }
+    if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; localStorage.setItem(DFS_KEY, JSON.stringify(dfsData)); }
     if(rec.settings) { settings = {...settings, ...rec.settings}; saveSettings(); applyDarkMode(); }
     if(rec.training){
       localStorage.setItem('sjn_training_v1', JSON.stringify(rec.training));
@@ -6358,6 +6769,14 @@ async function cloudPull(silent = false){
       if(window.STCR && typeof window.STCR.loadData === 'function'){
         window.STCR.loadData();
         if(typeof window.STCR.applyFilters === 'function') window.STCR.applyFilters();
+      }
+    }
+    // Restore drygoods data
+    if(rec.drygoodsData){
+      localStorage.setItem('sjnam_drygoods_v1', JSON.stringify(rec.drygoodsData));
+      if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.loadData === 'function'){
+        window.DRYGOODS.loadData();
+        window.DRYGOODS.renderAll();
       }
     }
     // Restore hak akses per-role
@@ -6445,9 +6864,9 @@ function startRealtimeSubscription(){
         cloudLog('🔄 Update masuk dari device lain ('+( rec._pushedBy||'?')+') — memuat ulang data...', 'info');
         _cloudPullInProgress = true;
         try {
-        if(Array.isArray(rec.data)) { data = rec.data; saveData(); }
-        if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; saveStations(); }
-        if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; saveDfsData(); }
+        if(Array.isArray(rec.data)) { data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+        if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(stations)); }
+        if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; localStorage.setItem(DFS_KEY, JSON.stringify(dfsData)); }
         if(rec.settings) { settings = {...settings, ...rec.settings}; saveSettings(); applyDarkMode(); }
         if(rec.training){
           localStorage.setItem('sjn_training_v1', JSON.stringify(rec.training));
@@ -6463,6 +6882,14 @@ function startRealtimeSubscription(){
           if(window.STCR && typeof window.STCR.loadData === 'function'){
             window.STCR.loadData();
             if(typeof window.STCR.applyFilters === 'function') window.STCR.applyFilters();
+          }
+        }
+        // Restore drygoods dari realtime
+        if(rec.drygoodsData){
+          localStorage.setItem('sjnam_drygoods_v1', JSON.stringify(rec.drygoodsData));
+          if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.loadData === 'function'){
+            window.DRYGOODS.loadData();
+            window.DRYGOODS.renderAll();
           }
         }
         // Restore hak akses per-role dari realtime
@@ -7090,6 +7517,7 @@ function applyPermissions(){
   const trainingMenuGroup = document.getElementById('toggleTrainingMenu')?.closest('div');
   const homeMenuGroup = document.getElementById('toggleHomeMenu')?.closest('div');
   const stcrMenuGroup = document.getElementById('toggleStcrMenu')?.closest('div');
+  const drygoodsMenuGroup = document.getElementById('toggleDrygoodsMenu')?.closest('div');
 
   if(isPeserta){
     // Peserta: HANYA bisa akses "Mulai Training Peserta" (tab-soal-peserta)
@@ -7099,6 +7527,7 @@ function applyPermissions(){
     if(adminMenuGroup) adminMenuGroup.style.display = 'none';
     if(homeMenuGroup) homeMenuGroup.style.display = 'none';
     if(stcrMenuGroup) stcrMenuGroup.style.display = 'none';
+    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
     if(trainingMenuGroup) trainingMenuGroup.style.display = '';
   } else if(isUser){
@@ -7119,6 +7548,8 @@ function applyPermissions(){
     if(homeMenuGroup) homeMenuGroup.style.display = '';
     // Tampilkan Stretchercase & POB menu group (User boleh akses Dashboard/Data/Station)
     if(stcrMenuGroup) stcrMenuGroup.style.display = '';
+    // Tampilkan Drygoods menu group
+    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
     // Sembunyikan tombol Import & Hapus Semua di tab Data (read-only untuk User)
     setTimeout(()=>{
       const elImport = document.getElementById('fileImportJson')?.closest('label');
@@ -7166,6 +7597,8 @@ function applyPermissions(){
     if(trainingMenuGroup) trainingMenuGroup.style.display = '';
     if(homeMenuGroup) homeMenuGroup.style.display = '';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
+    if(stcrMenuGroup) stcrMenuGroup.style.display = '';
+    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
     // Pastikan tombol import/hapus semua tampil lagi
     setTimeout(()=>{
       const elImport2 = document.getElementById('fileImportJson')?.closest('label');
@@ -7421,7 +7854,7 @@ window.switchTab = function(tab){
     } else {
       // Fallback when dynamic perms not yet loaded: use safe defaults for User
       if(_cu.role === 'User'){
-        const userDefault = ['home','input','data','dashboard','soal','soal-peserta','stcr-dashboard','stcr-data','stcr-station'];
+        const userDefault = ['home','input','data','dashboard','soal','soal-peserta','stcr-dashboard','stcr-data','stcr-station','drygoods-data','drygoods-dashboard','drygoods-ifs'];
         if(!userDefault.includes(tab)) return;
       }
     }
@@ -7642,7 +8075,7 @@ document.addEventListener('DOMContentLoaded', function(){ document.getElementByI
   document.getElementById('btnLogoutSide')?.addEventListener('click', ()=> document.getElementById('btnLogout')?.click());
   
   // Initial sync
-  const currentTab = localStorage.getItem('sjn_current_tab') || 'home';
+  const currentTab = localStorage.getItem('sjnam_current_tab') || 'home';
   syncSidebarActive(currentTab);
 });
 </script>
@@ -8796,15 +9229,15 @@ function renderCertificate(p, prefix){
     const resultsEl = document.getElementById('certSearchResults');
     const reprintArea = document.getElementById('certReprintArea');
     if(!resultsEl) return;
-    if(!query){ resultsEl.innerHTML=''; reprintArea.classList.add('hidden'); return; }
-    const matches = trainingData.peserta.filter(p =>
+    if(!query){ resultsEl.innerHTML=''; if(reprintArea) reprintArea.classList.add('hidden'); return; }
+    const matches = (trainingData.peserta||[]).filter(p =>
       (p.certNo||'').toLowerCase().includes(query) ||
       (p.nama||'').toLowerCase().includes(query) ||
       (p.email||'').toLowerCase().includes(query)
     );
     if(!matches.length){
       resultsEl.innerHTML = '<p class="text-sm text-slate-500">Tidak ditemukan data sertifikat.</p>';
-      reprintArea.classList.add('hidden');
+      if(reprintArea) reprintArea.classList.add('hidden');
       return;
     }
     resultsEl.innerHTML = matches.map(p=>`
@@ -8822,9 +9255,12 @@ function renderCertificate(p, prefix){
 
   function showCertReprint(p){
     const reprintArea = document.getElementById('certReprintArea');
+    if(!reprintArea) return;
     reprintArea.classList.remove('hidden');
     renderCertificate(p, 'certReprint');
-    document.getElementById('certReprintInfo').innerHTML = `
+    const reprintInfo = document.getElementById('certReprintInfo');
+    if(!reprintInfo) return;
+    reprintInfo.innerHTML = `
       <p><strong>No Sertifikat:</strong> ${esc(p.certNo)}</p>
       <p><strong>Nama:</strong> ${esc(p.nama)}</p>
       <p><strong>Airlines:</strong> ${p.airlines==='nam'?'NAM Air':'Sriwijaya Air'}</p>
@@ -8838,7 +9274,8 @@ function renderCertificate(p, prefix){
   }
 
   document.getElementById('btnCertSearch')?.addEventListener('click', ()=>{
-    dispatchCertSearch(document.getElementById('certSearchInput').value);
+    const inp = document.getElementById('certSearchInput');
+    if(inp) dispatchCertSearch(inp.value);
   });
   document.getElementById('certSearchInput')?.addEventListener('keydown', (e)=>{
     if(e.key==='Enter') dispatchCertSearch(e.target.value);
@@ -8846,13 +9283,15 @@ function renderCertificate(p, prefix){
   document.getElementById('certSearchResults')?.addEventListener('click', (e)=>{
     const certNo = e.target.closest('[data-cert-pick]')?.getAttribute('data-cert-pick');
     if(certNo){
-      const p = trainingData.peserta.find(x=>x.certNo===certNo);
+      const p = (trainingData.peserta||[]).find(x=>x.certNo===certNo);
       if(p) showCertReprint(p);
     }
   });
   document.getElementById('btnReprintDownload')?.addEventListener('click', ()=>{
-    const certNo = document.getElementById('certReprintArea').dataset.certNo;
-    const p = trainingData.peserta.find(x=>x.certNo===certNo);
+    const repArea = document.getElementById('certReprintArea');
+    if(!repArea) return;
+    const certNo = repArea.dataset.certNo;
+    const p = (trainingData.peserta||[]).find(x=>x.certNo===certNo);
     if(p) downloadCertificate('certReprintPreview', 'sertifikat', p.certNo);
   });
   document.getElementById('btnReprintSendEmail')?.addEventListener('click', ()=>{
@@ -9133,10 +9572,22 @@ function renderCertificate(p, prefix){
 document.getElementById('toggleTrainingMenu')?.addEventListener('click', ()=>{
   const c = document.getElementById('trainingMenuContent');
   const icon = document.getElementById('iconTrainingMenu');
+  if(!c) return;
   const open = !c.classList.contains('collapsed');
   c.classList.toggle('collapsed', open);
   if(icon) icon.style.transform = open ? 'rotate(-90deg)' : 'rotate(0deg)';
+  try{ localStorage.setItem('sjnam_training_menu_open', open ? '0' : '1'); }catch(e){}
 });
+// Restore training menu state
+(function(){
+  const saved = localStorage.getItem('sjnam_training_menu_open');
+  if(saved === '0'){
+    const c = document.getElementById('trainingMenuContent');
+    const icon = document.getElementById('iconTrainingMenu');
+    if(c){ c.classList.add('collapsed'); }
+    if(icon) icon.style.transform = 'rotate(-90deg)';
+  }
+})();
 // NOTE: toggleStcrMenu sudah ditangani di sidebar DOMContentLoaded block di atas (dengan localStorage persistence). Tidak perlu listener duplikat di sini.
 })();
 </script>
@@ -9302,6 +9753,9 @@ window.addEventListener('beforeunload', ()=>{
     { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false} },
     { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false} },
     { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false} },
+    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok',  def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard',  def:{coAdmin:true, user:true,  peserta:false} },
+    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station',def:{coAdmin:true, user:true,  peserta:false} },
     { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false} },
     { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false} },
     { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false} },
@@ -9450,6 +9904,9 @@ window.addEventListener('beforeunload', ()=>{
       'tab-stcr-dashboard': document.querySelector('[data-tab="stcr-dashboard"]'),
       'tab-stcr-data':      document.querySelector('[data-tab="stcr-data"]'),
       'tab-stcr-station':   document.querySelector('[data-tab="stcr-station"]'),
+      'tab-drygoods-data':      document.querySelector('[data-tab="drygoods-data"]'),
+      'tab-drygoods-dashboard': document.querySelector('[data-tab="drygoods-dashboard"]'),
+      'tab-drygoods-ifs':       document.querySelector('[data-tab="drygoods-ifs"]'),
     };
 
     Object.entries(tabMap).forEach(([featId, el])=>{
@@ -9465,6 +9922,10 @@ window.addEventListener('beforeunload', ()=>{
     if(homeMenuGroup) homeMenuGroup.style.display = (canSee('tab-home')||canSee('tab-input')||canSee('tab-data')||canSee('tab-dashboard')||canSee('tab-request')||canSee('tab-dfs')) ? '' : 'none';
     if(trainingMenuGroup) trainingMenuGroup.style.display = (canSee('tab-materi')||canSee('tab-soal')||canSee('feat-mulai')||canSee('tab-sertifikat')) ? '' : 'none';
     if(stcrMenuGroup2) stcrMenuGroup2.style.display = (canSee('tab-stcr-dashboard')||canSee('tab-stcr-data')||canSee('tab-stcr-station')) ? '' : 'none';
+
+    // Drygoods menu group
+    const drygoodsMenuGroup = document.getElementById('toggleDrygoodsMenu')?.closest('div');
+    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = (canSee('tab-drygoods-data')||canSee('tab-drygoods-dashboard')||canSee('tab-drygoods-ifs')) ? '' : 'none';
 
     const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = canSee('feat-mulai') ? '' : 'none';
@@ -9780,20 +10241,9 @@ window.addEventListener('beforeunload', ()=>{
   console.log('[SJNAM Enhanced] All features loaded: Admin Rules, Timer, Undo Stack');
 })();
 
-// ===================================================================
-// STRETCHERCASE & POB MENU: hook ke sistem switchTab agar render
-// dashboard / tabel / station setiap kali sub-menu terkait dibuka.
-// ===================================================================
-(function(){
-  const _origSwitchTabStcr = window.switchTab;
-  window.switchTab = function(name){
-    if(typeof _origSwitchTabStcr === 'function') _origSwitchTabStcr.apply(this, arguments);
-    if(!window.STCR) return;
-    if(name === 'stcr-dashboard') window.STCR.onShowDashboard();
-    else if(name === 'stcr-data') window.STCR.onShowData();
-    else if(name === 'stcr-station') window.STCR.onShowStation();
-  };
-})();
+// NOTE: STCR tab rendering is already handled by the base switchTab function above.
+// The separate wrapper has been removed to prevent double-rendering.
+
 </script>
 
 <!-- ============================================================ -->
@@ -11672,6 +12122,591 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     setTimeout(init, 200);
   }
 })();
+</script>
 
+<script>
+// =================================================================
+// DRYGOODS MODULE — Kartu Stok & IFS Station
+// =================================================================
+(function(){
+  'use strict';
+  const DG_KEY  = 'sjnam_drygoods_v1';
+  const DG_STATIONS_DEFAULT = ['CGK','UPG','SUB','DPS','SRG','DJJ'];
+
+  let dgData = { transactions:[], employees:[], stations: DG_STATIONS_DEFAULT.slice() };
+
+  // ── STORAGE ──────────────────────────────────────────────────────
+  function saveDrygoodsData(){
+    try { localStorage.setItem(DG_KEY, JSON.stringify(dgData)); } catch(e){}
+    if(typeof triggerAutoSync === 'function') triggerAutoSync();
+  }
+  function loadDrygoodsData(){
+    try {
+      const raw = localStorage.getItem(DG_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(parsed && typeof parsed === 'object'){
+          dgData.transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+          dgData.employees    = Array.isArray(parsed.employees)    ? parsed.employees    : [];
+          dgData.stations     = Array.isArray(parsed.stations)     ? parsed.stations     : DG_STATIONS_DEFAULT.slice();
+          return true;
+        }
+      }
+    } catch(e){}
+    return false;
+  }
+  loadDrygoodsData();
+
+  // ── HELPERS ───────────────────────────────────────────────────────
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function fmtDate(d){ if(!d)return'-'; const [y,m,dd]=d.split('-'); return `${dd}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]}-${y}`; }
+  function todayStr(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+  function genId(){ return 'dg_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+
+  // ── STATION TABS ─────────────────────────────────────────────────
+  let activeDgStation = 'ALL';
+  function buildStationTabs(){
+    const container = document.getElementById('dgStationTabs');
+    if(!container) return;
+    // Keep the last child (+ Station button)
+    const addBtn = document.getElementById('btnDgAddStation');
+    container.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.setAttribute('data-dg-station','ALL');
+    allBtn.className = 'dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 whitespace-nowrap '+(activeDgStation==='ALL'?'border-blue-600 text-blue-600':'border-transparent text-slate-500 hover:text-slate-700');
+    allBtn.textContent = '🌐 Semua';
+    container.appendChild(allBtn);
+    dgData.stations.forEach(st=>{
+      const btn = document.createElement('button');
+      btn.setAttribute('data-dg-station', st);
+      btn.className = 'dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 whitespace-nowrap '+(activeDgStation===st?'border-blue-600 text-blue-600':'border-transparent text-slate-500 hover:text-slate-700');
+      btn.textContent = '✈ '+st;
+      container.appendChild(btn);
+    });
+    if(addBtn) container.appendChild(addBtn); else {
+      const nb = document.createElement('button');
+      nb.id = 'btnDgAddStation';
+      nb.className = 'px-3 py-2 text-sm font-semibold text-slate-400 hover:text-blue-600 whitespace-nowrap';
+      nb.textContent = '＋ Station';
+      container.appendChild(nb);
+    }
+    // Wire station filter select
+    const sel = document.getElementById('dgActiveStation');
+    if(sel){
+      sel.innerHTML = '<option value="ALL">— Semua Station —</option>';
+      dgData.stations.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+      // Also update IFS filter selects
+      ['dgIfsFilterStation','dgTrxStation','dgEmpStation'].forEach(id=>{
+        const el=document.getElementById(id); if(!el) return;
+        const cur=el.value;
+        const isFilter = id.includes('Filter');
+        el.innerHTML = isFilter ? '<option value="">— Semua Station —</option>' : '<option value="">-- Pilih --</option>';
+        dgData.stations.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; el.appendChild(o); });
+        if(dgData.stations.includes(cur)) el.value=cur;
+      });
+    }
+  }
+
+  // ── SALDO CALCULATION ─────────────────────────────────────────────
+  function calcSaldo(){
+    // Map: { key: station+'|'+itemName => { nama,kode,satuan,in:0,out:0 } }
+    const map = {};
+    dgData.transactions.forEach(t=>{
+      const key = (t.station||'')+'|'+(t.item||'').toLowerCase();
+      if(!map[key]) map[key] = { nama:t.item, kode:t.kode||'', station:t.station, satuan:t.unit||'', in:0, out:0 };
+      if(t.type==='IN') map[key].in += Number(t.qty)||0;
+      else              map[key].out += Number(t.qty)||0;
+    });
+    return Object.values(map).map(r=>({ ...r, saldo: r.in - r.out }));
+  }
+
+  // ── RUNNING SALDO PER TRX ────────────────────────────────────────
+  function getFilteredTrx(){
+    const search = (document.getElementById('dgSearchTrx')?.value||'').toLowerCase();
+    const type   = document.getElementById('dgFilterType')?.value||'';
+    const from   = document.getElementById('dgFilterDateFrom')?.value||'';
+    const to     = document.getElementById('dgFilterDateTo')?.value||'';
+    return dgData.transactions.filter(t=>{
+      if(activeDgStation !== 'ALL' && t.station !== activeDgStation) return false;
+      if(type && t.type !== type) return false;
+      if(from && t.date < from) return false;
+      if(to   && t.date > to)   return false;
+      if(search && ![(t.item||'').toLowerCase(),(t.remark||'').toLowerCase()].join(' ').includes(search)) return false;
+      return true;
+    }).sort((a,b)=> a.date > b.date ? -1 : a.date < b.date ? 1 : 0);
+  }
+
+  // ── RENDER TRANSAKSI TABLE ────────────────────────────────────────
+  let dgPage = 1;
+  const DG_PAGE_SIZE = 30;
+  function renderDgTrx(){
+    const tbody = document.getElementById('dgTrxTableBody');
+    if(!tbody) return;
+    const filtered = getFilteredTrx();
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total/DG_PAGE_SIZE));
+    if(dgPage > totalPages) dgPage = totalPages;
+    const start = (dgPage-1)*DG_PAGE_SIZE;
+    const page = filtered.slice(start, start+DG_PAGE_SIZE);
+
+    // Compute running saldo per item per station (non-mutating: separate map by id)
+    const saldoById = {};
+    [...dgData.transactions]
+      .sort((a,b)=> a.date>b.date?1:a.date<b.date?-1:0)
+      .forEach(t=>{
+        const k=(t.station||'')+'|'+(t.item||'').toLowerCase();
+        if(saldoById[k] === undefined) saldoById[k] = 0;
+        saldoById[k] += (t.type==='IN'?1:-1)*(Number(t.qty)||0);
+        saldoById[t.id] = saldoById[k]; // map by id for O(1) lookup
+      });
+
+    if(!page.length){
+      tbody.innerHTML='<tr><td colspan="11" class="text-center py-8 text-slate-400 text-sm">Tidak ada data transaksi.</td></tr>';
+    } else {
+      tbody.innerHTML = page.map((t,i)=>{
+        const isIn = t.type==='IN';
+        const saldoVal = saldoById[t.id] !== undefined ? saldoById[t.id] : '-';
+        const saldoClass = typeof saldoVal === 'number' ? (saldoVal < 0 ? 'text-red-600 font-bold' : saldoVal < 10 ? 'text-amber-600 font-bold' : 'text-emerald-700 font-bold') : '';
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+          <td class="px-3 py-2 text-xs text-slate-500 whitespace-nowrap">${fmtDate(t.date)}</td>
+          <td class="px-3 py-2"><span class="badge bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">${esc(t.station||'-')}</span></td>
+          <td class="px-3 py-2 font-medium text-sm">${esc(t.item||'-')}</td>
+          <td class="px-3 py-2 text-xs font-mono text-slate-500">${esc(t.kode||'-')}</td>
+          <td class="px-3 py-2 text-center">
+            <span class="badge ${isIn?'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300':'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}">
+              ${isIn?'📥 IN':'📤 OUT'}
+            </span>
+          </td>
+          <td class="px-3 py-2 text-right font-semibold ${isIn?'text-emerald-700':'text-red-700'}">${Number(t.qty)||0}</td>
+          <td class="px-3 py-2 text-xs text-slate-500">${esc(t.unit||'-')}</td>
+          <td class="px-3 py-2 text-right ${saldoClass}">${saldoVal}</td>
+          <td class="px-3 py-2 text-xs text-slate-500 max-w-[120px] truncate" title="${esc(t.remark||'')}">${esc(t.remark||'-')}</td>
+          <td class="px-3 py-2 text-xs text-slate-400">${esc(t.inputBy||'-')}</td>
+          <td class="px-3 py-2 text-center whitespace-nowrap">
+            <button data-dg-edit-trx="${t.id}" class="text-blue-600 hover:underline text-xs mr-2">Edit</button>
+            <button data-dg-del-trx="${t.id}" class="text-red-600 hover:underline text-xs">Hapus</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    const info = document.getElementById('dgTrxInfo');
+    if(info) info.textContent = `${total} transaksi`;
+
+    // Pagination
+    const pag = document.getElementById('dgTrxPagination');
+    if(pag){
+      let html = `<button ${dgPage===1?'disabled':''} data-dg-page="${dgPage-1}" class="px-2 py-1 rounded border text-xs disabled:opacity-40">‹</button>`;
+      for(let p=Math.max(1,dgPage-2); p<=Math.min(totalPages,dgPage+2); p++){
+        html+=`<button data-dg-page="${p}" class="px-2 py-1 rounded border text-xs ${p===dgPage?'bg-blue-600 text-white border-blue-600':''}">${p}</button>`;
+      }
+      html+=`<button ${dgPage===totalPages?'disabled':''} data-dg-page="${dgPage+1}" class="px-2 py-1 rounded border text-xs disabled:opacity-40">›</button>`;
+      pag.innerHTML = html;
+      pag.onclick = e=>{ const p=e.target.dataset.dgPage; if(p){ dgPage=parseInt(p); renderDgTrx(); }};
+    }
+
+    renderDgSaldo();
+  }
+
+  function renderDgSaldo(){
+    const tbody = document.getElementById('dgSaldoTableBody');
+    if(!tbody) return;
+    const saldos = calcSaldo().filter(s=> activeDgStation==='ALL' || s.station===activeDgStation);
+    if(!saldos.length){
+      tbody.innerHTML='<tr><td colspan="8" class="text-center py-6 text-slate-400 text-sm">Belum ada data stok.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = saldos.sort((a,b)=>a.nama.localeCompare(b.nama)).map(s=>{
+      const statusClass = s.saldo < 0 ? 'bg-red-100 text-red-700' : s.saldo < 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+      const statusLabel = s.saldo < 0 ? '⚠️ Minus' : s.saldo < 10 ? '🔴 Rendah' : '✅ OK';
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+        <td class="px-3 py-2 font-medium text-sm">${esc(s.nama)}</td>
+        <td class="px-3 py-2 text-xs font-mono text-slate-500">${esc(s.kode||'-')}</td>
+        <td class="px-3 py-2"><span class="badge bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">${esc(s.station||'-')}</span></td>
+        <td class="px-3 py-2 text-right text-emerald-700 font-semibold">${s.in}</td>
+        <td class="px-3 py-2 text-right text-red-700 font-semibold">${s.out}</td>
+        <td class="px-3 py-2 text-right font-bold ${s.saldo<0?'text-red-700':s.saldo<10?'text-amber-600':'text-slate-800 dark:text-slate-100'}">${s.saldo}</td>
+        <td class="px-3 py-2 text-xs text-slate-500">${esc(s.satuan||'-')}</td>
+        <td class="px-3 py-2 text-center"><span class="badge ${statusClass}">${statusLabel}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── RENDER EMPLOYEE TABLE ────────────────────────────────────────
+  function renderDgEmployees(){
+    const tbody = document.getElementById('dgEmployeeTableBody');
+    if(!tbody) return;
+    const search = (document.getElementById('dgIfsSearch')?.value||'').toLowerCase();
+    const filterSt = document.getElementById('dgIfsFilterStation')?.value||'';
+    const filterStatus = document.getElementById('dgIfsFilterStatus')?.value||'';
+    const today = todayStr();
+    let list = dgData.employees.filter(e=>{
+      if(filterSt && e.station !== filterSt) return false;
+      if(search && ![(e.name||'').toLowerCase(),(e.nip||'').toLowerCase()].join(' ').includes(search)) return false;
+      if(filterStatus){
+        const daysLeft = e.expired ? Math.ceil((new Date(e.expired)-new Date(today))/(1000*60*60*24)) : 9999;
+        if(filterStatus==='active' && daysLeft <= 0) return false;
+        if(filterStatus==='expiring' && (daysLeft > 30 || daysLeft <= 0)) return false;
+        if(filterStatus==='expired' && daysLeft > 0) return false;
+      }
+      return true;
+    });
+
+    // KPI
+    const kpiAll  = dgData.employees.length;
+    let kpiActive=0, kpiExpiring=0, kpiExpired=0;
+    dgData.employees.forEach(e=>{
+      const dl = e.expired ? Math.ceil((new Date(e.expired)-new Date(today))/(1000*60*60*24)) : 9999;
+      if(dl > 30) kpiActive++;
+      else if(dl > 0) kpiExpiring++;
+      else kpiExpired++;
+    });
+    document.getElementById('dgEmpKpiTotal').textContent  = kpiAll;
+    document.getElementById('dgEmpKpiActive').textContent = kpiActive;
+    document.getElementById('dgEmpKpiExpiring').textContent = kpiExpiring;
+    document.getElementById('dgEmpKpiExpired').textContent  = kpiExpired;
+    document.getElementById('dgEmpInfo').textContent = `${list.length} karyawan`;
+
+    if(!list.length){
+      tbody.innerHTML='<tr><td colspan="9" class="text-center py-8 text-slate-400 text-sm">Tidak ada data karyawan.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map((e,i)=>{
+      const daysLeft = e.expired ? Math.ceil((new Date(e.expired)-new Date(today))/(1000*60*60*24)) : 9999;
+      let statusClass = 'bg-emerald-100 text-emerald-700', statusLabel = '✅ Aktif';
+      if(daysLeft <= 0){ statusClass='bg-red-100 text-red-700'; statusLabel='❌ Expired'; }
+      else if(daysLeft <= 30){ statusClass='bg-amber-100 text-amber-700'; statusLabel=`⚠️ ${daysLeft}hr`; }
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+        <td class="px-3 py-2 text-xs text-slate-400">${i+1}</td>
+        <td class="px-3 py-2 font-semibold text-sm">${esc(e.name||'-')}</td>
+        <td class="px-3 py-2 font-mono text-xs">${esc(e.nip||'-')}</td>
+        <td class="px-3 py-2 text-center"><span class="badge bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">${esc(e.station||'-')}</span></td>
+        <td class="px-3 py-2 text-xs">${esc(e.position||'-')}</td>
+        <td class="px-3 py-2 text-xs whitespace-nowrap">${fmtDate(e.joinDate)}</td>
+        <td class="px-3 py-2 text-xs font-medium whitespace-nowrap ${daysLeft<=0?'text-red-600':daysLeft<=30?'text-amber-600':''}">${fmtDate(e.expired)}</td>
+        <td class="px-3 py-2 text-center"><span class="badge ${statusClass}">${statusLabel}</span></td>
+        <td class="px-3 py-2 text-center whitespace-nowrap">
+          <button data-dg-edit-emp="${e.id}" class="text-blue-600 hover:underline text-xs mr-2">Edit</button>
+          <button data-dg-del-emp="${e.id}" class="text-red-600 hover:underline text-xs">Hapus</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── DASHBOARD ─────────────────────────────────────────────────────
+  let dgCharts = {};
+  function destroyDgChart(k){ if(dgCharts[k]){ dgCharts[k].destroy(); delete dgCharts[k]; } }
+  function renderDgDashboard(){
+    // KPI
+    const saldos = calcSaldo();
+    document.getElementById('dgKpiItems').textContent     = new Set(dgData.transactions.map(t=>t.item)).size;
+    document.getElementById('dgKpiIn').textContent        = dgData.transactions.filter(t=>t.type==='IN').reduce((s,t)=>s+(Number(t.qty)||0),0);
+    document.getElementById('dgKpiOut').textContent       = dgData.transactions.filter(t=>t.type==='OUT').reduce((s,t)=>s+(Number(t.qty)||0),0);
+    document.getElementById('dgKpiStations').textContent  = new Set(dgData.transactions.map(t=>t.station).filter(Boolean)).size;
+
+    // Chart Monthly
+    const monthMap = {};
+    dgData.transactions.forEach(t=>{
+      if(!t.date) return;
+      const ym = t.date.slice(0,7);
+      if(!monthMap[ym]) monthMap[ym]={in:0,out:0};
+      if(t.type==='IN') monthMap[ym].in += Number(t.qty)||0;
+      else monthMap[ym].out += Number(t.qty)||0;
+    });
+    const months = Object.keys(monthMap).sort().slice(-12);
+    destroyDgChart('monthly');
+    const ctx1 = document.getElementById('dgChartMonthly');
+    if(ctx1 && months.length){
+      dgCharts.monthly = new Chart(ctx1,{type:'bar',data:{labels:months,datasets:[
+        {label:'IN',data:months.map(m=>monthMap[m].in),backgroundColor:'#10b981',borderRadius:4},
+        {label:'OUT',data:months.map(m=>monthMap[m].out),backgroundColor:'#ef4444',borderRadius:4}
+      ]},options:{responsive:true,plugins:{legend:{display:true}},scales:{x:{ticks:{maxRotation:45,font:{size:9}}}}}});
+    }
+
+    // Chart Top Items
+    const itemMap = {};
+    dgData.transactions.filter(t=>t.type==='OUT').forEach(t=>{ itemMap[t.item]=(itemMap[t.item]||0)+(Number(t.qty)||0); });
+    const topItems = Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    destroyDgChart('topItems');
+    const ctx2 = document.getElementById('dgChartTopItems');
+    if(ctx2 && topItems.length){
+      dgCharts.topItems = new Chart(ctx2,{type:'bar',data:{labels:topItems.map(x=>x[0]),datasets:[{label:'Total OUT',data:topItems.map(x=>x[1]),backgroundColor:'#6366f1',borderRadius:4}]},
+      options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}}}}});
+    }
+
+    // Chart Station
+    const stMap = {};
+    dgData.transactions.forEach(t=>{ if(t.station) stMap[t.station]=(stMap[t.station]||0)+1; });
+    destroyDgChart('station');
+    const ctx3 = document.getElementById('dgChartStation');
+    if(ctx3 && Object.keys(stMap).length){
+      dgCharts.station = new Chart(ctx3,{type:'pie',data:{labels:Object.keys(stMap),datasets:[{data:Object.values(stMap),backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6']}]},options:{responsive:true}});
+    }
+
+    // Low Stock
+    const lowEl = document.getElementById('dgLowStockList');
+    if(lowEl){
+      const low = saldos.filter(s=>s.saldo < 10);
+      lowEl.innerHTML = low.length ? low.sort((a,b)=>a.saldo-b.saldo).map(s=>`
+        <div class="flex items-center justify-between p-2 rounded-lg ${s.saldo<0?'bg-red-50 dark:bg-red-900/20':'bg-amber-50 dark:bg-amber-900/20'}">
+          <span class="font-medium text-sm">${esc(s.nama)} <span class="text-xs text-slate-500">(${esc(s.station)})</span></span>
+          <span class="badge ${s.saldo<0?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${s.saldo}</span>
+        </div>`).join('')
+        : '<p class="text-slate-400 text-sm text-center py-4">✅ Semua stok dalam batas aman.</p>';
+    }
+  }
+
+  // ── MODAL TRANSAKSI ───────────────────────────────────────────────
+  let dgEditTrxId = null;
+  function openTrxModal(trx){
+    dgEditTrxId = trx ? trx.id : null;
+    document.getElementById('dgTrxModalTitle').textContent = trx ? 'Edit Transaksi' : 'Tambah Transaksi Stok';
+    document.getElementById('dgTrxDate').value    = trx?.date    || todayStr();
+    document.getElementById('dgTrxStation').value = trx?.station || (activeDgStation!=='ALL'?activeDgStation:'');
+    document.getElementById('dgTrxItem').value    = trx?.item    || '';
+    document.getElementById('dgTrxCode').value    = trx?.kode    || '';
+    document.getElementById('dgTrxType').value    = trx?.type    || 'IN';
+    document.getElementById('dgTrxQty').value     = trx?.qty     || '';
+    document.getElementById('dgTrxUnit').value    = trx?.unit    || '';
+    document.getElementById('dgTrxRemark').value  = trx?.remark  || '';
+    // Build item autocomplete from existing items
+    const suggestions = document.getElementById('dgItemSuggestions');
+    if(suggestions){
+      const items = [...new Set(dgData.transactions.map(t=>t.item).filter(Boolean))];
+      suggestions.innerHTML = items.map(i=>`<option value="${esc(i)}">`).join('');
+    }
+    document.getElementById('dgTrxModal').classList.remove('hidden');
+  }
+  function closeTrxModal(){ document.getElementById('dgTrxModal').classList.add('hidden'); }
+
+  document.getElementById('dgTrxModalCancel')?.addEventListener('click', closeTrxModal);
+  // Click outside modal to close
+  document.getElementById('dgTrxModal')?.addEventListener('click', e=>{ if(e.target === document.getElementById('dgTrxModal')) closeTrxModal(); });
+  document.getElementById('dgTrxModalSave')?.addEventListener('click', ()=>{
+    const date    = document.getElementById('dgTrxDate').value;
+    const station = document.getElementById('dgTrxStation').value;
+    const item    = document.getElementById('dgTrxItem').value.trim();
+    const kode    = document.getElementById('dgTrxCode').value.trim();
+    const type    = document.getElementById('dgTrxType').value;
+    const qty     = parseInt(document.getElementById('dgTrxQty').value)||0;
+    const unit    = document.getElementById('dgTrxUnit').value.trim();
+    const remark  = document.getElementById('dgTrxRemark').value.trim();
+    if(!date||!station||!item||!qty){ showToast('Lengkapi: Tanggal, Station, Nama Barang, Qty','error'); return; }
+    const currentUser = window.currentUser;
+    const entry = { id: dgEditTrxId||genId(), date, station, item, kode, type, qty, unit, remark, inputBy: currentUser?.name||currentUser?.username||'', updatedAt: new Date().toISOString() };
+    const idx = dgData.transactions.findIndex(t=>t.id===dgEditTrxId);
+    if(idx>-1) dgData.transactions[idx]=entry; else dgData.transactions.unshift(entry);
+    saveDrygoodsData();
+    closeTrxModal();
+    renderDgTrx();
+    showToast(dgEditTrxId?'Transaksi diperbarui':'Transaksi ditambahkan','success');
+  });
+
+  // Delete trx
+  document.getElementById('dgTrxTableBody')?.addEventListener('click', async e=>{
+    const editId = e.target.closest('[data-dg-edit-trx]')?.dataset.dgEditTrx;
+    const delId  = e.target.closest('[data-dg-del-trx]')?.dataset.dgDelTrx;
+    if(editId){ const t=dgData.transactions.find(x=>x.id===editId); if(t) openTrxModal(t); }
+    if(delId){
+      const ok = await showConfirm('Hapus Transaksi','Hapus transaksi ini?');
+      if(!ok) return;
+      dgData.transactions = dgData.transactions.filter(t=>t.id!==delId);
+      saveDrygoodsData(); renderDgTrx(); showToast('Transaksi dihapus');
+    }
+  });
+
+  // ── MODAL KARYAWAN ────────────────────────────────────────────────
+  let dgEditEmpId = null;
+  function openEmpModal(emp){
+    dgEditEmpId = emp ? emp.id : null;
+    document.getElementById('dgEmpModalTitle').textContent = emp ? 'Edit Karyawan' : 'Tambah Karyawan';
+    document.getElementById('dgEmpName').value     = emp?.name     || '';
+    document.getElementById('dgEmpNip').value      = emp?.nip      || '';
+    document.getElementById('dgEmpStation').value  = emp?.station  || '';
+    document.getElementById('dgEmpPosition').value = emp?.position || '';
+    document.getElementById('dgEmpJoinDate').value = emp?.joinDate || '';
+    document.getElementById('dgEmpExpired').value  = emp?.expired  || '';
+    document.getElementById('dgEmpNote').value     = emp?.note     || '';
+    document.getElementById('dgEmpModal').classList.remove('hidden');
+  }
+  function closeEmpModal(){ document.getElementById('dgEmpModal').classList.add('hidden'); }
+
+  document.getElementById('dgEmpModalCancel')?.addEventListener('click', closeEmpModal);
+  // Click outside modal to close
+  document.getElementById('dgEmpModal')?.addEventListener('click', e=>{ if(e.target === document.getElementById('dgEmpModal')) closeEmpModal(); });
+  document.getElementById('dgEmpModalSave')?.addEventListener('click', ()=>{
+    const name     = document.getElementById('dgEmpName').value.trim();
+    const nip      = document.getElementById('dgEmpNip').value.trim();
+    const station  = document.getElementById('dgEmpStation').value;
+    const position = document.getElementById('dgEmpPosition').value.trim();
+    const joinDate = document.getElementById('dgEmpJoinDate').value;
+    const expired  = document.getElementById('dgEmpExpired').value;
+    const note     = document.getElementById('dgEmpNote').value.trim();
+    if(!name||!nip||!station||!expired){ showToast('Lengkapi: Nama, NIP, Station, Expired Kontrak','error'); return; }
+    const entry = { id: dgEditEmpId||genId(), name, nip, station, position, joinDate, expired, note, updatedAt: new Date().toISOString() };
+    const idx = dgData.employees.findIndex(e=>e.id===dgEditEmpId);
+    if(idx>-1) dgData.employees[idx]=entry; else dgData.employees.push(entry);
+    saveDrygoodsData();
+    closeEmpModal();
+    renderDgEmployees();
+    showToast(dgEditEmpId?'Data karyawan diperbarui':'Karyawan ditambahkan','success');
+  });
+
+  document.getElementById('dgEmployeeTableBody')?.addEventListener('click', async e=>{
+    const editId = e.target.closest('[data-dg-edit-emp]')?.dataset.dgEditEmp;
+    const delId  = e.target.closest('[data-dg-del-emp]')?.dataset.dgDelEmp;
+    if(editId){ const emp=dgData.employees.find(x=>x.id===editId); if(emp) openEmpModal(emp); }
+    if(delId){
+      const ok = await showConfirm('Hapus Karyawan','Hapus data karyawan ini?');
+      if(!ok) return;
+      dgData.employees = dgData.employees.filter(e=>e.id!==delId);
+      saveDrygoodsData(); renderDgEmployees(); showToast('Data karyawan dihapus');
+    }
+  });
+
+  // ── EVENT WIRING ──────────────────────────────────────────────────
+  // Add button
+  document.getElementById('btnDgAddTrx')?.addEventListener('click', ()=> openTrxModal(null));
+  document.getElementById('btnDgAddEmployee')?.addEventListener('click', ()=> openEmpModal(null));
+
+  // Station tabs click
+  document.getElementById('dgStationTabs')?.addEventListener('click', e=>{
+    const st = e.target.closest('[data-dg-station]')?.dataset.dgStation;
+    if(!st) return;
+    activeDgStation = st;
+    buildStationTabs();
+    dgPage=1; renderDgTrx();
+  });
+
+  // Active station select change
+  document.getElementById('dgActiveStation')?.addEventListener('change', e=>{
+    activeDgStation = e.target.value;
+    buildStationTabs(); dgPage=1; renderDgTrx();
+  });
+
+  // Filter changes
+  ['dgSearchTrx','dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', ()=>{ dgPage=1; renderDgTrx(); });
+  });
+  document.getElementById('btnDgResetFilter')?.addEventListener('click', ()=>{
+    ['dgSearchTrx','dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    activeDgStation='ALL'; buildStationTabs(); dgPage=1; renderDgTrx();
+  });
+
+  // IFS filters
+  ['dgIfsSearch','dgIfsFilterStation','dgIfsFilterStatus'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', renderDgEmployees);
+    document.getElementById(id)?.addEventListener('change', renderDgEmployees);
+  });
+
+  // Add station
+  document.addEventListener('click', e=>{
+    if(e.target && e.target.id === 'btnDgAddStation'){
+      const st = prompt('Kode Station baru (3 huruf, contoh: MKS):');
+      if(!st) return;
+      const code = st.trim().toUpperCase().slice(0,3);
+      if(!code || code.length < 2){ showToast('Kode station tidak valid','error'); return; }
+      if(dgData.stations.includes(code)){ showToast('Station sudah ada','error'); return; }
+      dgData.stations.push(code);
+      saveDrygoodsData();
+      buildStationTabs();
+      showToast('Station '+code+' ditambahkan','success');
+    }
+  });
+
+  // Export Excel Transactions
+  document.getElementById('btnDgExportExcel')?.addEventListener('click', ()=>{
+    if(!window.XLSX){ showToast('XLSX tidak tersedia','error'); return; }
+    const rows = getFilteredTrx().map((t,i)=>({
+      'No':i+1,'Tanggal':t.date,'Station':t.station,'Nama Barang':t.item,'Kode':t.kode||'',
+      'Jenis':t.type,'Qty':t.qty,'Satuan':t.unit||'','Keterangan':t.remark||'','Input By':t.inputBy||''
+    }));
+    if(!rows.length){ showToast('Tidak ada data untuk di-export','error'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data Stok');
+    XLSX.writeFile(wb, `Drygoods_Stok_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('Export Excel berhasil');
+  });
+
+  // Export Excel Employees
+  document.getElementById('btnDgExportEmployee')?.addEventListener('click', ()=>{
+    if(!window.XLSX){ showToast('XLSX tidak tersedia','error'); return; }
+    const today = todayStr();
+    const rows = dgData.employees.map((e,i)=>({
+      'No':i+1,'Nama':e.name,'NIP':e.nip,'Station':e.station,'Jabatan':e.position||'',
+      'Tgl Masuk':e.joinDate||'','Expired Kontrak':e.expired,
+      'Sisa Hari': e.expired ? Math.ceil((new Date(e.expired)-new Date(today))/(1000*60*60*24)) : '',
+      'Catatan':e.note||''
+    }));
+    if(!rows.length){ showToast('Tidak ada data karyawan','error'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'IFS Karyawan');
+    XLSX.writeFile(wb, `Drygoods_IFS_Karyawan_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('Export Excel karyawan berhasil');
+  });
+
+  // ── SIDEBAR TOGGLE ───────────────────────────────────────────────
+  document.getElementById('toggleDrygoodsMenu')?.addEventListener('click', ()=>{
+    const c = document.getElementById('drygoodsMenuContent');
+    const icon = document.getElementById('iconDrygoodsMenu');
+    if(!c) return;
+    const open = !c.classList.contains('collapsed');
+    c.classList.toggle('collapsed', open);
+    if(icon) icon.style.transform = open ? 'rotate(-90deg)' : 'rotate(0deg)';
+    try{ localStorage.setItem('sjnam_drygoods_menu_open', open?'0':'1'); }catch(e){}
+  });
+  (function(){
+    const saved = localStorage.getItem('sjnam_drygoods_menu_open');
+    if(saved==='0'){
+      const c=document.getElementById('drygoodsMenuContent'),icon=document.getElementById('iconDrygoodsMenu');
+      if(c) c.classList.add('collapsed');
+      if(icon) icon.style.transform='rotate(-90deg)';
+    }
+  })();
+
+  // ── TAB SWITCHING HOOK ───────────────────────────────────────────
+  const _origSwitch = window.switchTab;
+  window.switchTab = function(tab){
+    if(typeof _origSwitch === 'function') _origSwitch(tab);
+    if(tab === 'drygoods-data')      { buildStationTabs(); renderDgTrx(); }
+    if(tab === 'drygoods-dashboard') { renderDgDashboard(); }
+    if(tab === 'drygoods-ifs')       { buildStationTabs(); renderDgEmployees(); }
+  };
+
+  // ── EXPOSE PUBLIC API ────────────────────────────────────────────
+  window.DRYGOODS = {
+    loadData: loadDrygoodsData,
+    saveData: saveDrygoodsData,
+    renderAll: function(){ buildStationTabs(); renderDgTrx(); renderDgDashboard(); renderDgEmployees(); },
+    getData: ()=> dgData
+  };
+
+  // ── INIT ─────────────────────────────────────────────────────────
+  buildStationTabs();
+  // Initial render only if tab is active
+  const currentTab = localStorage.getItem('sjnam_current_tab')||'';
+  if(currentTab.startsWith('drygoods')){ renderDgTrx(); renderDgDashboard(); renderDgEmployees(); }
+
+  // Notification banner untuk karyawan yang akan habis kontrak (≤30 hari)
+  function checkExpiringContracts(){
+    if(!window.currentUser) return;
+    const today = todayStr();
+    const expiring = dgData.employees.filter(e=>{
+      const dl = e.expired ? Math.ceil((new Date(e.expired)-new Date(today))/(1000*60*60*24)) : 9999;
+      return dl > 0 && dl <= 30;
+    });
+    if(expiring.length > 0){
+      showToast(`⚠️ ${expiring.length} karyawan IFS akan habis kontrak dalam 30 hari!`, 'warn');
+    }
+  }
+  setTimeout(()=>{
+    const pollLogin = setInterval(()=>{
+      if(window.currentUser){ clearInterval(pollLogin); setTimeout(checkExpiringContracts, 3000); }
+    }, 1000);
+  }, 500);
+
+})();
 </script>
 </body></html>
