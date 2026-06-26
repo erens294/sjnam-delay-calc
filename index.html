@@ -457,6 +457,9 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <svg id="iconDrygoodsMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="drygoodsMenuContent" class="space-y-1" aria-hidden="false">
+        <button data-tab="drygoods-bankitem" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Bank Item Drygoods" type="button">
+          <span class="text-lg w-6 text-center">🗂️</span> <span class="sidebar-text">Bank Item</span>
+        </button>
         <button data-tab="drygoods-data" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Data Stok Drygoods" type="button">
           <span class="text-lg w-6 text-center">📦</span> <span class="sidebar-text">Data Stok</span>
         </button>
@@ -545,6 +548,10 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="flex-1"></div>
+      <button id="btnDarkToggle" title="Mode Gelap/Terang" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 mr-2">
+        <svg id="iconDark" class="hidden" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg id="iconLight" class="hidden" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
       <div id="userPanel" class="hidden items-center gap-2">
         <div class="hidden md:flex items-center gap-3 mr-3 text-xs text-slate-500 dark:text-slate-400">
           <span id="clockWib"></span>
@@ -846,10 +853,15 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       </button>
     </div>
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 flex-1">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-2 flex-1">
         <input type="text" id="searchInput" placeholder="🔍 Cari flight / route..." class="input text-sm">
         <input type="date" id="filterTglFrom" class="input text-sm" title="Dari tanggal">
         <input type="date" id="filterTglTo" class="input text-sm" title="Sampai tanggal">
+        <select id="filterAirline" class="input text-sm" title="Filter Airline">
+          <option value="">Semua Airline</option>
+          <option value="SJ">Sriwijaya Air (SJ)</option>
+          <option value="IN">NAM Air (IN)</option>
+        </select>
         <div class="relative">
           <button type="button" id="btnKatFilter" class="input text-sm text-left flex justify-between items-center">
             <span id="katFilterLabel">Semua Kategori</span>
@@ -1025,6 +1037,29 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="card p-5">
       <h3 class="font-semibold mb-3">🔵 Flight Status Distribution</h3>
       <div class="max-w-xs mx-auto"><div class="relative h-[240px] max-w-xs mx-auto"><canvas id="chartStatus"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Top 3 Delay Terbesar -->
+  <div class="card p-5 mb-5">
+    <h3 class="font-semibold mb-3">🏆 Top 3 Delay Terbesar</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+            <th class="px-3 py-2">#</th>
+            <th class="px-3 py-2">Tanggal</th>
+            <th class="px-3 py-2">No. Flight</th>
+            <th class="px-3 py-2">Rute</th>
+            <th class="px-3 py-2">Durasi Delay</th>
+            <th class="px-3 py-2">Kategori</th>
+            <th class="px-3 py-2">Status</th>
+            <th class="px-3 py-2 text-center">Qty Pax</th>
+            <th class="px-3 py-2 text-right">Est. Cost</th>
+          </tr>
+        </thead>
+        <tbody id="topDelayBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+      </table>
     </div>
   </div>
 
@@ -3726,6 +3761,129 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     </div>
   </div>
 </section>
+
+<!-- ============= TAB DRYGOODS — BANK ITEM ============= -->
+<section id="tab-drygoods-bankitem" class="tab-pane">
+  <div class="card p-5 md:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 class="text-lg font-bold flex items-center gap-2">🗂️ Bank Item Drygoods</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Master data barang drygoods. Kode barang di-generate otomatis oleh sistem. Klik "Transaksi Baru" untuk langsung input stok dari barang ini.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="btnDgAddBankItem" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Tambah Barang</button>
+        <button id="btnDgExportBankItem" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl">⬇️ Export Excel</button>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 mb-4">
+      <input id="dgBankItemSearch" type="text" placeholder="🔍 Cari nama barang / kode / group..." class="input text-sm flex-1 min-w-[200px]">
+      <select id="dgBankItemFilterGroup" class="input text-sm">
+        <option value="">Semua Group</option>
+        <option value="Dry Goods">Dry Goods</option>
+        <option value="Cabin & Toilet Article">Cabin &amp; Toilet Article</option>
+      </select>
+      <button id="btnDgBankItemResetFilter" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-semibold rounded-xl">Reset</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-blue-600" id="dgBankItemKpiTotal">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Total Barang</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-amber-600" id="dgBankItemKpiDryGoods">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Dry Goods</div>
+      </div>
+      <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-purple-600" id="dgBankItemKpiCabin">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Cabin &amp; Toilet</div>
+      </div>
+      <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-emerald-600" id="dgBankItemKpiWithStock">0</div>
+        <div class="text-xs text-slate-500 mt-0.5">Ada Stok Aktif</div>
+      </div>
+    </div>
+    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-100 dark:bg-slate-800">
+          <tr>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">No</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Kode</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Nama Barang</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">UOM</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Isi/UOM</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Satuan</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Satuan 2nd</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Satuan 3rd</th>
+            <th class="px-3 py-2.5 text-left font-semibold text-xs uppercase">Group Item</th>
+            <th class="px-3 py-2.5 text-center font-semibold text-xs uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="dgBankItemTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+          <tr><td colspan="10" class="text-center py-8 text-slate-400 text-sm">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between mt-3 text-xs text-slate-500">
+      <span id="dgBankItemInfo">0 barang</span>
+      <div class="flex gap-2" id="dgBankItemPagination"></div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL BANK ITEM -->
+<div id="dgBankItemModal" class="modal-overlay hidden">
+  <div class="modal-box max-w-xl">
+    <h3 id="dgBankItemModalTitle" class="text-lg font-bold mb-1">Tambah Barang</h3>
+    <p class="text-xs text-slate-500 mb-4">Kode barang akan di-generate otomatis oleh sistem.</p>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Kode Barang <span class="text-xs text-slate-400 font-normal">(auto)</span></label>
+          <input type="text" id="dgBankItemCode" class="input bg-slate-50 dark:bg-slate-900 font-mono text-blue-700 dark:text-blue-300" placeholder="DG-XXX-000" readonly>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Group Item <span class="text-red-500">*</span></label>
+          <select id="dgBankItemGroup" class="input" onchange="window.dgBiAutoCode && window.dgBiAutoCode()">
+            <option value="Dry Goods">Dry Goods</option>
+            <option value="Cabin &amp; Toilet Article">Cabin &amp; Toilet Article</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Nama Barang <span class="text-red-500">*</span></label>
+        <input type="text" id="dgBankItemName" class="input" placeholder="Nama barang...">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">UOM <span class="text-red-500">*</span></label>
+          <input type="text" id="dgBankItemUom" class="input" placeholder="Dus / Pack / Box / Pcs...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Isi / UOM</label>
+          <input type="number" id="dgBankItemIsiUom" class="input" min="0" placeholder="Jumlah isi...">
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Satuan <span class="text-red-500">*</span></label>
+          <input type="text" id="dgBankItemSatuan" class="input" placeholder="Pcs / Bottle / Sachet...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Satuan 2nd</label>
+          <input type="text" id="dgBankItemSatuan2" class="input" placeholder="Opsional">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Satuan 3rd</label>
+          <input type="text" id="dgBankItemSatuan3" class="input" placeholder="Opsional">
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button id="dgBankItemModalCancel" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-medium rounded-lg">Batal</button>
+      <button id="dgBankItemModalSave" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">💾 Simpan</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============= TAB DRYGOODS — DATA STOK ============= -->
 <section id="tab-drygoods-data" class="tab-pane">
@@ -12090,6 +12248,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     setTimeout(init, 200);
   }
 })();
+</script>
 
 <script>
 // =================================================================
@@ -12100,7 +12259,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   const DG_KEY  = 'sjnam_drygoods_v1';
   const DG_STATIONS_DEFAULT = ['CGK','UPG','SUB','DPS','SRG','DJJ'];
 
-  let dgData = { transactions:[], employees:[], stations: DG_STATIONS_DEFAULT.slice() };
+  let dgData = { transactions:[], employees:[], stations: DG_STATIONS_DEFAULT.slice(), bankItems:[] };
 
   // ── STORAGE ──────────────────────────────────────────────────────
   function saveDrygoodsData(){
@@ -12116,6 +12275,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
           dgData.transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
           dgData.employees    = Array.isArray(parsed.employees)    ? parsed.employees    : [];
           dgData.stations     = Array.isArray(parsed.stations)     ? parsed.stations     : DG_STATIONS_DEFAULT.slice();
+          dgData.bankItems    = Array.isArray(parsed.bankItems)    ? parsed.bankItems    : [];
           return true;
         }
       }
@@ -12532,8 +12692,8 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   });
 
   // ── EVENT WIRING ──────────────────────────────────────────────────
-  // Add button
-  document.getElementById('btnDgAddTrx')?.addEventListener('click', ()=> openTrxModal(null));
+  // Add button - handled by bank item module patch below for + Transaksi Baru
+  // document.getElementById('btnDgAddTrx')?.addEventListener('click', ()=> openTrxModal(null));
   document.getElementById('btnDgAddEmployee')?.addEventListener('click', ()=> openEmpModal(null));
 
   // Station tabs click
@@ -12637,8 +12797,8 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   const _origSwitch = window.switchTab;
   window.switchTab = function(tab){
     if(typeof _origSwitch === 'function') _origSwitch(tab);
-    if(tab === 'drygoods-data')      { buildStationTabs(); renderDgTrx(); }
-    if(tab === 'drygoods-dashboard') { renderDgDashboard(); }
+    if(tab === 'drygoods-bankitem')  { renderDgBankItem(); }
+    if(tab === 'drygoods-data')      { buildStationTabs(); renderDgTrx(); }    if(tab === 'drygoods-dashboard') { renderDgDashboard(); }
     if(tab === 'drygoods-ifs')       { buildStationTabs(); renderDgEmployees(); }
   };
 
@@ -12646,15 +12806,353 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   window.DRYGOODS = {
     loadData: loadDrygoodsData,
     saveData: saveDrygoodsData,
-    renderAll: function(){ buildStationTabs(); renderDgTrx(); renderDgDashboard(); renderDgEmployees(); },
-    getData: ()=> dgData
+    renderAll: function(){ buildStationTabs(); renderDgTrx(); renderDgDashboard(); renderDgEmployees(); renderDgBankItem(); },
+    getData: ()=> dgData,
+    openTrxFromBankItem: openTrxFromBankItem
   };
 
   // ── INIT ─────────────────────────────────────────────────────────
   buildStationTabs();
   // Initial render only if tab is active
   const currentTab = localStorage.getItem('sjnam_current_tab')||'';
-  if(currentTab.startsWith('drygoods')){ renderDgTrx(); renderDgDashboard(); renderDgEmployees(); }
+  if(currentTab.startsWith('drygoods')){ renderDgTrx(); renderDgDashboard(); renderDgEmployees(); renderDgBankItem(); }
+
+  // ── BANK ITEM MODULE ──────────────────────────────────────────────
+  // Default bank item data sesuai permintaan
+  const DG_BANK_ITEM_DEFAULTS = [
+    {name:'Hand soap calington',uom:'Dus',isiUom:'1',satuan:'liter',satuan2:'Pcs',satuan3:'',group:'Dry Goods'},
+    {name:'Botol sabun',uom:'Dus',isiUom:'1',satuan:'Bottle',satuan2:'',satuan3:'',group:'Dry Goods'},
+    {name:'Air Mineral 330ml',uom:'Dus',isiUom:'24',satuan:'Bottle',satuan2:'',satuan3:'',group:'Dry Goods'},
+    {name:'Air Mineral 600ml',uom:'Pack',isiUom:'24',satuan:'Bottle',satuan2:'Pcs',satuan3:'',group:'Dry Goods'},
+    {name:'Air Sicknes Bag',uom:'Pack',isiUom:'10000',satuan:'Papper',satuan2:'Pcs',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Blanket',uom:'Pcs',isiUom:'1',satuan:'Pcs',satuan2:'',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Coffee',uom:'Pack',isiUom:'250',satuan:'Sachet',satuan2:'Pcs',satuan3:'',group:'Dry Goods'},
+    {name:'Creamer',uom:'Box',isiUom:'2500',satuan:'Sachet',satuan2:'Pcs',satuan3:'',group:'Dry Goods'},
+    {name:'Daily Order (DO)',uom:'Book',isiUom:'1',satuan:'Book',satuan2:'',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Disposal Bag',uom:'Pack',isiUom:'500',satuan:'Pocket',satuan2:'Pcs',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Facial Tisue',uom:'Dus',isiUom:'40',satuan:'Box',satuan2:'Pcs',satuan3:'Kelenex',group:'Dry Goods'},
+    {name:'Hand Soap',uom:'Pack',isiUom:'1',satuan:'Pcs',satuan2:'',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Monouse Cup',uom:'Pack',isiUom:'100',satuan:'Cup',satuan2:'',satuan3:'',group:'Dry Goods'},
+    {name:'Papper Cup',uom:'Pack',isiUom:'',satuan:'Cup',satuan2:'',satuan3:'',group:'Dry Goods'},
+    {name:'Plastik Klip',uom:'Pack',isiUom:'100',satuan:'Pcs',satuan2:'',satuan3:'1',group:'Dry Goods'},
+    {name:'Prayer Card',uom:'Pcs',isiUom:'1',satuan:'Pcs',satuan2:'',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Roll Tissue',uom:'Dus',isiUom:'100',satuan:'Roll',satuan2:'Pcs',satuan3:'',group:'Cabin & Toilet Article'},
+    {name:'Seal',uom:'Pack',isiUom:'1000',satuan:'Pcs',satuan2:'',satuan3:'1',group:'Dry Goods'},
+    {name:'Sugar',uom:'Box',isiUom:'2500',satuan:'Sachet',satuan2:'Pcs',satuan3:'',group:'Dry Goods'},
+    {name:'Tea Sosro',uom:'Box',isiUom:'25',satuan:'Sachet',satuan2:'Pcs',satuan3:'1',group:'Dry Goods'},
+    {name:'Tea Spoon',uom:'Pack',isiUom:'250',satuan:'Pcs',satuan2:'',satuan3:'1',group:'Dry Goods'},
+    {name:'Plastik Penutup Gerobak',uom:'Pcs',isiUom:'1',satuan:'Pcs',satuan2:'',satuan3:'1',group:'Cabin & Toilet Article'},
+    {name:'Catering Slip (CS)',uom:'Book',isiUom:'1',satuan:'book',satuan2:'',satuan3:'',group:'Cabin & Toilet Article'}
+  ];
+
+  // Generate kode barang: DG-DRY-001 for Dry Goods, DG-CAB-001 for Cabin & Toilet Article
+  function generateBankItemCode(group, existingItems){
+    const prefix = (group||'').toLowerCase().includes('cabin') ? 'DG-CAB' : 'DG-DRY';
+    const existing = (existingItems||[]).filter(i=> i.kode && i.kode.startsWith(prefix));
+    let maxNum = 0;
+    existing.forEach(i=>{
+      const parts = i.kode.split('-');
+      const n = parseInt(parts[parts.length-1])||0;
+      if(n > maxNum) maxNum = n;
+    });
+    return prefix+'-'+String(maxNum+1).padStart(3,'0');
+  }
+
+  // Ensure default bank items loaded if bankItems array missing/empty
+  function ensureBankItemDefaults(){
+    if(!dgData.bankItems || dgData.bankItems.length === 0){
+      dgData.bankItems = DG_BANK_ITEM_DEFAULTS.map((it, idx)=>{
+        const prefix = (it.group||'').toLowerCase().includes('cabin') ? 'DG-CAB' : 'DG-DRY';
+        // Count how many of same prefix before this
+        const samePrefix = DG_BANK_ITEM_DEFAULTS.slice(0, idx).filter(x=>
+          (x.group||'').toLowerCase().includes('cabin') === (it.group||'').toLowerCase().includes('cabin')
+        ).length;
+        return {
+          id: 'bi_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_'+idx,
+          kode: prefix+'-'+String(samePrefix+1).padStart(3,'0'),
+          name: it.name,
+          uom: it.uom,
+          isiUom: it.isiUom,
+          satuan: it.satuan,
+          satuan2: it.satuan2,
+          satuan3: it.satuan3,
+          group: it.group,
+          createdAt: new Date().toISOString()
+        };
+      });
+      // Re-sort and regenerate codes properly
+      let dryIdx=0, cabIdx=0;
+      dgData.bankItems.forEach(it=>{
+        const isCabin = (it.group||'').toLowerCase().includes('cabin');
+        if(isCabin){ cabIdx++; it.kode='DG-CAB-'+String(cabIdx).padStart(3,'0'); }
+        else { dryIdx++; it.kode='DG-DRY-'+String(dryIdx).padStart(3,'0'); }
+      });
+      saveDrygoodsData();
+    }
+  }
+
+  // Render Bank Item table
+  let dgBankItemPage = 1;
+  const DG_BI_PAGE_SIZE = 30;
+  function renderDgBankItem(){
+    if(!dgData.bankItems) dgData.bankItems = [];
+    ensureBankItemDefaults();
+
+    const search = (document.getElementById('dgBankItemSearch')?.value||'').toLowerCase();
+    const groupFilter = document.getElementById('dgBankItemFilterGroup')?.value||'';
+
+    let list = dgData.bankItems.filter(it=>{
+      if(groupFilter && it.group !== groupFilter) return false;
+      if(search && ![(it.name||''),(it.kode||''),(it.group||''),(it.uom||''),(it.satuan||'')].join(' ').toLowerCase().includes(search)) return false;
+      return true;
+    });
+
+    // KPI
+    const allItems = dgData.bankItems;
+    const kpiDry = allItems.filter(i=>(i.group||'').includes('Dry')).length;
+    const kpiCabin = allItems.filter(i=>(i.group||'').toLowerCase().includes('cabin')).length;
+    // "With stock" = item name exists in transactions
+    const itemsWithTrx = new Set(dgData.transactions.map(t=>(t.item||'').toLowerCase()));
+    const kpiWithStock = allItems.filter(i=>itemsWithTrx.has((i.name||'').toLowerCase())).length;
+    document.getElementById('dgBankItemKpiTotal').textContent = allItems.length;
+    document.getElementById('dgBankItemKpiDryGoods').textContent = kpiDry;
+    document.getElementById('dgBankItemKpiCabin').textContent = kpiCabin;
+    document.getElementById('dgBankItemKpiWithStock').textContent = kpiWithStock;
+
+    // Pagination
+    const total = list.length;
+    const totalPages = Math.max(1, Math.ceil(total/DG_BI_PAGE_SIZE));
+    if(dgBankItemPage > totalPages) dgBankItemPage = 1;
+    const start = (dgBankItemPage-1)*DG_BI_PAGE_SIZE;
+    const page = list.slice(start, start+DG_BI_PAGE_SIZE);
+
+    const infoEl = document.getElementById('dgBankItemInfo');
+    if(infoEl) infoEl.textContent = `${total} barang`;
+
+    const tbody = document.getElementById('dgBankItemTableBody');
+    if(!tbody) return;
+
+    if(!page.length){
+      tbody.innerHTML='<tr><td colspan="10" class="text-center py-8 text-slate-400 text-sm">Tidak ada data barang.</td></tr>';
+    } else {
+      const groupColors = {'Dry Goods':'bg-amber-100 text-amber-700','Cabin & Toilet Article':'bg-purple-100 text-purple-700'};
+      tbody.innerHTML = page.map((it,i)=>{
+        const gc = groupColors[it.group]||'bg-slate-100 text-slate-600';
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+          <td class="px-3 py-2.5 text-xs text-slate-400">${start+i+1}</td>
+          <td class="px-3 py-2.5"><span class="font-mono text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">${esc(it.kode||'-')}</span></td>
+          <td class="px-3 py-2.5 font-medium text-sm">${esc(it.name||'-')}</td>
+          <td class="px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300">${esc(it.uom||'-')}</td>
+          <td class="px-3 py-2.5 text-center text-xs">${it.isiUom||'-'}</td>
+          <td class="px-3 py-2.5 text-xs">${esc(it.satuan||'-')}</td>
+          <td class="px-3 py-2.5 text-xs text-slate-500">${esc(it.satuan2||'-')}</td>
+          <td class="px-3 py-2.5 text-xs text-slate-500">${esc(it.satuan3||'-')}</td>
+          <td class="px-3 py-2.5"><span class="badge text-xs ${gc}">${esc(it.group||'-')}</span></td>
+          <td class="px-3 py-2.5 text-center whitespace-nowrap">
+            <button data-bi-trx="${it.id}" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg mr-1" title="Buat Transaksi Baru dari barang ini">📦 Transaksi</button>
+            <button data-bi-edit="${it.id}" class="text-blue-600 hover:underline text-xs mr-2">Edit</button>
+            <button data-bi-del="${it.id}" class="text-red-600 hover:underline text-xs">Hapus</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Pagination buttons
+    const pag = document.getElementById('dgBankItemPagination');
+    if(pag){
+      let html = `<button ${dgBankItemPage===1?'disabled':''} data-bi-page="${dgBankItemPage-1}" class="px-2 py-1 rounded border text-xs disabled:opacity-40">‹</button>`;
+      for(let p=Math.max(1,dgBankItemPage-2); p<=Math.min(totalPages,dgBankItemPage+2); p++){
+        html+=`<button data-bi-page="${p}" class="px-2 py-1 rounded border text-xs ${p===dgBankItemPage?'bg-blue-600 text-white border-blue-600':''}">${p}</button>`;
+      }
+      html+=`<button ${dgBankItemPage===totalPages?'disabled':''} data-bi-page="${dgBankItemPage+1}" class="px-2 py-1 rounded border text-xs disabled:opacity-40">›</button>`;
+      pag.innerHTML = html;
+      pag.onclick = e=>{ const p=e.target.dataset.biPage; if(p){ dgBankItemPage=parseInt(p); renderDgBankItem(); }};
+    }
+  }
+
+  // Open transaction from bank item (link Bank Item → Data Stok)
+  function openTrxFromBankItem(item){
+    // Switch to Data Stok tab first
+    if(typeof window.switchTabDirect === 'function') window.switchTabDirect('drygoods-data');
+    else {
+      // manually switch tab
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      const tp = document.getElementById('tab-drygoods-data');
+      if(tp) tp.classList.add('active');
+      document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('[data-tab="drygoods-data"]').forEach(b=>b.classList.add('active'));
+      buildStationTabs(); renderDgTrx();
+    }
+    // Open modal pre-filled with item data
+    setTimeout(()=>{
+      dgEditTrxId = null;
+      document.getElementById('dgTrxModalTitle').textContent = 'Tambah Transaksi — '+item.name;
+      document.getElementById('dgTrxDate').value = todayStr();
+      document.getElementById('dgTrxStation').value = activeDgStation !== 'ALL' ? activeDgStation : '';
+      document.getElementById('dgTrxItem').value = item.name;
+      document.getElementById('dgTrxCode').value = item.kode||'';
+      document.getElementById('dgTrxType').value = 'IN';
+      document.getElementById('dgTrxQty').value = '';
+      document.getElementById('dgTrxUnit').value = item.satuan||item.uom||'';
+      document.getElementById('dgTrxRemark').value = '';
+      // Update autocomplete from bank items + existing transactions
+      const suggestions = document.getElementById('dgItemSuggestions');
+      if(suggestions){
+        const items = [...new Set([
+          ...(dgData.bankItems||[]).map(i=>i.name),
+          ...dgData.transactions.map(t=>t.item)
+        ].filter(Boolean))];
+        suggestions.innerHTML = items.map(n=>`<option value="${esc(n)}">`).join('');
+      }
+      document.getElementById('dgTrxModal').classList.remove('hidden');
+    }, 200);
+  }
+
+  // Auto-update item name dropdown in transaction modal from bank items
+  function updateTrxModalSuggestions(){
+    const suggestions = document.getElementById('dgItemSuggestions');
+    if(!suggestions) return;
+    const bankNames = (dgData.bankItems||[]).map(i=>i.name);
+    const trxNames = dgData.transactions.map(t=>t.item);
+    const items = [...new Set([...bankNames, ...trxNames].filter(Boolean))];
+    suggestions.innerHTML = items.map(n=>`<option value="${esc(n)}">`).join('');
+  }
+
+  // Auto-fill code when item name is typed in transaction modal
+  document.getElementById('dgTrxItem')?.addEventListener('input', function(){
+    const val = this.value.trim().toLowerCase();
+    if(!val) return;
+    const found = (dgData.bankItems||[]).find(i=>(i.name||'').toLowerCase() === val);
+    if(found){
+      const codeEl = document.getElementById('dgTrxCode');
+      const unitEl = document.getElementById('dgTrxUnit');
+      if(codeEl && !codeEl.value) codeEl.value = found.kode||'';
+      if(unitEl && !unitEl.value) unitEl.value = found.satuan||found.uom||'';
+    }
+  });
+
+  // Bank Item Modal logic
+  let dgEditBankItemId = null;
+  window.dgBiAutoCode = function(){
+    if(dgEditBankItemId) return; // only auto on new
+    const group = document.getElementById('dgBankItemGroup')?.value||'Dry Goods';
+    const code = generateBankItemCode(group, dgData.bankItems||[]);
+    const el = document.getElementById('dgBankItemCode');
+    if(el) el.value = code;
+  };
+
+  function openBankItemModal(item){
+    dgEditBankItemId = item ? item.id : null;
+    document.getElementById('dgBankItemModalTitle').textContent = item ? 'Edit Barang' : 'Tambah Barang';
+    if(item){
+      document.getElementById('dgBankItemCode').value   = item.kode||'';
+      document.getElementById('dgBankItemGroup').value  = item.group||'Dry Goods';
+      document.getElementById('dgBankItemName').value   = item.name||'';
+      document.getElementById('dgBankItemUom').value    = item.uom||'';
+      document.getElementById('dgBankItemIsiUom').value = item.isiUom||'';
+      document.getElementById('dgBankItemSatuan').value = item.satuan||'';
+      document.getElementById('dgBankItemSatuan2').value= item.satuan2||'';
+      document.getElementById('dgBankItemSatuan3').value= item.satuan3||'';
+    } else {
+      // new item: auto-generate code
+      const group = document.getElementById('dgBankItemGroup')?.value||'Dry Goods';
+      document.getElementById('dgBankItemCode').value   = generateBankItemCode(group, dgData.bankItems||[]);
+      document.getElementById('dgBankItemName').value   = '';
+      document.getElementById('dgBankItemUom').value    = '';
+      document.getElementById('dgBankItemIsiUom').value = '';
+      document.getElementById('dgBankItemSatuan').value = '';
+      document.getElementById('dgBankItemSatuan2').value= '';
+      document.getElementById('dgBankItemSatuan3').value= '';
+    }
+    document.getElementById('dgBankItemModal').classList.remove('hidden');
+  }
+  function closeBankItemModal(){ document.getElementById('dgBankItemModal').classList.add('hidden'); }
+
+  document.getElementById('dgBankItemModalCancel')?.addEventListener('click', closeBankItemModal);
+  document.getElementById('dgBankItemModal')?.addEventListener('click', e=>{ if(e.target===document.getElementById('dgBankItemModal')) closeBankItemModal(); });
+
+  document.getElementById('dgBankItemModalSave')?.addEventListener('click', ()=>{
+    const kode   = document.getElementById('dgBankItemCode').value.trim();
+    const group  = document.getElementById('dgBankItemGroup').value;
+    const name   = document.getElementById('dgBankItemName').value.trim();
+    const uom    = document.getElementById('dgBankItemUom').value.trim();
+    const isiUom = document.getElementById('dgBankItemIsiUom').value.trim();
+    const satuan = document.getElementById('dgBankItemSatuan').value.trim();
+    const satuan2= document.getElementById('dgBankItemSatuan2').value.trim();
+    const satuan3= document.getElementById('dgBankItemSatuan3').value.trim();
+    if(!name||!uom||!satuan){ showToast('Lengkapi: Nama Barang, UOM, dan Satuan','error'); return; }
+    if(!dgData.bankItems) dgData.bankItems = [];
+    // Check duplicate name (except when editing same)
+    const dupName = dgData.bankItems.find(i=>i.id!==dgEditBankItemId && (i.name||'').toLowerCase()===name.toLowerCase());
+    if(dupName){ showToast('Nama barang sudah ada di bank item: '+dupName.kode,'error'); return; }
+    const entry = { id: dgEditBankItemId||('bi_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)), kode, group, name, uom, isiUom, satuan, satuan2, satuan3, updatedAt: new Date().toISOString() };
+    const idx = dgData.bankItems.findIndex(i=>i.id===dgEditBankItemId);
+    if(idx>-1) dgData.bankItems[idx]=entry; else dgData.bankItems.push(entry);
+    saveDrygoodsData();
+    closeBankItemModal();
+    renderDgBankItem();
+    showToast(dgEditBankItemId?'Barang diperbarui':'Barang ditambahkan','success');
+    dgEditBankItemId = null;
+  });
+
+  document.getElementById('btnDgAddBankItem')?.addEventListener('click', ()=> openBankItemModal(null));
+
+  // Table click delegation for bank item table
+  document.getElementById('dgBankItemTableBody')?.addEventListener('click', async e=>{
+    const trxId  = e.target.closest('[data-bi-trx]')?.dataset.biTrx;
+    const editId = e.target.closest('[data-bi-edit]')?.dataset.biEdit;
+    const delId  = e.target.closest('[data-bi-del]')?.dataset.biDel;
+    if(trxId){
+      const it = (dgData.bankItems||[]).find(i=>i.id===trxId);
+      if(it) openTrxFromBankItem(it);
+    }
+    if(editId){ const it=(dgData.bankItems||[]).find(i=>i.id===editId); if(it) openBankItemModal(it); }
+    if(delId){
+      const ok = await showConfirm('Hapus Barang','Hapus barang ini dari bank item?');
+      if(!ok) return;
+      dgData.bankItems = (dgData.bankItems||[]).filter(i=>i.id!==delId);
+      saveDrygoodsData(); renderDgBankItem(); showToast('Barang dihapus');
+    }
+  });
+
+  // Search/filter wiring for bank item
+  ['dgBankItemSearch','dgBankItemFilterGroup'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', ()=>{ dgBankItemPage=1; renderDgBankItem(); });
+    document.getElementById(id)?.addEventListener('change', ()=>{ dgBankItemPage=1; renderDgBankItem(); });
+  });
+  document.getElementById('btnDgBankItemResetFilter')?.addEventListener('click', ()=>{
+    const s=document.getElementById('dgBankItemSearch'); if(s) s.value='';
+    const g=document.getElementById('dgBankItemFilterGroup'); if(g) g.value='';
+    dgBankItemPage=1; renderDgBankItem();
+  });
+
+  // Export Excel for bank items
+  document.getElementById('btnDgExportBankItem')?.addEventListener('click', ()=>{
+    if(!window.XLSX){ showToast('XLSX tidak tersedia','error'); return; }
+    const items = dgData.bankItems||[];
+    if(!items.length){ showToast('Tidak ada data bank item','error'); return; }
+    const rows = items.map((it,i)=>({
+      'No':i+1,'Kode':it.kode||'','Nama Barang':it.name||'','UOM':it.uom||'',
+      'Isi/UOM':it.isiUom||'','Satuan':it.satuan||'','Satuan 2nd':it.satuan2||'',
+      'Satuan 3rd':it.satuan3||'','Group Item':it.group||''
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bank Item');
+    XLSX.writeFile(wb, `Drygoods_BankItem_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('Export Excel bank item berhasil');
+  });
+
+  // Patch openTrxModal to always load bank item suggestions
+  // Register btnDgAddTrx listener here (original was commented out above)
+  document.getElementById('btnDgAddTrx')?.addEventListener('click', ()=>{
+    openTrxModal(null);
+    updateTrxModalSuggestions();
+  });
+
+  // ── INIT BANK ITEM ───────────────────────────────────────────────
+  if(!dgData.bankItems) dgData.bankItems = [];
+  ensureBankItemDefaults();
 
   // Notification banner untuk karyawan yang akan habis kontrak (≤30 hari)
   function checkExpiringContracts(){
