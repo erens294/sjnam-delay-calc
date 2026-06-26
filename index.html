@@ -3093,40 +3093,34 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 11l3 3m0 0l3-3m-3 3V3"/></svg>
           Tarik Data dari Cloud
         </button>
-        <button id="btnCloudAutoToggle" class="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-semibold rounded-xl transition flex items-center gap-2" title="Auto-sync setiap kali data berubah">
-          <span id="autoSyncIcon">⚡</span>
-          <span id="autoSyncLabel">Auto-Sync: OFF</span>
-        </button>
+        <!-- REMOVED: Auto-Sync toggle button (diganti Smart-Sync otomatis) -->
+        <!-- Hidden elements for backward-compat JS references -->
+        <span id="autoSyncIcon" class="hidden">⚡</span>
+        <span id="autoSyncLabel" class="hidden">Smart-Sync: ON</span>
+        <span id="syncDelayInput" class="hidden"></span>
+        <span id="syncDelayStatus" class="hidden"></span>
+        <button id="btnCloudAutoToggle" class="hidden"></button>
+        <button id="btnSaveSyncDelay" class="hidden"></button>
         <button id="btnCloudClear" class="px-4 py-2.5 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-xl transition">🗑 Hapus Config</button>
       </div>
 
-      <!-- ⏱ PENGATURAN DELAY AUTO-SYNC -->
-      <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span class="text-sm font-semibold text-blue-700 dark:text-blue-300">⏱ Delay Auto-Sync:</span>
+      <!-- ⚡ SMART-SYNC INFO PANEL (menggantikan Auto-Sync + Delay) -->
+      <div class="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl">⚡</span>
+          <div>
+            <p class="text-sm font-bold text-emerald-700 dark:text-emerald-300">Smart-Sync Aktif — Sinkronisasi Otomatis & Cerdas</p>
+            <ul class="text-xs text-emerald-700 dark:text-emerald-400 mt-1 space-y-1 list-disc list-inside">
+              <li>Data dikirim ke cloud <strong>hanya jika ada perubahan</strong> (penambahan, penghapusan, perubahan password, user baru/dihapus)</li>
+              <li>Jika tidak ada perubahan, <strong>tidak ada request</strong> ke Supabase — hemat kuota &amp; tidak membuang bandwidth</li>
+              <li>Realtime: perubahan dari device/user lain langsung masuk otomatis via Supabase Realtime</li>
+              <li>Hash-check mencegah push duplikat &amp; pull yang tidak perlu</li>
+            </ul>
           </div>
-          <div class="flex items-center gap-2 flex-1 min-w-0">
-            <input type="number" id="syncDelayInput" min="3" max="300" step="1" value="15"
-              class="input text-sm font-mono w-24 text-center"
-              title="Jeda (detik) sebelum data dikirim ke Supabase setelah perubahan">
-            <span class="text-sm text-blue-600 dark:text-blue-400 font-medium">detik</span>
-          </div>
-          <button id="btnSaveSyncDelay" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition flex-shrink-0">
-            💾 Simpan
-          </button>
-          <span id="syncDelayStatus" class="text-xs text-slate-400 italic"></span>
         </div>
-        <div class="mt-2 flex flex-wrap gap-2">
-          <span class="text-xs text-blue-600 dark:text-blue-400">Preset cepat:</span>
-          <button onclick="document.getElementById('syncDelayInput').value=5" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">5 dtk</button>
-          <button onclick="document.getElementById('syncDelayInput').value=10" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">10 dtk</button>
-          <button onclick="document.getElementById('syncDelayInput').value=15" class="text-xs px-2 py-0.5 bg-blue-600 text-white rounded-lg font-mono transition">15 dtk ✓</button>
-          <button onclick="document.getElementById('syncDelayInput').value=30" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">30 dtk</button>
-          <button onclick="document.getElementById('syncDelayInput').value=60" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">60 dtk</button>
-          <button onclick="document.getElementById('syncDelayInput').value=120" class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 rounded-lg font-mono text-blue-700 dark:text-blue-300 transition">2 mnt</button>
+        <div class="mt-3 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+          <span id="smartSyncLastPush" class="font-mono">Terakhir sync: -</span>
         </div>
-        <p class="text-xs text-blue-500 dark:text-blue-400 mt-2">💡 Semakin kecil = lebih cepat sync, lebih banyak request. Min 3 dtk, maks 5 mnt. Default: <strong>15 detik</strong>.</p>
       </div>
 
       <div id="cloudLog" class="hidden mt-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-mono text-slate-600 dark:text-slate-300 max-h-28 overflow-y-auto space-y-1"></div>
@@ -3904,6 +3898,8 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
           <option value="DJJ">DJJ</option>
         </select>
         <button id="btnDgAddTrx" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Transaksi Baru</button>
+        <button id="btnDgImportExcel" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl">📥 Import Excel</button>
+        <input type="file" id="dgImportExcelInput" accept=".xlsx,.xls" class="hidden">
         <button id="btnDgExportExcel" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl">⬇️ Export Excel</button>
       </div>
     </div>
@@ -4296,7 +4292,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
 // saveData original removed - patched version below
-function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); if(typeof triggerAutoSync==='function') triggerAutoSync(); }
 // saveStations original removed - patched version below
 
 // function parseUTC removed to avoid duplicate declaration
@@ -4471,6 +4467,11 @@ function switchTab(name){
   if(name==='stcr-dashboard' && window.STCR) window.STCR.onShowDashboard();
   if(name==='stcr-data' && window.STCR) window.STCR.onShowData();
   if(name==='stcr-station' && window.STCR) window.STCR.onShowStation();
+  // Drygoods sub-tabs
+  if(name==='drygoods-data' && window.DRYGOODS){ renderDgTrx && renderDgTrx(); }
+  if(name==='drygoods-dashboard' && window.DRYGOODS){ window.DRYGOODS.renderAll(); }
+  if(name==='drygoods-ifs' && window.DRYGOODS){ typeof renderDgEmployees==='function' && renderDgEmployees(); }
+  if(name==='drygoods-bankitem' && window.DRYGOODS){ typeof renderDgBankItem==='function' && renderDgBankItem(); }
   if(name==='sertifikat'){
     setTimeout(()=>{ if(typeof window.ctbRenderAll==='function') window.ctbRenderAll(); }, 120);
   }
@@ -5957,7 +5958,7 @@ $('#stationBody').addEventListener('click',e=>{
 $('#defaultCostPerPax').addEventListener('change',e=>{settings.costPerPax=parseInt(e.target.value)||300000;saveSettings();showToast('Default cost diperbarui');});
 
 $('#btnExportAllJson').addEventListener('click',()=>{
-  const blob=new Blob([JSON.stringify({data,stations,settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({data,stations,dfsData,settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download=`sjn_backup_${new Date().toISOString().slice(0,10)}.json`;
@@ -5972,9 +5973,13 @@ $('#fileImportAllJson').addEventListener('change',async e=>{
     const ok=await showConfirm('Import Database','Ganti seluruh database? Data saat ini akan hilang!');
     if(ok){
       if(Array.isArray(parsed)) data=parsed;
-      else if(parsed.data){data=parsed.data;if(parsed.stations)stations=parsed.stations;}
+      else if(parsed.data){
+        data=parsed.data;
+        if(parsed.stations) stations=parsed.stations;
+        if(Array.isArray(parsed.dfsData)){ dfsData=parsed.dfsData; saveDfsData(); }
+      }
       else throw new Error('Format tidak dikenali');
-      saveData();saveStations();renderTable();showToast('Database dipulihkan');
+      saveData();saveStations();renderTable();renderDfsTable();showToast('Database dipulihkan');
     }
   }catch(err){showToast('File tidak valid: '+err.message,'error');}
   e.target.value='';
@@ -6001,7 +6006,7 @@ document.addEventListener('keydown',e=>{
 // login form's submit handler further down ever got registered. That is why login appeared
 // to do nothing on a fresh browser / cleared storage. Using var here (hoisted, no TDZ) and
 // removing the duplicate let/const further down fixes it without changing any behavior.
-var cloudConfig = { autoSync: true, syncDelaySec: 15 };
+var cloudConfig = { supabaseUrl:'', supabaseKey:'' };
 var _cloudPullInProgress = false;
 var _autoSyncTimer = null;
 var _lastCloudUpdatedAt = null;
@@ -6606,15 +6611,14 @@ const _k = atob('ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2l
 const DEFAULT_SUPABASE_URL = _u;
 const DEFAULT_SUPABASE_KEY = _k;
 
-cloudConfig = { supabaseUrl: DEFAULT_SUPABASE_URL, supabaseKey: DEFAULT_SUPABASE_KEY, autoSync: true, syncDelaySec: 15 };
+cloudConfig = { supabaseUrl: DEFAULT_SUPABASE_URL, supabaseKey: DEFAULT_SUPABASE_KEY };
 try {
   const c = JSON.parse(localStorage.getItem(CLOUD_KEY)||'{}');
   // migrasi dari format lama (apiKey/binId) ke format baru
   cloudConfig = {
     supabaseUrl: c.supabaseUrl || c.apiKey || DEFAULT_SUPABASE_URL,
     supabaseKey: c.supabaseKey || c.binId || DEFAULT_SUPABASE_KEY,
-    autoSync: true, // paksa auto-sync ON
-    syncDelaySec: (c.syncDelaySec && c.syncDelaySec > 0) ? parseInt(c.syncDelaySec) : 15
+    // autoSync & syncDelaySec dihapus — diganti Smart-Sync otomatis
   };
 } catch(e){}
 
@@ -6983,8 +6987,7 @@ async function cloudPull(silent = false){
 
     updateSyncStatus('connected');
     cloudLog('✅ Data berhasil diambil dari Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
-    if(!silent) blinkBlueLight();
-    else blinkBlueLight();
+    blinkBlueLight(); // selalu blink saat data berhasil ditarik
   } catch(err){
     _cloudPullInProgress = false; // also reset on outer catch
     updateSyncStatus('error');
@@ -7016,7 +7019,7 @@ function blinkSyncLight(){
 // REALTIME SUBSCRIPTION — dengarkan perubahan dari device lain
 function startRealtimeSubscription(){
   const sb = getSupabaseClient();
-  if(!sb || !cloudConfig.autoSync) return;
+  if(!sb) return;
   if(_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
 
   _realtimeChannel = sb
@@ -7173,12 +7176,27 @@ function startRealtimeSubscription(){
   window.triggerDailyBackup = doScheduledBackup;
 })();
 
+// ⚡ SMART-SYNC: push segera jika ada perubahan data, tanpa delay, tanpa toggle
+// Dipanggil setiap kali ada save (data, user, drygoods, stcr, training, dll)
 function triggerAutoSync(){
   if(_cloudPullInProgress) return;
-  if(!cloudConfig.autoSync || !cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) return;
+  if(!cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) return;
+  // Debounce singkat (300ms) agar burst save tidak spam — tapi JAUH lebih cepat dari auto-sync lama
   clearTimeout(_autoSyncTimer);
-  const delayMs = ((cloudConfig.syncDelaySec && cloudConfig.syncDelaySec > 0) ? cloudConfig.syncDelaySec : 15) * 1000;
-  _autoSyncTimer = setTimeout(()=>cloudPush(true), delayMs); // debounce — default 15 detik, bisa diatur
+  _autoSyncTimer = setTimeout(async ()=>{
+    const localPayload = getAllCloudData();
+    const currentHash = _hashPayload(localPayload);
+    if(currentHash && currentHash === _lastPushedHash){
+      // Tidak ada perubahan — skip, tidak kirim ke cloud
+      return;
+    }
+    // Ada perubahan → push sekarang
+    const ok = await cloudPush(true);
+    if(ok){
+      const el = document.getElementById('smartSyncLastPush');
+      if(el) el.textContent = 'Terakhir sync: ' + new Date().toLocaleTimeString('id-ID');
+    }
+  }, 300);
 }
 
 // Patch save functions to trigger auto-sync
@@ -7190,30 +7208,17 @@ function saveDfsData(){ localStorage.setItem(DFS_KEY, JSON.stringify(dfsData)); 
 function initCloudUI(){
   if($('#cloudApiKey')) $('#cloudApiKey').value = cloudConfig.supabaseUrl || '';
   if($('#cloudBinId')) $('#cloudBinId').value = cloudConfig.supabaseKey || '';
-  // Set nilai delay input sesuai config tersimpan
-  const delayInp = document.getElementById('syncDelayInput');
-  if(delayInp) delayInp.value = cloudConfig.syncDelaySec || 15;
   updateAutoSyncBtn();
   if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
     updateSyncStatus('connected');
     const guide = $('#cloudSetupGuide');
     if(guide) guide.classList.add('hidden');
-    if(cloudConfig.autoSync) startRealtimeSubscription();
+    startRealtimeSubscription();
   }
 }
 
 function updateAutoSyncBtn(){
-  const btn = $('#btnCloudAutoToggle');
-  const lbl = $('#autoSyncLabel');
-  if(btn && lbl){
-    if(cloudConfig.autoSync){
-      btn.className = 'px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl transition flex items-center gap-2';
-      lbl.textContent = 'Auto-Sync: ON';
-    } else {
-      btn.className = 'px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-semibold rounded-xl transition flex items-center gap-2';
-      lbl.textContent = 'Auto-Sync: OFF';
-    }
-  }
+  // Smart-Sync selalu aktif — fungsi ini dipertahankan agar tidak error jika dipanggil dari tempat lain
   if(typeof window.updateServiceSyncIndicator === 'function') window.updateServiceSyncIndicator();
 }
 
@@ -7231,7 +7236,7 @@ $('#btnCloudSave').addEventListener('click', async()=>{
   if(ok){
     const guide = $('#cloudSetupGuide');
     if(guide) guide.classList.add('hidden');
-    if(cloudConfig.autoSync) startRealtimeSubscription();
+    startRealtimeSubscription();
   }
 });
 
@@ -7247,19 +7252,9 @@ $('#btnCloudLoad').addEventListener('click', async()=>{
   await cloudPull();
 });
 
+// Smart-Sync: toggle dihapus — selalu aktif. Handler dipertahankan untuk compat.
 $('#btnCloudAutoToggle').addEventListener('click', ()=>{
-  cloudConfig.autoSync = !cloudConfig.autoSync;
-  saveCloudConfig();
-  updateAutoSyncBtn();
-  const msg = cloudConfig.autoSync ? '⚡ Auto-Sync aktif — data otomatis tersinkron realtime' : 'Auto-Sync dimatikan';
-  showToast(msg, cloudConfig.autoSync ? 'success' : 'info');
-  cloudLog(msg);
-  if(cloudConfig.autoSync){
-    startRealtimeSubscription();
-  } else {
-    const sb = getSupabaseClient();
-    if(sb && _realtimeChannel){ sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
-  }
+  // No-op: Smart-Sync selalu ON, tidak ada toggle
 });
 
 $('#btnCloudClear').addEventListener('click', async()=>{
@@ -7268,7 +7263,7 @@ $('#btnCloudClear').addEventListener('click', async()=>{
     const sb = getSupabaseClient();
     if(sb && _realtimeChannel){ sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
     _supabaseClient = null;
-    cloudConfig = { supabaseUrl:'', supabaseKey:'', autoSync:false };
+    cloudConfig = { supabaseUrl:'', supabaseKey:'' };
     saveCloudConfig();
     initCloudUI();
     updateSyncStatus('disconnected');
@@ -7282,35 +7277,12 @@ $('#btnCloudClear').addEventListener('click', async()=>{
 $('#cloudApiKey').addEventListener('change', e=>{ cloudConfig.supabaseUrl = e.target.value.trim(); saveCloudConfig(); });
 $('#cloudBinId').addEventListener('change', e=>{ cloudConfig.supabaseKey = e.target.value.trim(); saveCloudConfig(); });
 
-// ⏱ SYNC DELAY — simpan & terapkan
-function initSyncDelayUI(){
-  const inp = document.getElementById('syncDelayInput');
-  if(!inp) return;
-  inp.value = cloudConfig.syncDelaySec || 15;
-  // highlight preset aktif
-  updatePresetHighlight(inp.value);
-}
-function updatePresetHighlight(val){
-  // Reset semua preset ke style default, highlight yang aktif
-  const presets = [5,10,15,30,60,120];
-  // Tidak ada ID pada preset btn, skip highlight (sudah cukup dengan value di input)
-}
+// ⏱ SYNC DELAY — dihapus (Smart-Sync tidak pakai delay)
+function initSyncDelayUI(){ /* no-op: Smart-Sync tidak pakai delay */ }
+function updatePresetHighlight(val){ /* no-op */ }
 document.addEventListener('click', function(e){
   if(e.target && e.target.id === 'btnSaveSyncDelay'){
-    const inp = document.getElementById('syncDelayInput');
-    const statusEl = document.getElementById('syncDelayStatus');
-    let val = parseInt(inp ? inp.value : 15);
-    if(isNaN(val) || val < 3) val = 3;
-    if(val > 300) val = 300;
-    inp.value = val;
-    cloudConfig.syncDelaySec = val;
-    saveCloudConfig();
-    if(statusEl){
-      statusEl.textContent = '✅ Tersimpan! (' + val + ' dtk)';
-      setTimeout(()=>{ statusEl.textContent = ''; }, 3000);
-    }
-    const mins = val >= 60 ? ' = ' + (val/60).toFixed(1) + ' mnt' : '';
-    showToast('⏱ Delay auto-sync diubah ke ' + val + ' detik' + mins, 'success');
+    // no-op: tombol ini hidden
   }
 });
 
@@ -7321,9 +7293,9 @@ initSyncDelayUI();
 // === AUTO PULL SAAT LOAD ===
 setTimeout(async ()=>{
   if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
-    console.log('[Auto-Sync] Menarik data terbaru dari Supabase...');
-    await cloudPull(true); // silent = true, langsung tarik soal/data terbaru
-    if(cloudConfig.autoSync) startRealtimeSubscription();
+    console.log('[Smart-Sync] Menarik data terbaru dari Supabase...');
+    await cloudPull(true); // silent = true, langsung tarik data terbaru
+    startRealtimeSubscription();
   }
 }, 1200);
 
@@ -7522,8 +7494,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
       updateLoginLockMsg(username, newLock);
       showToast('⛔ Terlalu banyak percobaan! Akun dikunci 5 menit.', 'error');
     } else {
-      const remaining = 5 - (fails > 0 ? fails : (entry.lockedUntil ? 0 : fails));
-      showToast(`Username atau password salah (percobaan ${fails}/5)`, 'error');
+      showToast(`Username atau password salah. Percobaan ${fails}/5.`, 'error');
     }
     document.getElementById('loginPass').value = '';
     document.getElementById('loginPass').focus();
@@ -7892,8 +7863,7 @@ document.getElementById('btnAddUser')?.addEventListener('click', function(){
       active: true,
       created: new Date().toISOString().split('T')[0]
     });
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    if(typeof triggerAutoSync === 'function') triggerAutoSync();
+    saveUsers(users);
     renderUserTable();
     showToast('User berhasil ditambahkan', 'success');
   });
@@ -7951,14 +7921,12 @@ function editUser(id){
   if(newPass && newPass.trim()){
     sha256(newPass.trim()).then(h=>{
       user.password = h;
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-      if(typeof triggerAutoSync === 'function') triggerAutoSync();
+      saveUsers(users);
       renderUserTable();
       showToast('User diperbarui (password di-hash SHA-256)', 'success');
     });
   } else {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    if(typeof triggerAutoSync === 'function') triggerAutoSync();
+    saveUsers(users);
     renderUserTable();
     showToast('User diperbarui', 'success');
   }
@@ -7987,8 +7955,7 @@ function deleteUser(id){
   
   let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   users = users.filter(u => u.id !== id);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  if(typeof triggerAutoSync === 'function') triggerAutoSync();
+  saveUsers(users);
   renderUserTable();
   showToast('User dihapus', 'success');
 }
@@ -9889,9 +9856,9 @@ window.addEventListener('beforeunload', ()=>{
     const dot = document.getElementById('serviceSyncDot');
     const lbl = document.getElementById('serviceSyncLabel');
     if(!dot || !lbl) return;
-    const on = typeof cloudConfig !== 'undefined' && cloudConfig.autoSync;
-    dot.className = 'w-2 h-2 rounded-full ' + (on ? 'bg-emerald-500' : 'bg-slate-300');
-    lbl.textContent = 'Auto-Sync: ' + (on ? 'ON' : 'OFF');
+    const connected = typeof cloudConfig !== 'undefined' && cloudConfig.supabaseUrl;
+    dot.className = 'w-2 h-2 rounded-full ' + (connected ? 'bg-emerald-500' : 'bg-slate-300');
+    lbl.textContent = 'Smart-Sync: ' + (connected ? 'ON' : 'Belum terhubung');
   }
   window.updateServiceSyncIndicator = updateServiceSyncIndicator;
 
@@ -12779,6 +12746,14 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     activeDgStation='ALL'; buildStationTabs(); dgPage=1; renderDgTrx();
   });
 
+  // ── WIRE SEARCH & FILTER INPUTS ─────────────────────────────────
+  ['dgSearchTrx'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input', ()=>{ dgPage=1; renderDgTrx(); });
+  });
+  ['dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change', ()=>{ dgPage=1; renderDgTrx(); });
+  });
+
   // IFS filters
   ['dgIfsSearch','dgIfsFilterStation','dgIfsFilterStatus'].forEach(id=>{
     document.getElementById(id)?.addEventListener('input', renderDgEmployees);
@@ -12813,6 +12788,149 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     XLSX.utils.book_append_sheet(wb, ws, 'Data Stok');
     XLSX.writeFile(wb, `Drygoods_Stok_${new Date().toISOString().slice(0,10)}.xlsx`);
     showToast('Export Excel berhasil');
+  });
+
+  // ── IMPORT EXCEL KARTU STOK ─────────────────────────────────────
+  // Format kolom: Tgl, Station, Nama Barang, Kode, Jenis (IN/OUT), Qty, Satuan, Saldo*, Keterangan, Input By
+  // *Kolom Saldo diabaikan saat import (dihitung otomatis dari transaksi)
+  document.getElementById('btnDgImportExcel')?.addEventListener('click', ()=>{
+    const inp = document.getElementById('dgImportExcelInput');
+    if(inp){ inp.value=''; inp.click(); }
+  });
+
+  document.getElementById('dgImportExcelInput')?.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(!window.XLSX){ showToast('Library XLSX belum termuat','error'); return; }
+
+    const reader = new FileReader();
+    reader.onload = async (ev)=>{
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'binary'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+        if(!rows.length){ showToast('File Excel kosong atau format tidak dikenali','error'); return; }
+
+        // Mapping kolom fleksibel (case-insensitive)
+        function col(row, ...names){
+          for(const n of names){
+            const k = Object.keys(row).find(k=> k.trim().toLowerCase() === n.toLowerCase());
+            if(k !== undefined) return String(row[k]||'').trim();
+          }
+          return '';
+        }
+
+        let added=0, skipped=0, errors=[];
+        const currentUserName = window.currentUser?.name || window.currentUser?.username || '';
+        const newTrx = [];
+
+        rows.forEach((row, idx)=>{
+          const rowNum = idx + 2; // +2 karena header di baris 1
+          // Tanggal
+          let dateRaw = col(row,'tgl','tanggal','date','tgl.','tanggal transaksi');
+          let dateVal = '';
+          if(dateRaw){
+            // coba parse berbagai format
+            // format Excel serial number
+            if(!isNaN(Number(dateRaw)) && Number(dateRaw) > 40000){
+              const d = XLSX.SSF.parse_date_code(Number(dateRaw));
+              if(d) dateVal = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+            } else {
+              // string: dd-Mon-yyyy, dd/mm/yyyy, yyyy-mm-dd, dsb.
+              const parts = dateRaw.match(/(\d{1,4})[-\/](\w{1,3}|\d{1,2})[-\/](\d{2,4})/);
+              if(parts){
+                const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+                const p1=parts[1], p2=parts[2], p3=parts[3];
+                const m2 = months[p2.toLowerCase()];
+                if(m2){
+                  // dd-Mon-yyyy
+                  const yr = p3.length===2?'20'+p3:p3;
+                  dateVal = `${yr}-${String(m2).padStart(2,'0')}-${p1.padStart(2,'0')}`;
+                } else if(parseInt(p1)>31){
+                  // yyyy-mm-dd
+                  dateVal = `${p1}-${p2.padStart(2,'0')}-${p3.padStart(2,'0')}`;
+                } else {
+                  // dd/mm/yyyy
+                  const yr = p3.length===2?'20'+p3:p3;
+                  dateVal = `${yr}-${p2.padStart(2,'0')}-${p1.padStart(2,'0')}`;
+                }
+              } else {
+                // try native Date parse
+                const d = new Date(dateRaw);
+                if(!isNaN(d)) dateVal = d.toISOString().slice(0,10);
+              }
+            }
+          }
+          if(!dateVal){ errors.push(`Baris ${rowNum}: Tanggal tidak valid ("${dateRaw}")`); skipped++; return; }
+
+          const station  = col(row,'station','stasiun','stn') || (activeDgStation!=='ALL'?activeDgStation:'');
+          const item     = col(row,'nama barang','namabarang','barang','item','nama','name');
+          const kode     = col(row,'kode','code','kode barang');
+          const typeRaw  = col(row,'jenis','type','tipe','in/out').toUpperCase();
+          const type     = typeRaw==='IN'||typeRaw==='MASUK'?'IN': typeRaw==='OUT'||typeRaw==='KELUAR'?'OUT':'';
+          const qtyRaw   = col(row,'qty','jumlah','quantity','kuantitas');
+          const qty      = parseInt(String(qtyRaw).replace(/[^\d]/g,''))||0;
+          const unit     = col(row,'satuan','unit','uom');
+          // kolom Saldo diabaikan — dihitung otomatis
+          const remark   = col(row,'keterangan','remark','catatan','ket');
+          const inputBy  = col(row,'input by','inputby','diinput','oleh','by') || currentUserName;
+
+          if(!item){ errors.push(`Baris ${rowNum}: Nama Barang kosong`); skipped++; return; }
+          if(!station){ errors.push(`Baris ${rowNum}: Station kosong`); skipped++; return; }
+          if(!type){ errors.push(`Baris ${rowNum}: Jenis harus IN atau OUT (ditemukan: "${typeRaw}")`); skipped++; return; }
+          if(!qty){ errors.push(`Baris ${rowNum}: Qty tidak valid`); skipped++; return; }
+
+          newTrx.push({
+            id: genId()+'_'+idx,
+            date: dateVal, station, item, kode, type, qty, unit, remark, inputBy,
+            updatedAt: new Date().toISOString()
+          });
+          added++;
+        });
+
+        if(!newTrx.length){
+          showToast(`Import gagal: ${skipped} baris dilewati. Periksa format file.`, 'error');
+          if(errors.length) console.warn('[DG Import]', errors.join('\n'));
+          return;
+        }
+
+        // Konfirmasi
+        const ok = await showConfirm('Import Excel Kartu Stok',
+          `Akan menambahkan ${added} transaksi dari file Excel.\n`+
+          (skipped?`${skipped} baris dilewati karena tidak valid.\n`:'')+
+          `Lanjutkan?`
+        );
+        if(!ok) return;
+
+        // Gabungkan — cegah duplikat berdasarkan (date+station+item+type+qty)
+        const existingKeys = new Set(dgData.transactions.map(t=>`${t.date}|${t.station}|${(t.item||'').toLowerCase()}|${t.type}|${t.qty}`));
+        let dupCount = 0;
+        newTrx.forEach(t=>{
+          const k = `${t.date}|${t.station}|${(t.item||'').toLowerCase()}|${t.type}|${t.qty}`;
+          if(existingKeys.has(k)){ dupCount++; return; }
+          existingKeys.add(k);
+          dgData.transactions.unshift(t);
+        });
+
+        saveDrygoodsData();
+        renderDgTrx();
+        renderDgSaldo();
+        renderDgDashboard();
+
+        let msg = `✅ Import berhasil: ${added - dupCount} data baru ditambahkan`;
+        if(dupCount) msg += `, ${dupCount} duplikat dilewati`;
+        if(skipped) msg += `, ${skipped} baris tidak valid`;
+        if(errors.length) console.warn('[DG Import] Baris tidak valid:', errors.join('\n'));
+        showToast(msg, 'success');
+      } catch(err){
+        showToast('Gagal membaca file Excel: '+err.message, 'error');
+        console.error('[DG Import]', err);
+      }
+    };
+    reader.readAsBinaryString(file);
+    // Reset input agar file yang sama bisa dipilih lagi
+    e.target.value = '';
   });
 
   // Export Excel Employees
