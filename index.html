@@ -606,7 +606,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
     <div class="flex items-center justify-between mb-5">
       <div>
         <h2 class="text-lg font-bold">Manajemen User</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Kelola akun Admin, Co-Admin, User, dan Peserta</p>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola akun Admin, Co-Admin, User, Peserta, dan role kustom (UserXXX/UserXX/UserX)</p>
         <p id="userPesertaCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Akun Peserta: 0 / 150</p>
       </div>
       <button id="btnAddUser" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Tambah User</button>
@@ -633,14 +633,14 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
   <div id="adminSubPerms" class="admin-subtab-pane hidden">
     <div class="card p-5 md:p-6">
       <h2 class="text-lg font-bold mb-1">🔐 Pengaturan Akses Role</h2>
-      <p class="text-xs text-slate-500 mb-2">Atur tab / fitur apa saja yang dapat dilihat oleh Co-Admin, User, dan Peserta. Admin selalu memiliki akses penuh.</p>
+      <p class="text-xs text-slate-500 mb-2">Atur tab / fitur apa saja yang dapat dilihat oleh Co-Admin, User, Peserta, dan role kustom (UserXXX/UserXX/UserX). Admin selalu memiliki akses penuh. Role kustom defaultnya TANPA akses sama sekali sampai dicentang di sini.</p>
       <div id="permsAdminOnlyNotice" class="hidden mb-4 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-300 font-semibold">
         ⚠️ Hanya Admin yang dapat mengubah pengaturan akses. Anda hanya bisa melihat (read-only).
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-slate-50 dark:bg-slate-800">
-            <tr class="text-center">
+            <tr class="text-center" id="permTableHeadRow">
               <th class="p-3 text-left font-semibold">Fitur / Tab</th>
               <th class="p-3 font-semibold text-blue-700 dark:text-blue-300">Co-Admin</th>
               <th class="p-3 font-semibold text-emerald-700 dark:text-emerald-300">User</th>
@@ -7881,7 +7881,7 @@ function renderUserTable(){
     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
       <td class="p-3 font-mono text-xs">${u.username}</td>
       <td class="p-3">${u.name}</td>
-      <td class="p-3"><span class="badge ${u.role==='Admin'?'bg-purple-100 text-purple-700':u.role==='Co-Admin'?'bg-blue-100 text-blue-700':u.role==='Peserta'?'bg-indigo-100 text-indigo-700':'bg-slate-100 text-slate-700'}">${u.role}</span></td>
+      <td class="p-3"><span class="badge ${getRoleBadgeClass(u.role)}">${u.role}</span></td>
       <td class="p-3"><span class="text-xs ${u.active?'text-emerald-600':'text-red-600'}">${u.active?'Aktif':'Nonaktif'}</span></td>
       <td class="p-3 text-right">
         ${canEdit ? `<button onclick="editUser(${u.id})" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>` : ''}
@@ -7893,6 +7893,20 @@ function renderUserTable(){
   const pesertaInfo = document.getElementById('userPesertaCountInfo');
   if(pesertaInfo) pesertaInfo.textContent = `Akun Peserta: ${pesertaCount} / 150`;
 }
+
+// Helper: kelas warna badge untuk setiap role, termasuk role kustom (UserXXX/UserXX/UserX).
+// Dipusatkan di sini agar konsisten dan mudah ditambah jika ada role baru lagi nanti.
+function getRoleBadgeClass(role){
+  if(role === 'Admin') return 'bg-purple-100 text-purple-700';
+  if(role === 'Co-Admin') return 'bg-blue-100 text-blue-700';
+  if(role === 'User') return 'bg-emerald-100 text-emerald-700';
+  if(role === 'Peserta') return 'bg-indigo-100 text-indigo-700';
+  const custom = (typeof window.CUSTOM_ROLES !== 'undefined' ? window.CUSTOM_ROLES : []).find(r=>r.roleName === role);
+  if(custom) return custom.badgeClass;
+  return 'bg-slate-100 text-slate-700';
+}
+window.getRoleBadgeClass = getRoleBadgeClass;
+
 
 // Add user
 document.getElementById('btnAddUser')?.addEventListener('click', function(){
@@ -7912,11 +7926,18 @@ document.getElementById('btnAddUser')?.addEventListener('click', function(){
   if(!name) return;
   // Co-Admin cannot create Admin accounts
   const isCallerAdmin   = currentUser.role === 'Admin';
-  const allowedRoles    = isCallerAdmin ? 'Admin / Co-Admin / User / Peserta' : 'Co-Admin / User / Peserta';
+  // BUGFIX: daftar role sebelumnya hardcoded 4 nilai saja, sehingga role kustom baru
+  // (UserXXX/UserXX/UserX) tidak bisa dibuat lewat dialog ini. Sekarang diambil dari
+  // window.ALL_ROLES yang sudah mencakup role bawaan + semua role kustom.
+  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Admin','Co-Admin','User','Peserta'];
+  const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin');
+  const allowedRoles    = rolesForCaller.join(' / ');
   const defaultRole     = 'Peserta';
-  const role = prompt(`Role (${allowedRoles}):`, defaultRole);
-  if(!role){ return; }
-  if(!['Admin','Co-Admin','User','Peserta'].includes(role)){
+  const roleInput = prompt(`Role (${allowedRoles}):`, defaultRole);
+  if(!roleInput){ return; }
+  // Cocokkan tanpa peduli besar/kecil huruf agar lebih toleran terhadap input user
+  const role = rolesForCaller.find(r=>r.toLowerCase() === roleInput.trim().toLowerCase());
+  if(!role){
     showToast('Role tidak valid. Pilih: ' + allowedRoles, 'error');
     return;
   }
@@ -7986,8 +8007,13 @@ function editUser(id){
   const newPass = prompt('Password baru (kosongkan jika tidak diubah):');
   
   if(currentUser.role === 'Admin'){
-    const newRole = prompt('Role (Admin/Co-Admin/User/Peserta):', user.role);
-    if(newRole !== null && ['Admin','Co-Admin','User','Peserta'].includes(newRole)){
+    const allRolesEdit = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Admin','Co-Admin','User','Peserta'];
+    const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
+    const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
+    if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
+      showToast('Role tidak valid. Role tidak diubah. Pilih: ' + allRolesEdit.join('/'), 'error');
+    }
+    if(newRole){
       if(newRole === 'Peserta' && user.role !== 'Peserta'){
         const pesertaCount = users.filter(u=>u.role==='Peserta').length;
         if(pesertaCount >= 150){
@@ -8061,22 +8087,33 @@ window.switchTab = function(tab){
     }
   }
 
-  // Non-Admin/Co-Admin: check against dynamic permissions if available
-  if(_cu && (_cu.role === 'User' || _cu.role === 'Peserta')){
+  // BUGFIX: sebelumnya guard ini hanya berlaku untuk role 'User'/'Peserta' — artinya
+  // Co-Admin dan role kustom apa pun (UserXXX/UserXX/UserX, atau role lain di masa
+  // depan) bisa memanggil switchTab() langsung (misalnya lewat console atau elemen
+  // yang lolos dari penyembunyian applyPermissions) tanpa pengecekan apa pun di sini.
+  // Sekarang semua role NON-ADMIN dicek secara generic via roleNameToKey().
+  if(_cu && _cu.role !== 'Admin'){
     const perms = (typeof window.getRolePerms === 'function') ? window.getRolePerms() : null;
+    const roleKey = (typeof window.roleNameToKey === 'function') ? window.roleNameToKey(_cu.role) : (_cu.role === 'Co-Admin' ? 'coAdmin' : _cu.role === 'User' ? 'user' : _cu.role === 'Peserta' ? 'peserta' : null);
     if(perms){
-      const roleKey = _cu.role === 'User' ? 'user' : 'peserta';
       const featId  = 'tab-' + tab;
-      const allowed = perms[featId] ? perms[featId][roleKey] : false;
+      // roleKey null (role tak dikenal) -> fail-closed, tidak ada akses sama sekali
+      const allowed = roleKey ? (perms[featId] ? !!perms[featId][roleKey] : false) : false;
       // Always allow soal-peserta (training wizard tab — not in perm table but always allowed)
       if(tab !== 'soal-peserta' && !allowed){
         return; // silent block per dynamic perms
       }
     } else {
-      // Fallback when dynamic perms not yet loaded: use safe defaults for User
+      // Fallback when dynamic perms not yet loaded: use safe defaults for User.
+      // Co-Admin & role kustom lain tanpa perms termuat: TIDAK diberi fallback
+      // akses penuh — fail-closed sampai perms berhasil dimuat.
       if(_cu.role === 'User'){
         const userDefault = ['home','input','data','dashboard','soal','soal-peserta','stcr-dashboard','stcr-data','stcr-station','drygoods-data','drygoods-dashboard','drygoods-ifs','drygoods-bankitem'];
         if(!userDefault.includes(tab)) return;
+      } else if(_cu.role !== 'Co-Admin'){
+        // Role kustom (UserXXX/UserXX/UserX) atau role tak dikenal: hanya izinkan
+        // soal-peserta sebagai default paling aman sebelum perms termuat.
+        if(tab !== 'soal-peserta') return;
       }
     }
   }
@@ -8102,8 +8139,21 @@ function restoreSession(){
   setTimeout(() => {
     if(document.querySelector(`[data-tab="${savedTab}"]`)?.style.display !== 'none'){
       window.switchTab(savedTab);
-    } else {
+    } else if(document.querySelector('[data-tab="home"]')?.style.display !== 'none'){
       window.switchTab('home');
+    } else {
+      // BUGFIX: role kustom (UserXXX/UserXX/UserX) defaultnya TANPA akses sama sekali,
+      // sehingga tab "home" pun bisa disembunyikan. Sebelumnya kode langsung memaksa
+      // switchTab('home') yang akan di-block diam-diam oleh guard switchTab, membuat
+      // tampilan kosong tanpa penjelasan. Sekarang cari tab pertama yang memang
+      // diizinkan untuk role ini dan arahkan ke sana; jika benar-benar tidak ada satu
+      // tab pun yang diizinkan, beri tahu user agar menghubungi Admin.
+      const firstVisibleTab = document.querySelector('.sidebar-btn[data-tab]:not([style*="display: none"])')?.dataset?.tab;
+      if(firstVisibleTab){
+        window.switchTab(firstVisibleTab);
+      } else if(typeof showToast === 'function'){
+        showToast('Akun Anda belum diberi akses ke fitur apa pun. Hubungi Admin.', 'error');
+      }
     }
   }, 250);
 }
@@ -9975,32 +10025,53 @@ window.addEventListener('beforeunload', ()=>{
 (function(){
   const PERM_KEY = 'sjnam_role_perms_v1';
 
-  // Feature list: { id, label, default: {coAdmin, user, peserta} }
+  // Feature list: { id, label, default: {coAdmin, user, peserta, userxxx, userxx, userx} }
+  // Role baru (UserXXX/UserXX/UserX) bersifat custom & setara — default TANPA akses
+  // sama sekali; Admin yang mengatur lewat tabel "Atur Akses Role" sesuai kebutuhan.
   const FEATURES = [
-    { id:'tab-home',       label:'🏠 Tab Home',            def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-input',      label:'✈️ Tab Input',            def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-data',       label:'📊 Tab Data',             def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-dashboard',  label:'📈 Tab Dashboard',        def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-request',    label:'📝 Tab Approval',         def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-stations',   label:'🗺️ Tab Station',          def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank',         def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-materi',     label:'📚 Tab Materi Training',  def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-soal',       label:'📝 Tab Soal Training',    def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false} },
-    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok',  def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard',  def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station',def:{coAdmin:true, user:true,  peserta:false} },
-    { id:'tab-drygoods-bankitem',  label:'🗂️ Drygoods – Bank Item',  def:{coAdmin:true, user:false, peserta:false} },
-    { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false} },
-    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false} },
-    { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false} },
-    { id:'feat-mulai',     label:'🚀 Mulai Training Peserta',def:{coAdmin:true, user:true,  peserta:true} },
+    { id:'tab-home',       label:'🏠 Tab Home',            def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-input',      label:'✈️ Tab Input',            def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-data',       label:'📊 Tab Data',             def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-dashboard',  label:'📈 Tab Dashboard',        def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-request',    label:'📝 Tab Approval',         def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-stations',   label:'🗺️ Tab Station',          def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank',         def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-materi',     label:'📚 Tab Materi Training',  def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-soal',       label:'📝 Tab Soal Training',    def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok',  def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard',  def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station',def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'tab-drygoods-bankitem',  label:'🗂️ Drygoods – Bank Item',  def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false} },
+    { id:'feat-mulai',     label:'🚀 Mulai Training Peserta',def:{coAdmin:true, user:true,  peserta:true,  userxxx:false, userxx:false, userx:false} },
   ];
+
+  // Daftar role kustom non-bawaan (selain Admin/Co-Admin/User/Peserta).
+  // Tambahkan di sini jika suatu saat ingin menambah role baru lagi.
+  const CUSTOM_ROLES = [
+    { key:'userxxx', label:'UserXXX', roleName:'UserXXX', accent:'accent-rose-600',  badgeClass:'bg-rose-100 text-rose-700',   headerTextClass:'text-rose-700 dark:text-rose-300' },
+    { key:'userxx',  label:'UserXX',  roleName:'UserXX',  accent:'accent-amber-600', badgeClass:'bg-amber-100 text-amber-700', headerTextClass:'text-amber-700 dark:text-amber-300' },
+    { key:'userx',   label:'UserX',   roleName:'UserX',   accent:'accent-teal-600',  badgeClass:'bg-teal-100 text-teal-700',   headerTextClass:'text-teal-700 dark:text-teal-300' },
+  ];
+  window.CUSTOM_ROLES = CUSTOM_ROLES;
+  // Semua role yang valid dalam sistem (dipakai untuk validasi di banyak tempat)
+  window.ALL_ROLES = ['Admin','Co-Admin','User','Peserta', ...CUSTOM_ROLES.map(r=>r.roleName)];
+  // Mapping nama role (persis seperti disimpan di user object) -> roleKey di tabel perms
+  window.roleNameToKey = function(roleName){
+    if(roleName === 'Co-Admin') return 'coAdmin';
+    if(roleName === 'User') return 'user';
+    if(roleName === 'Peserta') return 'peserta';
+    const custom = CUSTOM_ROLES.find(r=>r.roleName === roleName);
+    return custom ? custom.key : null; // null = Admin atau role tak dikenal
+  };
 
   function loadPerms(){
     try { return JSON.parse(localStorage.getItem(PERM_KEY)) || null; } catch(e){ return null; }
@@ -10030,6 +10101,10 @@ window.addEventListener('beforeunload', ()=>{
     if(resetBtn){ resetBtn.disabled = !isViewerAdmin; resetBtn.style.opacity = isViewerAdmin ? '' : '0.4'; resetBtn.style.cursor = isViewerAdmin ? '' : 'not-allowed'; }
     tbody.innerHTML = FEATURES.map(f=>{
       const p = perms[f.id] || f.def;
+      const customCells = CUSTOM_ROLES.map(r=>`
+        <td class="p-3 text-center">
+          <input type="checkbox" data-feat="${f.id}" data-role="${r.key}" ${p[r.key]?'checked':''} class="perm-chk w-4 h-4 ${r.accent}" ${isViewerAdmin?'':'disabled'}>
+        </td>`).join('');
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
         <td class="p-3 font-medium">${f.label}</td>
         <td class="p-3 text-center">
@@ -10040,9 +10115,21 @@ window.addEventListener('beforeunload', ()=>{
         </td>
         <td class="p-3 text-center">
           <input type="checkbox" data-feat="${f.id}" data-role="peserta" ${p.peserta?'checked':''} class="perm-chk w-4 h-4 accent-indigo-600" ${isViewerAdmin?'':'disabled'}>
-        </td>
+        </td>${customCells}
       </tr>`;
     }).join('');
+    // Render header kolom role kustom sekali saja (idempotent)
+    const headRow = document.getElementById('permTableHeadRow');
+    if(headRow && !headRow.dataset.customRendered){
+      CUSTOM_ROLES.forEach(r=>{
+        const th = document.createElement('th');
+        th.className = 'p-3 font-semibold';
+        th.style.color = r.headerColor || '';
+        th.innerHTML = `<span class="${r.headerTextClass||''}">${r.label}</span>`;
+        headRow.appendChild(th);
+      });
+      headRow.dataset.customRendered = '1';
+    }
   }
   window.renderPermTable = renderPermTable;
 
@@ -10121,11 +10208,18 @@ window.addEventListener('beforeunload', ()=>{
 
     // Pastikan Co-Admin TIDAK bypass — lanjutkan ke permission check di bawah
 
-    // Determine which roleKey to check
-    let roleKey = isCoAdmin ? 'coAdmin' : isUser ? 'user' : 'peserta';
+    // BUGFIX: sebelumnya roleKey hanya bisa coAdmin/user/peserta — role lain (termasuk
+    // role kustom baru seperti UserXXX/UserXX/UserX) akan otomatis jatuh ke 'peserta'.
+    // Sekarang pakai roleNameToKey() yang generic dan mencakup semua role kustom.
+    // Jika role benar-benar tidak dikenal (null), perlakukan sebagai TANPA AKSES SAMA
+    // SEKALI (fail-closed), bukan diam-diam diberi akses peserta.
+    const roleKey = (typeof window.roleNameToKey === 'function') ? window.roleNameToKey(role) : (isCoAdmin ? 'coAdmin' : isUser ? 'user' : isPeserta ? 'peserta' : null);
     const perms = getPerms();
 
-    function canSee(featId){ return perms[featId] ? perms[featId][roleKey] : false; }
+    function canSee(featId){
+      if(!roleKey) return false; // role tak dikenal -> fail-closed, tidak ada akses sama sekali
+      return perms[featId] ? !!perms[featId][roleKey] : false;
+    }
 
     // Map feature id to DOM elements
     const tabMap = {
