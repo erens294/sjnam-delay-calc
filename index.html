@@ -3898,7 +3898,23 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
           <option value="DJJ">DJJ</option>
         </select>
         <button id="btnDgAddTrx" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Transaksi Baru</button>
-        <button id="btnDgDeleteSelected" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl hidden">🗑️ Hapus Terpilih (<span id="dgSelectedCount">0</span>)</button>
+        <!-- Bulk-action group (hanya tampil saat ada seleksi atau mode select-all) -->
+        <div id="dgBulkActionGroup" class="hidden relative flex items-stretch">
+          <button id="btnDgDeleteSelected" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-l-xl border-r border-red-500 whitespace-nowrap">🗑️ Hapus Terpilih (<span id="dgSelectedCount">0</span>)</button>
+          <button id="btnDgBulkDropdown" class="px-2 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-r-xl" title="Opsi lainnya">▾</button>
+          <div id="dgBulkDropdownMenu" class="hidden absolute top-full right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl z-50 min-w-[220px] overflow-hidden">
+            <button id="btnDgSelectAllFiltered" class="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 font-semibold text-blue-700 dark:text-blue-400">
+              ☑️ Pilih Semua Data Terfilter (<span id="dgSelectAllFilteredCount">0</span>)
+            </button>
+            <div class="border-t border-slate-200 dark:border-slate-600"></div>
+            <button id="btnDgDeleteAllFiltered" class="w-full text-left px-4 py-3 text-sm hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 font-semibold text-red-700 dark:text-red-400">
+              🗑️ Hapus Semua Data Terfilter (<span id="dgDeleteAllFilteredCount">0</span>)
+            </button>
+            <button id="btnDgClearSelection" class="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-slate-600 dark:text-slate-400">
+              ✖ Batalkan Pilihan
+            </button>
+          </div>
+        </div>
         <button id="btnDgImportExcel" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl">📥 Import Excel</button>
         <button id="btnDgDownloadTemplate" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-sm font-semibold rounded-xl" title="Download template Excel kosong untuk diisi">📋 Template</button>
         <input type="file" id="dgImportExcelInput" accept=".xlsx,.xls" class="hidden">
@@ -3929,6 +3945,13 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       <input id="dgFilterDateFrom" type="date" class="input text-sm" title="Tanggal Dari">
       <input id="dgFilterDateTo" type="date" class="input text-sm" title="Tanggal Hingga">
       <button id="btnDgResetFilter" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-sm font-semibold rounded-xl">Reset</button>
+    </div>
+
+    <!-- Banner "Semua X data terfilter dipilih" -->
+    <div id="dgSelectAllBanner" class="hidden mb-3 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 text-sm text-blue-800 dark:text-blue-200 flex items-center gap-3 flex-wrap">
+      <span id="dgSelectAllBannerText">Semua data di halaman ini dipilih.</span>
+      <button id="btnDgSelectAllFilteredBanner" class="font-semibold underline hover:no-underline text-blue-700 dark:text-blue-300 whitespace-nowrap"></button>
+      <button id="btnDgClearSelectionBanner" class="ml-auto text-xs text-slate-500 hover:text-red-600 font-medium">✖ Batalkan</button>
     </div>
 
     <!-- Tabel Stok -->
@@ -12459,18 +12482,82 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   let dgPage = 1;
   const DG_PAGE_SIZE = 30;
   let dgSelectedIds = new Set();
+  let dgSelectAllMode = false; // true = semua data terfilter dipilih (cross-page)
 
-  function updateDgBulkDeleteBtn(){
-    const btn = document.getElementById('btnDgDeleteSelected');
+  function getDgFilteredIds(){
+    return getFilteredTrx().map(t=>t.id);
+  }
+
+  function updateDgBulkUI(){
+    const filteredIds = getDgFilteredIds();
+    const filteredTotal = filteredIds.length;
+    const selCount = dgSelectAllMode ? filteredTotal : dgSelectedIds.size;
+
+    // Toolbar group
+    const group = document.getElementById('dgBulkActionGroup');
     const counter = document.getElementById('dgSelectedCount');
-    if(!btn) return;
-    const n = dgSelectedIds.size;
-    if(n > 0){
-      btn.classList.remove('hidden');
-      if(counter) counter.textContent = n;
-    } else {
-      btn.classList.add('hidden');
+    const selAllCount = document.getElementById('dgSelectAllFilteredCount');
+    const delAllCount = document.getElementById('dgDeleteAllFilteredCount');
+    if(group){
+      if(selCount > 0) group.classList.remove('hidden');
+      else { group.classList.add('hidden'); closeBulkDropdown(); }
     }
+    if(counter) counter.textContent = selCount;
+    if(selAllCount) selAllCount.textContent = filteredTotal;
+    if(delAllCount) delAllCount.textContent = dgSelectAllMode ? filteredTotal : selCount;
+
+    // Banner
+    const banner = document.getElementById('dgSelectAllBanner');
+    const bannerText = document.getElementById('dgSelectAllBannerText');
+    const bannerBtn = document.getElementById('btnDgSelectAllFilteredBanner');
+    if(banner && bannerText && bannerBtn){
+      const filtered = getFilteredTrx();
+      const start = (dgPage-1)*DG_PAGE_SIZE;
+      const pageIds = filtered.slice(start, start+DG_PAGE_SIZE).map(t=>t.id);
+      const allPageSelected = pageIds.length > 0 && pageIds.every(id=> dgSelectAllMode || dgSelectedIds.has(id));
+
+      if(dgSelectAllMode){
+        banner.classList.remove('hidden');
+        bannerText.textContent = `Semua ${filteredTotal} data terfilter dipilih.`;
+        bannerBtn.textContent = '';
+        bannerBtn.classList.add('hidden');
+      } else if(allPageSelected && filteredTotal > pageIds.length){
+        // All on this page selected, more pages exist → offer to select all
+        banner.classList.remove('hidden');
+        bannerText.textContent = `${pageIds.length} data di halaman ini dipilih.`;
+        bannerBtn.textContent = `Pilih semua ${filteredTotal} data terfilter`;
+        bannerBtn.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // Check-all header checkbox
+    const checkAll = document.getElementById('dgCheckAll');
+    if(checkAll){
+      const filtered = getFilteredTrx();
+      const start = (dgPage-1)*DG_PAGE_SIZE;
+      const pageIds = filtered.slice(start, start+DG_PAGE_SIZE).map(t=>t.id);
+      if(dgSelectAllMode){
+        checkAll.checked = true;
+        checkAll.indeterminate = false;
+      } else {
+        const allChecked = pageIds.length > 0 && pageIds.every(id=>dgSelectedIds.has(id));
+        const someChecked = pageIds.some(id=>dgSelectedIds.has(id));
+        checkAll.checked = allChecked;
+        checkAll.indeterminate = !allChecked && someChecked;
+      }
+    }
+  }
+
+  function closeBulkDropdown(){
+    document.getElementById('dgBulkDropdownMenu')?.classList.add('hidden');
+  }
+
+  function clearDgSelection(){
+    dgSelectedIds.clear();
+    dgSelectAllMode = false;
+    updateDgBulkUI();
   }
 
   function renderDgTrx(){
@@ -12501,7 +12588,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
         const isIn = t.type==='IN';
         const saldoVal = saldoById[t.id] !== undefined ? saldoById[t.id] : '-';
         const saldoClass = typeof saldoVal === 'number' ? (saldoVal < 0 ? 'text-red-600 font-bold' : saldoVal < 10 ? 'text-amber-600 font-bold' : 'text-emerald-700 font-bold') : '';
-        const isChecked = dgSelectedIds.has(t.id);
+        const isChecked = dgSelectAllMode || dgSelectedIds.has(t.id);
         return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isChecked?'bg-blue-50 dark:bg-blue-900/20':''}">
           <td class="px-3 py-2 text-center"><input type="checkbox" class="dg-row-check rounded accent-blue-600 cursor-pointer" data-id="${t.id}" ${isChecked?'checked':''}></td>
           <td class="px-3 py-2 text-xs text-slate-500 whitespace-nowrap">${fmtDate(t.date)}</td>
@@ -12526,18 +12613,15 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       }).join('');
     }
 
-    // Sync check-all state
-    const checkAll = document.getElementById('dgCheckAll');
-    if(checkAll){
-      const pageIds = page.map(t=>t.id);
-      const allChecked = pageIds.length > 0 && pageIds.every(id=>dgSelectedIds.has(id));
-      checkAll.checked = allChecked;
-      checkAll.indeterminate = !allChecked && pageIds.some(id=>dgSelectedIds.has(id));
-    }
-    updateDgBulkDeleteBtn();
+    // Sync check-all state and bulk UI (centralized in updateDgBulkUI)
+    updateDgBulkUI();
 
     const info = document.getElementById('dgTrxInfo');
-    if(info) info.textContent = `${total} transaksi`;
+    if(info){
+      const selCount = dgSelectAllMode ? total : dgSelectedIds.size;
+      const selText = selCount > 0 ? ` · <span class="text-blue-600 font-semibold">${selCount} dipilih</span>` : '';
+      info.innerHTML = `${total} transaksi${selText}`;
+    }
 
     // Pagination
     const pag = document.getElementById('dgTrxPagination');
@@ -12748,7 +12832,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     showToast(dgEditTrxId?'Transaksi diperbarui':'Transaksi ditambahkan','success');
   });
 
-  // Delete trx
+  // Delete single trx
   document.getElementById('dgTrxTableBody')?.addEventListener('click', async e=>{
     const editId = e.target.closest('[data-dg-edit-trx]')?.dataset.dgEditTrx;
     const delId  = e.target.closest('[data-dg-del-trx]')?.dataset.dgDelTrx;
@@ -12758,15 +12842,32 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       if(!ok) return;
       dgData.transactions = dgData.transactions.filter(t=>t.id!==delId);
       dgSelectedIds.delete(delId);
+      // If in select-all mode, we keep it but the deleted record is gone anyway
       saveDrygoodsData(); renderDgTrx(); showToast('Transaksi dihapus');
     }
   });
+
+  // ── BULK SELECTION & DELETE EVENT HANDLERS ───────────────────────
+
+  // Dropdown toggle
+  document.getElementById('btnDgBulkDropdown')?.addEventListener('click', e=>{
+    e.stopPropagation();
+    document.getElementById('dgBulkDropdownMenu')?.classList.toggle('hidden');
+  });
+  // Close dropdown on outside click
+  document.addEventListener('click', ()=> closeBulkDropdown());
 
   // Checkbox per-row selection
   document.getElementById('dgTrxTableBody')?.addEventListener('change', e=>{
     const cb = e.target.closest('.dg-row-check');
     if(!cb) return;
     const id = cb.dataset.id;
+    // If we were in select-all mode, expand to explicit set first
+    if(dgSelectAllMode){
+      dgSelectAllMode = false;
+      const filteredIds = getDgFilteredIds();
+      filteredIds.forEach(fid => dgSelectedIds.add(fid));
+    }
     if(cb.checked) dgSelectedIds.add(id);
     else dgSelectedIds.delete(id);
     // Update row highlight
@@ -12775,42 +12876,90 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       row.classList.toggle('bg-blue-50', cb.checked);
       row.classList.toggle('dark:bg-blue-900/20', cb.checked);
     }
-    // Sync check-all
-    const filtered = getFilteredTrx();
-    const start = (dgPage-1)*DG_PAGE_SIZE;
-    const pageIds = filtered.slice(start, start+DG_PAGE_SIZE).map(t=>t.id);
-    const checkAll = document.getElementById('dgCheckAll');
-    if(checkAll){
-      const allChecked = pageIds.length > 0 && pageIds.every(id=>dgSelectedIds.has(id));
-      checkAll.checked = allChecked;
-      checkAll.indeterminate = !allChecked && pageIds.some(id=>dgSelectedIds.has(id));
-    }
-    updateDgBulkDeleteBtn();
+    updateDgBulkUI();
   });
 
-  // Check-All checkbox
+  // Check-All checkbox (current page)
   document.getElementById('dgCheckAll')?.addEventListener('change', e=>{
     const filtered = getFilteredTrx();
     const start = (dgPage-1)*DG_PAGE_SIZE;
     const pageIds = filtered.slice(start, start+DG_PAGE_SIZE).map(t=>t.id);
-    if(e.target.checked){
+    if(dgSelectAllMode && !e.target.checked){
+      // Expand select-all to explicit set, then remove this page
+      dgSelectAllMode = false;
+      getDgFilteredIds().forEach(id=>dgSelectedIds.add(id));
+      pageIds.forEach(id=>dgSelectedIds.delete(id));
+    } else if(e.target.checked){
+      dgSelectAllMode = false; // stay in per-id mode
       pageIds.forEach(id=>dgSelectedIds.add(id));
     } else {
+      dgSelectAllMode = false;
       pageIds.forEach(id=>dgSelectedIds.delete(id));
     }
     renderDgTrx();
   });
 
-  // Bulk delete button
-  document.getElementById('btnDgDeleteSelected')?.addEventListener('click', async ()=>{
-    const n = dgSelectedIds.size;
-    if(!n) return;
-    const ok = await showConfirm('Hapus Data Terpilih', `Hapus ${n} transaksi yang dipilih? Tindakan ini tidak dapat dibatalkan.`);
-    if(!ok) return;
-    dgData.transactions = dgData.transactions.filter(t=>!dgSelectedIds.has(t.id));
+  // Select ALL filtered data (cross-page) — from dropdown
+  document.getElementById('btnDgSelectAllFiltered')?.addEventListener('click', ()=>{
+    closeBulkDropdown();
+    dgSelectAllMode = true;
     dgSelectedIds.clear();
+    renderDgTrx();
+  });
+
+  // Select ALL filtered data — from inline banner button
+  document.getElementById('btnDgSelectAllFilteredBanner')?.addEventListener('click', ()=>{
+    dgSelectAllMode = true;
+    dgSelectedIds.clear();
+    renderDgTrx();
+  });
+
+  // Clear selection — from dropdown
+  document.getElementById('btnDgClearSelection')?.addEventListener('click', ()=>{
+    closeBulkDropdown();
+    clearDgSelection();
+    renderDgTrx();
+  });
+
+  // Clear selection — from banner
+  document.getElementById('btnDgClearSelectionBanner')?.addEventListener('click', ()=>{
+    clearDgSelection();
+    renderDgTrx();
+  });
+
+  // Hapus Terpilih (per-id set, NOT all-mode)
+  document.getElementById('btnDgDeleteSelected')?.addEventListener('click', async ()=>{
+    const filteredIds = getDgFilteredIds();
+    const idsToDelete = dgSelectAllMode
+      ? new Set(filteredIds)
+      : new Set(dgSelectedIds);
+    const n = idsToDelete.size;
+    if(!n) return;
+    const label = dgSelectAllMode ? `semua ${n} data terfilter` : `${n} data terpilih`;
+    const ok = await showConfirm('Hapus Data', `Hapus ${label}? Tindakan ini tidak dapat dibatalkan.`);
+    if(!ok) return;
+    dgData.transactions = dgData.transactions.filter(t=>!idsToDelete.has(t.id));
+    clearDgSelection();
     saveDrygoodsData(); renderDgTrx(); renderDgSaldo(); renderDgDashboard();
     showToast(`${n} transaksi berhasil dihapus`, 'success');
+  });
+
+  // Hapus Semua Data Terfilter — from dropdown (shortcut: pilih semua lalu hapus)
+  document.getElementById('btnDgDeleteAllFiltered')?.addEventListener('click', async ()=>{
+    closeBulkDropdown();
+    const filteredIds = getDgFilteredIds();
+    const idsToDelete = dgSelectAllMode ? filteredIds : [...dgSelectedIds];
+    const n = idsToDelete.length || idsToDelete.size || 0;
+    if(!n){ showToast('Tidak ada data untuk dihapus','error'); return; }
+    const label = dgSelectAllMode ? `semua ${filteredIds.length} data terfilter` : `${n} data terpilih`;
+    const ok = await showConfirm('Hapus Data', `Hapus ${label}? Tindakan ini tidak dapat dibatalkan.`);
+    if(!ok) return;
+    const deleteSet = new Set(dgSelectAllMode ? filteredIds : idsToDelete);
+    const deleted = deleteSet.size;
+    dgData.transactions = dgData.transactions.filter(t=>!deleteSet.has(t.id));
+    clearDgSelection();
+    saveDrygoodsData(); renderDgTrx(); renderDgSaldo(); renderDgDashboard();
+    showToast(`${deleted} transaksi berhasil dihapus`, 'success');
   });
 
   // ── MODAL KARYAWAN ────────────────────────────────────────────────
@@ -12872,7 +13021,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const st = e.target.closest('[data-dg-station]')?.dataset.dgStation;
     if(!st) return;
     activeDgStation = st;
-    dgSelectedIds.clear();
+    clearDgSelection();
     buildStationTabs();
     dgPage=1; renderDgTrx();
   });
@@ -12880,17 +13029,21 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   // Active station select change
   document.getElementById('dgActiveStation')?.addEventListener('change', e=>{
     activeDgStation = e.target.value;
-    dgSelectedIds.clear();
+    clearDgSelection();
     buildStationTabs(); dgPage=1; renderDgTrx();
   });
 
-  // Filter changes
+  // Filter changes — wire both input AND change for all filter controls
   ['dgSearchTrx','dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{
-    document.getElementById(id)?.addEventListener('input', ()=>{ dgPage=1; dgSelectedIds.clear(); renderDgTrx(); });
+    const el = document.getElementById(id);
+    if(!el) return;
+    const handler = ()=>{ dgPage=1; clearDgSelection(); renderDgTrx(); };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
   });
   document.getElementById('btnDgResetFilter')?.addEventListener('click', ()=>{
     ['dgSearchTrx','dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    activeDgStation='ALL'; dgSelectedIds.clear(); buildStationTabs(); dgPage=1; renderDgTrx();
+    activeDgStation='ALL'; clearDgSelection(); buildStationTabs(); dgPage=1; renderDgTrx();
   });
 
   // IFS filters
