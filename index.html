@@ -347,7 +347,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
 
 <!-- SIDEBAR -->
-<aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-[#050505] shadow-2xl z-40 flex flex-col transition-all duration-300 border-r border-neutral-800">
+<aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-[#050505] shadow-2xl z-40 flex flex-col transition-all duration-300 border-r border-neutral-800" style="visibility:hidden">
   <div class="p-4 border-b border-neutral-800">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -7610,8 +7610,18 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   if(_sideRoleEl) _sideRoleEl.textContent = user.role;
   if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
   
+  // Pre-hide restricted menu groups to prevent flash before applyPermissions runs
+  if(user.role !== 'Admin'){
+    ['toggleAdminMenu','toggleTrainingMenu','toggleStcrMenu','toggleDrygoodsMenu'].forEach(id=>{
+      const grp = document.getElementById(id)?.closest('div');
+      if(grp) grp.style.display = 'none';
+    });
+  }
   // By login time all <script> blocks have loaded — the dynamic patch is in place.
   (window.applyPermissions || applyPermissions)();
+  // Make sidebar visible AFTER permissions have been applied (no flash)
+  const _loginSidebar = document.getElementById('sidebar');
+  if(_loginSidebar) _loginSidebar.style.visibility = 'visible';
   restoreSession();
   showToast('Selamat datang, ' + user.name + '!', 'success');
 });
@@ -7850,6 +7860,10 @@ function applyPermissions(){
   window.currentUserCanAdd = isAdmin || isCoAdmin;
   
   renderUserTable();
+
+  // Reveal sidebar NOW — permissions are set, safe to show
+  const _origSb = document.getElementById('sidebar');
+  if(_origSb) _origSb.style.visibility = 'visible';
 
   // Peserta langsung diarahkan ke wizard "Mulai Training Peserta"
   if(isPeserta){
@@ -8179,6 +8193,24 @@ function restoreSession(){
       if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
       // IMPORTANT: defer so that the dynamic FEATURE-1 permission patch (installed by a later
       // <script> block) is already in place before we call window.applyPermissions().
+      // We use requestAnimationFrame (instead of setTimeout 0) to ensure DOM is ready
+      // but we ALSO hide all restricted menu groups immediately here (before the async call)
+      // to prevent the "flash" where non-admin users briefly see all menus.
+      (function hideSidebarGroupsImmediately(){
+        // Pre-hide all optional menu groups; applyPermissions will restore what's allowed.
+        const _role = currentUser ? currentUser.role : null;
+        const _isAdmin = _role === 'Admin';
+        if(!_isAdmin){
+          // Hide all menu groups except Home — applyPermissions will reveal the correct ones
+          ['toggleAdminMenu','toggleTrainingMenu','toggleStcrMenu','toggleDrygoodsMenu'].forEach(id=>{
+            const grp = document.getElementById(id)?.closest('div');
+            if(grp) grp.style.display = 'none';
+          });
+        }
+      })();
+      // Make sidebar visible NOW (after groups are pre-hidden) so there's no flicker
+      const _sidebarEl = document.getElementById('sidebar');
+      if(_sidebarEl) _sidebarEl.style.visibility = 'visible';
       setTimeout(()=>{
         (window.applyPermissions || applyPermissions)();
         restoreSession();
@@ -8203,7 +8235,15 @@ console.log('[AUTH] Sistem Administrasi aktif - Supabase auto-sync ON');
 
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){ document.getElementById('sidebar').style.visibility='visible';
+document.addEventListener('DOMContentLoaded', function(){
+  // Make sidebar visible only if checkAuth hasn't already done it (i.e., user was NOT logged in)
+  const _sb = document.getElementById('sidebar');
+  if(_sb && _sb.style.visibility !== 'visible'){
+    // Not logged in — keep sidebar hidden (loginOverlay covers everything anyway)
+    // Sidebar will become visible after successful login via applyPermissions
+  }
+  // If checkAuth already made sidebar visible (logged-in session), nothing extra needed here.
+  // Either way, proceed with sidebar wiring below.
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('mainContent');
   const btnCollapse = document.getElementById('btnCollapseSidebar');
@@ -10290,6 +10330,10 @@ window.addEventListener('beforeunload', ()=>{
     // currentUserCanEdit controls data record editing (delay records, DFS, etc.)
     window.currentUserReadOnly = !canSee('feat-edit'); // also set immediately (not just in setTimeout)
     if(typeof renderUserTable === 'function') renderUserTable();
+
+    // Reveal sidebar NOW — permissions have been applied, no more flash risk
+    const _patchedSb = document.getElementById('sidebar');
+    if(_patchedSb) _patchedSb.style.visibility = 'visible';
 
     // Peserta auto redirect
     if(isPeserta && canSee('feat-mulai')){
