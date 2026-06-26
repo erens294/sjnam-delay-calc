@@ -4467,11 +4467,9 @@ function switchTab(name){
   if(name==='stcr-dashboard' && window.STCR) window.STCR.onShowDashboard();
   if(name==='stcr-data' && window.STCR) window.STCR.onShowData();
   if(name==='stcr-station' && window.STCR) window.STCR.onShowStation();
-  // Drygoods sub-tabs
-  if(name==='drygoods-data' && window.DRYGOODS){ renderDgTrx && renderDgTrx(); }
-  if(name==='drygoods-dashboard' && window.DRYGOODS){ window.DRYGOODS.renderAll(); }
-  if(name==='drygoods-ifs' && window.DRYGOODS){ typeof renderDgEmployees==='function' && renderDgEmployees(); }
-  if(name==='drygoods-bankitem' && window.DRYGOODS){ typeof renderDgBankItem==='function' && renderDgBankItem(); }
+  // NOTE: Drygoods sub-tab rendering ditangani oleh patch window.switchTab
+  // di dalam Drygoods IIFE (lihat bagian "DRYGOODS MODULE") — JANGAN panggil
+  // renderDg* di sini karena fungsi tsb hanya ada di dalam scope IIFE (akan ReferenceError)
   if(name==='sertifikat'){
     setTimeout(()=>{ if(typeof window.ctbRenderAll==='function') window.ctbRenderAll(); }, 120);
   }
