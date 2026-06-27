@@ -7904,106 +7904,123 @@ function blinkSyncLight(){
 
 // REALTIME SUBSCRIPTION — dengarkan perubahan dari device lain
 function startRealtimeSubscription(){
-  const sb = getSupabaseClient();
-  if(!sb) return;
-  if(_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
+  // BUGFIX (kritis): seluruh isi fungsi ini dibungkus try-catch. Sebelumnya, jika
+  // Supabase client gagal membuat channel (mis. versi SDK berubah, network putus
+  // di tengah call, CORS, dll), error di sini akan UNCAUGHT dan menghentikan
+  // SELURUH <script> tag yang sama — termasuk checkAuth() & pemasangan listener
+  // submit form login yang didefinisikan lebih jauh di bawah pada script yang sama.
+  // Akibatnya: tombol "Masuk" tidak merespons sama sekali (listener belum terpasang),
+  // dan localStorage user/sesi tidak pernah diinisialisasi. Cloud sync bersifat
+  // best-effort dan TIDAK BOLEH PERNAH bisa menjatuhkan fitur login/auth.
+  try {
+    const sb = getSupabaseClient();
+    if(!sb) return;
+    if(_realtimeChannel) { sb.removeChannel(_realtimeChannel); _realtimeChannel = null; }
 
-  _realtimeChannel = sb
-    .channel('sjnam_sync_channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'sjnam_sync', filter: 'id=eq.sjnam_main' },
-      (payload) => {
-        // PENTING: callback ini harus NON-ASYNC — Supabase Realtime tidak support async handler
-        // (return Promise dianggap "true" → "message channel closed" error)
-        // Jalankan logic async secara terpisah (fire-and-forget) agar callback return undefined/void
-        (async () => {
-        if(_cloudPullInProgress) return;
-        const rec = payload.new?.payload;
-        if(!rec) return;
-        // Cek apakah data ini adalah push dari device kita sendiri — jika ya, skip
-        if(rec._pushedBy && rec._pushedBy === getDeviceId()) {
-          cloudLog('⏭️ Realtime: update dari device sendiri — skip pull balik', 'info');
-          return;
-        }
-        cloudLog('🔄 Update masuk dari device lain ('+( rec._pushedBy||'?')+') — memuat ulang data...', 'info');
-        _cloudPullInProgress = true;
-        try {
-        if(Array.isArray(rec.data)) { data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-        if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(stations)); }
-        if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; localStorage.setItem(DFS_KEY, JSON.stringify(dfsData)); }
-        // Gunakan localStorage langsung (BUKAN saveSettings) agar tidak memicu triggerAutoSync
-        if(rec.settings) { settings = {...settings, ...rec.settings}; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); applyDarkMode(); }
-        if(rec.training){
-          localStorage.setItem('sjn_training_v1', JSON.stringify(rec.training));
-          if(window.trainingData){ Object.assign(window.trainingData, rec.training); }
-        }
-        if(Array.isArray(rec.users)){
-          localStorage.setItem('sjnam_users_v1', JSON.stringify(rec.users));
-          if(typeof renderUserTable === 'function') renderUserTable();
-        }
-        // Restore data STCR dari realtime
-        if(Array.isArray(rec.stcrData) && rec.stcrData.length > 0){
-          localStorage.setItem('sjnam_stcr_data_v1', JSON.stringify(rec.stcrData));
-          if(window.STCR && typeof window.STCR.loadData === 'function'){
-            window.STCR.loadData();
-            if(typeof window.STCR.applyFilters === 'function') window.STCR.applyFilters();
+    _realtimeChannel = sb
+      .channel('sjnam_sync_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sjnam_sync', filter: 'id=eq.sjnam_main' },
+        (payload) => {
+          // PENTING: callback ini harus NON-ASYNC — Supabase Realtime tidak support async handler
+          // (return Promise dianggap "true" → "message channel closed" error)
+          // Jalankan logic async secara terpisah (fire-and-forget) agar callback return undefined/void
+          (async () => {
+          try {
+          if(_cloudPullInProgress) return;
+          const rec = payload.new?.payload;
+          if(!rec) return;
+          // Cek apakah data ini adalah push dari device kita sendiri — jika ya, skip
+          if(rec._pushedBy && rec._pushedBy === getDeviceId()) {
+            cloudLog('⏭️ Realtime: update dari device sendiri — skip pull balik', 'info');
+            return;
           }
-        }
-        // Restore drygoods dari realtime
-        if(rec.drygoodsData){
-          localStorage.setItem('sjnam_drygoods_v1', JSON.stringify(rec.drygoodsData));
-          if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.loadData === 'function'){
-            window.DRYGOODS.loadData();
-            window.DRYGOODS.renderAll();
+          cloudLog('🔄 Update masuk dari device lain ('+( rec._pushedBy||'?')+') — memuat ulang data...', 'info');
+          _cloudPullInProgress = true;
+          try {
+          if(Array.isArray(rec.data)) { data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+          if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(stations)); }
+          if(Array.isArray(rec.dfsData)) { dfsData = rec.dfsData; localStorage.setItem(DFS_KEY, JSON.stringify(dfsData)); }
+          // Gunakan localStorage langsung (BUKAN saveSettings) agar tidak memicu triggerAutoSync
+          if(rec.settings) { settings = {...settings, ...rec.settings}; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); applyDarkMode(); }
+          if(rec.training){
+            localStorage.setItem('sjn_training_v1', JSON.stringify(rec.training));
+            if(window.trainingData){ Object.assign(window.trainingData, rec.training); }
           }
+          if(Array.isArray(rec.users)){
+            localStorage.setItem('sjnam_users_v1', JSON.stringify(rec.users));
+            if(typeof renderUserTable === 'function') renderUserTable();
+          }
+          // Restore data STCR dari realtime
+          if(Array.isArray(rec.stcrData) && rec.stcrData.length > 0){
+            localStorage.setItem('sjnam_stcr_data_v1', JSON.stringify(rec.stcrData));
+            if(window.STCR && typeof window.STCR.loadData === 'function'){
+              window.STCR.loadData();
+              if(typeof window.STCR.applyFilters === 'function') window.STCR.applyFilters();
+            }
+          }
+          // Restore drygoods dari realtime
+          if(rec.drygoodsData){
+            localStorage.setItem('sjnam_drygoods_v1', JSON.stringify(rec.drygoodsData));
+            if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.loadData === 'function'){
+              window.DRYGOODS.loadData();
+              window.DRYGOODS.renderAll();
+            }
+          }
+          // Restore hak akses per-role dari realtime
+          if(rec.rolePerms){
+            localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
+            if(typeof window.renderPermTable === 'function') window.renderPermTable();
+            if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
+          }
+          // Restore template & elemen sertifikat dari realtime
+          let certChangedRt = false;
+          if(rec.certTemplate1){ localStorage.setItem('sjn_cert_template_1', JSON.stringify(rec.certTemplate1)); certChangedRt = true; }
+          if(rec.certTemplate2){ localStorage.setItem('sjn_cert_template_2', JSON.stringify(rec.certTemplate2)); certChangedRt = true; }
+          if(rec.certTemplateActive){ localStorage.setItem('sjn_cert_template_active', rec.certTemplateActive); certChangedRt = true; }
+          if(rec.certPositions){ localStorage.setItem('sjn_cert_positions_v1', JSON.stringify(rec.certPositions)); certChangedRt = true; }
+          if(rec.certBarcode !== undefined && rec.certBarcode !== null){ localStorage.setItem('sjn_cert_barcode_v1', rec.certBarcode); certChangedRt = true; }
+          if(rec.certCustomTexts){ localStorage.setItem('sjn_cert_custom_texts_v1', JSON.stringify(rec.certCustomTexts)); certChangedRt = true; }
+          if(rec.certCustomTextsSJ)   { localStorage.setItem('sjn_cert_custom_texts_sj_v1',   JSON.stringify(rec.certCustomTextsSJ));   certChangedRt = true; }
+          if(rec.certCustomTextsNAM)  { localStorage.setItem('sjn_cert_custom_texts_nam_v1',  JSON.stringify(rec.certCustomTextsNAM));  certChangedRt = true; }
+          if(rec.certCustomTextsBoth) { localStorage.setItem('sjn_cert_custom_texts_both_v1', JSON.stringify(rec.certCustomTextsBoth)); certChangedRt = true; }
+          if(rec.certParaf){ localStorage.setItem('sjn_cert_paraf_v1', JSON.stringify(rec.certParaf)); certChangedRt = true; }
+          if(rec.certParafShow !== undefined && rec.certParafShow !== null){ localStorage.setItem('sjn_cert_paraf_show_v1', rec.certParafShow); certChangedRt = true; }
+          if(certChangedRt){
+            if(typeof window.loadCertificateTemplate === 'function') window.loadCertificateTemplate();
+            if(typeof window.ctbRenderAll === 'function') window.ctbRenderAll();
+          }
+          // Simpan server timestamp — PENTING: gunakan updated_at dari server, bukan waktu lokal
+          if(payload.new?.updated_at){ _lastCloudUpdatedAt = payload.new.updated_at; try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){} }
+          // Batalkan push timer yang mungkin sedang menunggu — data sudah datang dari cloud
+          if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
+          // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
+          _lastPushedHash = _hashPayload(getAllCloudData());
+          } finally {
+          _cloudPullInProgress = false; // always reset — prevents deadlock
+          }
+          renderTable();
+          renderDashboard();
+          renderStations();
+          renderDfsTable();
+          if(typeof window.refreshTrainingViews === 'function') window.refreshTrainingViews();
+          if(typeof window.renderBankStations === 'function') window.renderBankStations();
+          blinkSyncLight();
+          } catch(rtErr){
+            console.error('[Cloud Sync] Error saat memproses realtime payload:', rtErr);
+            _cloudPullInProgress = false;
+          }
+          })(); // fire-and-forget async IIFE — callback sendiri return void (bukan Promise)
         }
-        // Restore hak akses per-role dari realtime
-        if(rec.rolePerms){
-          localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
-          if(typeof window.renderPermTable === 'function') window.renderPermTable();
-          if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
+      )
+      .subscribe((status) => {
+        if(status === 'SUBSCRIBED'){
+          cloudLog('📡 Realtime aktif — mendengarkan perubahan...', 'success');
+          updateSyncStatus('connected');
         }
-        // Restore template & elemen sertifikat dari realtime
-        let certChangedRt = false;
-        if(rec.certTemplate1){ localStorage.setItem('sjn_cert_template_1', JSON.stringify(rec.certTemplate1)); certChangedRt = true; }
-        if(rec.certTemplate2){ localStorage.setItem('sjn_cert_template_2', JSON.stringify(rec.certTemplate2)); certChangedRt = true; }
-        if(rec.certTemplateActive){ localStorage.setItem('sjn_cert_template_active', rec.certTemplateActive); certChangedRt = true; }
-        if(rec.certPositions){ localStorage.setItem('sjn_cert_positions_v1', JSON.stringify(rec.certPositions)); certChangedRt = true; }
-        if(rec.certBarcode !== undefined && rec.certBarcode !== null){ localStorage.setItem('sjn_cert_barcode_v1', rec.certBarcode); certChangedRt = true; }
-        if(rec.certCustomTexts){ localStorage.setItem('sjn_cert_custom_texts_v1', JSON.stringify(rec.certCustomTexts)); certChangedRt = true; }
-        if(rec.certCustomTextsSJ)   { localStorage.setItem('sjn_cert_custom_texts_sj_v1',   JSON.stringify(rec.certCustomTextsSJ));   certChangedRt = true; }
-        if(rec.certCustomTextsNAM)  { localStorage.setItem('sjn_cert_custom_texts_nam_v1',  JSON.stringify(rec.certCustomTextsNAM));  certChangedRt = true; }
-        if(rec.certCustomTextsBoth) { localStorage.setItem('sjn_cert_custom_texts_both_v1', JSON.stringify(rec.certCustomTextsBoth)); certChangedRt = true; }
-        if(rec.certParaf){ localStorage.setItem('sjn_cert_paraf_v1', JSON.stringify(rec.certParaf)); certChangedRt = true; }
-        if(rec.certParafShow !== undefined && rec.certParafShow !== null){ localStorage.setItem('sjn_cert_paraf_show_v1', rec.certParafShow); certChangedRt = true; }
-        if(certChangedRt){
-          if(typeof window.loadCertificateTemplate === 'function') window.loadCertificateTemplate();
-          if(typeof window.ctbRenderAll === 'function') window.ctbRenderAll();
-        }
-        // Simpan server timestamp — PENTING: gunakan updated_at dari server, bukan waktu lokal
-        if(payload.new?.updated_at){ _lastCloudUpdatedAt = payload.new.updated_at; try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){} }
-        // Batalkan push timer yang mungkin sedang menunggu — data sudah datang dari cloud
-        if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
-        // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
-        _lastPushedHash = _hashPayload(getAllCloudData());
-        } finally {
-        _cloudPullInProgress = false; // always reset — prevents deadlock
-        }
-        renderTable();
-        renderDashboard();
-        renderStations();
-        renderDfsTable();
-        if(typeof window.refreshTrainingViews === 'function') window.refreshTrainingViews();
-        if(typeof window.renderBankStations === 'function') window.renderBankStations();
-        blinkSyncLight();
-        })(); // fire-and-forget async IIFE — callback sendiri return void (bukan Promise)
-      }
-    )
-    .subscribe((status) => {
-      if(status === 'SUBSCRIBED'){
-        cloudLog('📡 Realtime aktif — mendengarkan perubahan...', 'success');
-        updateSyncStatus('connected');
-      }
-    });
+      });
+  } catch(err){
+    console.error('[Cloud Sync] Gagal memulai realtime subscription (sinkronisasi cloud dilewati, sisa aplikasi tetap berjalan normal):', err);
+  }
 }
 
 // Auto-sync: patch saveData, saveStations, saveDfsData untuk trigger cloud sync otomatis
@@ -8192,8 +8209,14 @@ document.addEventListener('click', function(e){
 });
 
 // Jalankan init
-initCloudUI();
-initSyncDelayUI();
+// BUGFIX: dibungkus try-catch — fitur cloud sync (Supabase) bersifat opsional/best-effort
+// dan tidak boleh pernah menjatuhkan sisa aplikasi (termasuk checkAuth/login) jika gagal.
+try {
+  initCloudUI();
+  initSyncDelayUI();
+} catch(cloudInitErr){
+  console.error('[Cloud Sync] Gagal inisialisasi (dilewati, aplikasi tetap berjalan normal):', cloudInitErr);
+}
 
 // === AUTO PULL SAAT LOAD ===
 // Smart Pull: hanya pull jika cloud memiliki data lebih baru dari sesi terakhir.
@@ -9014,11 +9037,14 @@ function restoreSession(){
       if(!stillValid){
         localStorage.removeItem(SESSION_KEY);
         document.body.style.overflow = 'hidden';
-        // Tampilkan konten (login form) segera
-        requestAnimationFrame(()=>{
-          document.getElementById('sidebar').classList.add('perm-ready');
-          document.getElementById('mainContent').classList.add('perm-ready');
-        });
+        // BUGFIX: sebelumnya kode ini menambahkan 'perm-ready' ke #sidebar dan
+        // #mainContent — yang secara keliru me-reveal SELURUH menu sidebar (Admin,
+        // STCR, Training, Drygoods, dst) tanpa applyPermissions() dipanggil sama
+        // sekali, sehingga menu lengkap terlihat menumpuk di belakang loginOverlay
+        // (terutama saat CDN/Tailwind lambat/gagal load). loginOverlay sudah visible
+        // secara default (tidak ikut pola opacity:0/perm-ready), jadi di sini kita
+        // TIDAK perlu dan TIDAK BOLEH me-reveal sidebar/mainContent — keduanya harus
+        // tetap tersembunyi (opacity:0) sampai user login & applyPermissions() jalan.
         return;
       }
       // Refresh data dari server (role/name bisa berubah oleh Admin)
@@ -9091,18 +9117,24 @@ function restoreSession(){
     } catch(e){
       localStorage.removeItem(SESSION_KEY);
       document.body.style.overflow = 'hidden';
-      requestAnimationFrame(()=>{
-        document.getElementById('sidebar').classList.add('perm-ready');
-        document.getElementById('mainContent').classList.add('perm-ready');
-      });
+      // BUGFIX: lihat catatan di branch !stillValid di atas — JANGAN reveal
+      // sidebar/mainContent di sini. Session korup/parse error berarti user
+      // belum (lagi) terotentikasi; loginOverlay sudah tampil secara default,
+      // jadi sidebar+mainContent harus tetap opacity:0 sampai login berhasil.
+      console.error('[AUTH] Gagal memuat sesi, fallback ke halaman login:', e);
     }
   } else {
-    // Belum login — tampilkan halaman login
+    // Belum login — loginOverlay sudah tampil secara default (lihat HTML).
+    // BUGFIX: sebelumnya branch ini menambahkan 'perm-ready' ke #sidebar dan
+    // #mainContent, yang artinya SELURUH menu sidebar (termasuk menu Admin,
+    // STCR, Training, Drygoods) ter-reveal penuh tanpa applyPermissions()
+    // sama sekali — terlihat menumpuk transparan di belakang form login,
+    // terutama saat CDN Tailwind/Chart.js lambat atau gagal load (lihat
+    // screenshot bug report). Sidebar & mainContent harus tetap tersembunyi
+    // (opacity:0, pointer-events:none) sampai user benar-benar login dan
+    // applyPermissions() dipanggil — itulah satu-satunya tempat yang boleh
+    // menambahkan class 'perm-ready'.
     document.body.style.overflow = 'hidden';
-    requestAnimationFrame(()=>{
-      document.getElementById('sidebar').classList.add('perm-ready');
-      document.getElementById('mainContent').classList.add('perm-ready');
-    });
   }
 })();
 
@@ -9118,6 +9150,26 @@ console.log('[AUTH] Sistem Administrasi aktif - Supabase auto-sync ON');
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+  // BUGFIX (kritis): `function applyPermissions(){...}` (didefinisikan di atas, ~baris
+  // 8597) adalah deklarasi fungsi global biasa — JS otomatis menjadikannya
+  // `window.applyPermissions` SAAT BARIS ITU DIEKSEKUSI, bukan `undefined`. Modul patch
+  // yang benar (window.applyPermissions = function(){...} dengan pengecekan tabel
+  // custom permission per-role) didefinisikan lebih JAUH DI BAWAH dalam dokumen ini.
+  // Karena checkAuth() (yang memanggil applyPermissions saat login/restore-session)
+  // berjalan SEBELUM parser mencapai modul patch, ia selalu memanggil versi LAMA —
+  // yang punya fast-path "Co-Admin = semua tab" TANPA mengecek tabel permission custom
+  // sama sekali. Akibatnya pembatasan akses yang diset Admin lewat "Atur Akses Role"
+  // untuk Co-Admin/User/role kustom tidak pernah benar-benar berlaku saat login/refresh.
+  //
+  // DOMContentLoaded hanya fire setelah SELURUH dokumen (termasuk modul patch di bawah)
+  // selesai diparsing & dieksekusi — jadi di titik ini window.applyPermissions PASTI
+  // sudah berisi versi final/benar. Panggil ulang di sini agar tab/menu yang seharusnya
+  // disembunyikan oleh custom permission benar-benar tersembunyi, bukan diam-diam
+  // dibiarkan terlihat (display:flex) sampai ada trigger manual lain.
+  if(typeof currentUser !== 'undefined' && currentUser && typeof window.applyPermissions === 'function'){
+    window.applyPermissions();
+  }
+
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('mainContent');
   const btnCollapse = document.getElementById('btnCollapseSidebar');
