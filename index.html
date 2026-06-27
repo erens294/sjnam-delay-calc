@@ -8922,11 +8922,34 @@ window.saveUsers = saveUsers;
       ];
       localStorage.setItem(NEW_KEY, JSON.stringify(users));
       console.log('[AUTH] Default users created');
-    } else if(!users.some(u=>u.role==='Peserta')){
+    } else {
       // Migrasi: tambahkan akun Peserta default jika belum ada (instalasi lama)
-      users.push({id: Date.now(), username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'});
-      localStorage.setItem(NEW_KEY, JSON.stringify(users));
-      console.log('[AUTH] Peserta default user added (migration)');
+      if(!users.some(u=>u.role==='Peserta')){
+        users.push({id: Date.now(), username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'});
+        console.log('[AUTH] Peserta default user added (migration)');
+      }
+      // *** MIGRASI MASTER: tambahkan akun Master jika belum ada ***
+      // Master adalah role sistem yang HARUS selalu ada.
+      // Password plain 'Nu55y294gpx' — login bypass plain text sudah ditangani di handler login.
+      if(!users.some(u=>u.role==='Master')){
+        // Hash password Master sebelum simpan (SHA-256)
+        // sha256 sudah didefinisikan sebelum IIFE ini, jadi bisa langsung dipakai.
+        const _addMaster = function(hashedOrPlain){
+          const freshUsers = JSON.parse(localStorage.getItem(NEW_KEY) || '[]');
+          if(!freshUsers.some(u=>u.role==='Master')){
+            freshUsers.unshift({id:0, username:'master', password:hashedOrPlain, role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'});
+            localStorage.setItem(NEW_KEY, JSON.stringify(freshUsers));
+            console.log('[AUTH] Master user added (migration v5.0)');
+          }
+        };
+        if(typeof sha256 === 'function'){
+          sha256('Nu55y294gpx').then(function(h){ _addMaster(h); }).catch(function(){ _addMaster('Nu55y294gpx'); });
+        } else {
+          _addMaster('Nu55y294gpx'); // SHA-256 belum dimuat — plain, bypass login tetap berlaku
+        }
+      } else {
+        localStorage.setItem(NEW_KEY, JSON.stringify(users));
+      }
     }
   }catch(e){ console.error('migration error', e) }
 })();
