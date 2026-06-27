@@ -7,6 +7,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#1d4ed8">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Service Management SJNAM">
@@ -317,9 +318,10 @@ body { background: var(--page-bg, #f0f4f8); }
 // rendering sertifikat) bisa menunggu library ini siap dipakai.
 (function(){
   const sources = [
+    // BUGFIX: reorder CDN sources — cdnjs most reliable, jsdelivr/unpkg sometimes blocked in corporate networks
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js',
     'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
-    'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js'
+    'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'
   ];
   window.__qrcodeLoadFailed = false;
   function tryLoad(i){
@@ -12306,7 +12308,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
 
     destroyChart('trendChart');
-    trendChart = new Chart(trendCanvas,{
+    charts['trendChart'] = new Chart(trendCanvas,{
       type:'line',
       data:{labels:sortedKeys.map(k=>k.replace('-',' ')),datasets:[{
         label:'Jumlah Request',data:sortedKeys.map(k=>trendMap[k]),
@@ -12324,7 +12326,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const other = data.length-stcrCount-pobCount-bothCount;
 
     destroyChart('pieChart');
-    pieChart = new Chart(pieCanvas,{
+    charts['pieChart'] = new Chart(pieCanvas,{
       type:'doughnut',
       data:{labels:['STCR','POB','STCR & POB','Lainnya'],
         datasets:[{data:[stcrCount,pobCount,bothCount,other],backgroundColor:['#7C3AED','#0D6E8A','#E8A427','#9CA3AF'],borderWidth:2}]},
@@ -12338,7 +12340,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const revKeys = sortedKeys.filter(k=>revMap[k]);
 
     destroyChart('revenueChart');
-    revenueChart = new Chart(revCanvas,{
+    charts['revenueChart'] = new Chart(revCanvas,{
       type:'bar',
       data:{labels:revKeys.map(k=>k.replace('-',' ')),datasets:[{
         label:'Revenue (juta Rp)',data:revKeys.map(k=>revMap[k]/1000000),
@@ -12354,7 +12356,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const topSt = Object.entries(stMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
     destroyChart('stationChart');
-    stationChart = new Chart(stCanvas,{
+    charts['stationChart'] = new Chart(stCanvas,{
       type:'bar',
       data:{labels:topSt.map(s=>s[0]),datasets:[{label:'Request',data:topSt.map(s=>s[1]),backgroundColor:'#0B1E3A',borderRadius:4}]},
       options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},
@@ -12390,7 +12392,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
 
     destroyChart('yoyChart');
-    yoyChart = new Chart(yoyCanvas,{
+    charts['yoyChart'] = new Chart(yoyCanvas,{
       type:'bar',
       data:{labels:years,datasets:[{label:'Jumlah Request per Tahun',data:yoyCounts,backgroundColor:'#7C3AED',borderRadius:6}]},
       options:{responsive:true,plugins:{
@@ -12429,7 +12431,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
 
     destroyChart('momChart');
-    momChart = new Chart(momCanvas,{
+    charts['momChart'] = new Chart(momCanvas,{
       type:'bar',
       data:{labels:momLabels,datasets:[{label:'Jumlah Request per Bulan',data:momCounts,backgroundColor:'#0EA5E9',borderRadius:6}]},
       options:{responsive:true,plugins:{
@@ -14379,7 +14381,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     destroyDgChart('monthly');
     const ctx1 = document.getElementById('dgChartMonthly');
     if(ctx1 && months.length){
-      monthly = new Chart(ctx1,{type:'bar',data:{labels:months,datasets:[
+      dgCharts['monthly'] = new Chart(ctx1,{type:'bar',data:{labels:months,datasets:[
         {label:'IN',data:months.map(m=>monthMap[m].in),backgroundColor:'#10b981',borderRadius:4,
           datalabels:{display:true,color:'#065f46',font:{size:9,weight:'bold'},anchor:'end',align:'top',formatter:v=>v>0?v.toLocaleString('id-ID'):''}},
         {label:'OUT',data:months.map(m=>monthMap[m].out),backgroundColor:'#ef4444',borderRadius:4,
@@ -14394,7 +14396,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     destroyDgChart('topItems');
     const ctx2 = document.getElementById('dgChartTopItems');
     if(ctx2 && topItems.length){
-      topItems = new Chart(ctx2,{type:'bar',data:{labels:topItems.map(x=>x[0]),datasets:[{label:'Total OUT',data:topItems.map(x=>x[1]),backgroundColor:'#6366f1',borderRadius:4,
+      dgCharts['topItems'] = new Chart(ctx2,{type:'bar',data:{labels:topItems.map(x=>x[0]),datasets:[{label:'Total OUT',data:topItems.map(x=>x[1]),backgroundColor:'#6366f1',borderRadius:4,
         datalabels:{display:true,color:'#312e81',font:{size:9,weight:'bold'},anchor:'end',align:'right',formatter:v=>v>0?v.toLocaleString('id-ID'):''}}]},
       options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},datalabels:{display:true}},scales:{x:{ticks:{font:{size:9}}}}}});
     }
@@ -14406,7 +14408,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const ctx3 = document.getElementById('dgChartStation');
     if(ctx3 && Object.keys(stMap).length){
       const stTotal = Object.values(stMap).reduce((a,b)=>a+b,0);
-      station = new Chart(ctx3,{type:'pie',data:{labels:Object.keys(stMap),datasets:[{data:Object.values(stMap),backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'],
+      dgCharts['station'] = new Chart(ctx3,{type:'pie',data:{labels:Object.keys(stMap),datasets:[{data:Object.values(stMap),backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'],
         datalabels:{display:true,color:'#fff',font:{size:10,weight:'bold'},formatter:(v,ctx)=>{const pct=stTotal?Math.round(v/stTotal*100):0;return v>0?`${v.toLocaleString('id-ID')}\n${pct}%`:'';}}}]},options:{responsive:true,plugins:{legend:{display:true,position:'bottom'},datalabels:{display:true}}}});
     }
 
