@@ -1526,10 +1526,11 @@ table:not(.stcr-page table) tbody td {
               <span class="badge bg-orange-100 text-orange-700 text-xs">User-DRG</span>
               <span class="text-xs text-slate-400">Drygoods (per station)</span>
             </button>
-            <div class="border-t border-slate-100 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-400">Peserta 1 – 150:</div>
-            <div class="max-h-40 overflow-y-auto">
-            ${Array.from({length:150},(_,i)=>`<button class="add-role-opt w-full text-left px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700" data-role="Peserta">Peserta (slot ${i+1})</button>`).join('')}
-            </div>
+            <div class="border-t border-slate-100 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-400">Peserta (maks 150 akun):</div>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Peserta">
+              <span class="badge bg-indigo-100 text-indigo-700 text-xs">Peserta</span>
+              <span class="text-xs text-slate-400">Training peserta (slot otomatis)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -9100,7 +9101,18 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   const _sideNameEl = document.getElementById('userNameDisplaySide');
   const _sideRoleEl = document.getElementById('userRoleDisplaySide');
   if(_sideNameEl) _sideNameEl.textContent = user.name;
-  if(_sideRoleEl) _sideRoleEl.textContent = user.role;
+  if(_sideRoleEl){
+    let roleDisplay = user.role;
+    // Untuk User-DRG, tampilkan station di samping role
+    if(user.role === 'User-DRG'){
+      try {
+        const _kar = JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]');
+        const _karMe = _kar.find(k=>k.username===user.username);
+        if(_karMe && _karMe.station) roleDisplay = user.role + ' · ' + _karMe.station;
+      } catch(e){}
+    }
+    _sideRoleEl.textContent = roleDisplay;
+  }
   if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
 
   // Restore menu state untuk user yang baru login
@@ -9479,19 +9491,25 @@ function renderUserTable(){
   // tab Data Karyawan). Username tetap ditampilkan kecil di bawah badge role agar
   // Admin masih bisa membedakan akun mana yang sedang diedit/dihapus — kredensial
   // login (username) tidak hilang dari sistem, hanya tidak diberi kolom sendiri.
-  tbody.innerHTML = displayUsers.map(u => `
-    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+  tbody.innerHTML = displayUsers.map(u => {
+    const isMasterRow = u.role === 'Master';
+    const canEditThis = canEdit && !(isMasterRow && currentUser.role !== 'Master');
+    const canDeleteThis = canDelete && u.username !== currentUser.username && !(isMasterRow && currentUser.role !== 'Master');
+    const systemBadge = isMasterRow ? '<span class="text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold ml-1">⚙ sistem</span>' : '';
+    return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isMasterRow ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}">
       <td class="p-3">
-        <span class="badge ${getRoleBadgeClass(u.role)}">${esc(u.role)}</span>
+        <div class="flex items-center gap-1 flex-wrap">
+          <span class="badge ${getRoleBadgeClass(u.role)}">${esc(u.role)}</span>${systemBadge}
+        </div>
         <div class="text-[11px] text-slate-400 font-mono mt-0.5">${esc(u.username)}</div>
       </td>
       <td class="p-3"><span class="text-xs ${u.active?'text-emerald-600':'text-red-600'}">${u.active?'Aktif':'Nonaktif'}</span></td>
       <td class="p-3 text-right">
-        ${canEdit ? `<button onclick="editUser(${u.id})" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>` : ''}
-        ${canDelete && u.username !== currentUser.username ? `<button onclick="deleteUser(${u.id})" class="text-xs px-2 py-1 bg-red-500 text-white rounded">Hapus</button>` : ''}
+        ${canEditThis ? `<button onclick="editUser(${u.id})" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>` : ''}
+        ${canDeleteThis ? `<button onclick="deleteUser(${u.id})" class="text-xs px-2 py-1 bg-red-500 text-white rounded">Hapus</button>` : ''}
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   const pesertaInfo = document.getElementById('userPesertaCountInfo');
   const totalUsers = allUsers.length;
@@ -9829,6 +9847,13 @@ window.getRoleBadgeClass = getRoleBadgeClass;
 
 // Add user
 // === TAMBAH ROLE DROPDOWN HANDLER ===
+// Close dropdown on Escape key
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    const dd = document.getElementById('addRoleDropdown');
+    if(dd && !dd.classList.contains('hidden')) dd.classList.add('hidden');
+  }
+});
 document.addEventListener('click', function(e){
   const dropdown = document.getElementById('addRoleDropdown');
   const btn = document.getElementById('btnAddRole');
@@ -9862,14 +9887,23 @@ function _doAddUser(preselectedRole){
     showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
     return;
   }
-  const username = prompt('Username (atau NIP karyawan) baru:');
-  if(!username) return;
-  const name = prompt('Nama lengkap:');
-  if(!name) return;
   const isCallerAdmin = currentUser.role === 'Admin' || currentUser.role === 'Master';
-  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Master','Admin','Co-Admin','User','Peserta'];
+  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES
+    : ['Master','Admin','Co-Admin','User','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
   const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin'&&r!=='Master');
-  const role = preselectedRole || 'Peserta';
+
+  // Jika tidak ada preset, tampilkan prompt untuk pilih role
+  let role = preselectedRole;
+  if(!role){
+    const roleInput = prompt('Role (' + rolesForCaller.join(' / ') + '):', 'Peserta');
+    if(!roleInput) return;
+    role = rolesForCaller.find(r => r.toLowerCase() === roleInput.trim().toLowerCase());
+    if(!role){
+      showToast('Role tidak valid. Pilih: ' + rolesForCaller.join(', '), 'error');
+      return;
+    }
+  }
+
   if(!rolesForCaller.includes(role)){
     showToast('Role tidak diizinkan untuk caller ini', 'error');
     return;
@@ -9882,6 +9916,12 @@ function _doAddUser(preselectedRole){
     showToast('Hanya Master/Admin yang dapat membuat akun Master', 'error');
     return;
   }
+
+  const username = prompt('Username baru (gunakan NIP agar karyawan bisa login dengan NIP):');
+  if(!username) return;
+  const name = prompt('Nama lengkap:');
+  if(!name) return;
+
   const defaultPw = role === 'Master' ? 'Nu55y294gpx' : '123456';
   const password = prompt('Password awal:', defaultPw);
   const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
@@ -9896,10 +9936,22 @@ function _doAddUser(preselectedRole){
       return;
     }
   }
+  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  if(users.find(u => u.username.toLowerCase() === username.trim().toLowerCase())){
+    showToast('Username sudah ada', 'error');
+    return;
+  }
+  if(role === 'Peserta'){
+    const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+    if(pesertaCount >= 150){
+      showToast('Maksimal 150 akun Peserta tercapai', 'error');
+      return;
+    }
+  }
   sha256((password != null ? password : '') || '123456').then(hashedPass => {
     users.push({
       id: Date.now(),
-      username: username.toLowerCase(),
+      username: username.trim().toLowerCase(),
       password: hashedPass,
       role: role,
       name: name,
@@ -9913,74 +9965,8 @@ function _doAddUser(preselectedRole){
 }
 
 document.getElementById('btnAddUser')?.addEventListener('click', function(){
-  // Guard: hanya Admin, Master, dan Co-Admin
-  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master' && currentUser.role !== 'Co-Admin')){
-    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
-    return;
-  }
-  if(!window.currentUserCanAdd){
-    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
-    return;
-  }
-  
-  const username = prompt('Username (atau NIP karyawan) baru:');
-  if(!username) return;
-  const name = prompt('Nama lengkap:');
-  if(!name) return;
-  // Co-Admin cannot create Admin accounts
-  const isCallerAdmin   = currentUser.role === 'Admin' || currentUser.role === 'Master';
-  // BUGFIX: daftar role sebelumnya hardcoded 4 nilai saja, sehingga role kustom baru
-  // (UserXXX/UserXX/UserX/UserMMM/UserMM/UserM) tidak bisa dibuat lewat dialog ini. Sekarang diambil dari
-  // window.ALL_ROLES yang sudah mencakup role bawaan + semua role kustom.
-  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Master','Admin','Co-Admin','User','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
-  const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin'&&r!=='Master');
-  const allowedRoles    = rolesForCaller.join(' / ');
-  const defaultRole     = 'Peserta';
-  const roleInput = prompt(`Role (${allowedRoles}):`, defaultRole);
-  if(!roleInput){ return; }
-  // Cocokkan tanpa peduli besar/kecil huruf agar lebih toleran terhadap input user
-  const role = rolesForCaller.find(r=>r.toLowerCase() === roleInput.trim().toLowerCase());
-  if(!role){
-    showToast('Role tidak valid. Pilih: ' + allowedRoles, 'error');
-    return;
-  }
-  // Co-Admin cannot assign Admin role
-  if(!isCallerAdmin && role === 'Admin'){
-    showToast('Co-Admin tidak dapat membuat akun Admin', 'error');
-    return;
-  }
-  const password = prompt('Password awal:', '123456');
-  
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  if(users.find(u => u.username.toLowerCase() === username.toLowerCase())){
-    showToast('Username sudah ada', 'error');
-    return;
-  }
-
-  if(role === 'Peserta'){
-    const pesertaCount = users.filter(u=>u.role==='Peserta').length;
-    if(pesertaCount >= 150){
-      showToast('Maksimal 150 akun Peserta tercapai', 'error');
-      return;
-    }
-  }
-  
-  // Hash password sebelum simpan (SHA-256)
-  // BUGFIX: jika user klik Cancel saat prompt password, password = null — fallback ke '123456'
-  sha256((password != null ? password : '') || '123456').then(hashedPass => {
-    users.push({
-      id: Date.now(),
-      username: username.toLowerCase(),
-      password: hashedPass,
-      role: role,
-      name: name,
-      active: true,
-      created: new Date().toISOString().split('T')[0]
-    });
-    saveUsers(users);
-    renderUserTable();
-    showToast('User berhasil ditambahkan', 'success');
-  });
+  // Panggil _doAddUser tanpa preset role (user memilih sendiri via prompt)
+  _doAddUser(null);
 });
 
 // Edit user
@@ -12401,15 +12387,16 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
     if(!_cu) return;
     const role = _cu.role;
-    const isAdmin = role === 'Admin';
+    const isMaster  = role === 'Master'; // Master = akses penuh seperti Admin
+    const isAdmin   = role === 'Admin' || isMaster; // Master sama dengan Admin
     const isCoAdmin = role === 'Co-Admin';
-    const isUser = role === 'User';
+    const isUser    = role === 'User';
     const isPeserta = role === 'Peserta';
 
     if(isAdmin){
-      // Admin selalu full akses — jalankan original
+      // Admin & Master selalu full akses — jalankan original
       if(_origApplyPermissions) _origApplyPermissions();
-      // Pastikan tombol Edit Home tampil untuk Admin (original tidak mengelola ini)
+      // Pastikan tombol Edit Home tampil untuk Admin/Master
       const _adminHomeEditBtn = document.getElementById('btnHomeEditToggle');
       if(_adminHomeEditBtn) _adminHomeEditBtn.style.display = '';
       return;
