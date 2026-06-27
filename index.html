@@ -1347,8 +1347,8 @@ table:not(.stcr-page table) tbody td {
       <div id="logo-nam-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">✈ NAM Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
     </div>
 
-    <!-- Edit toggle button -->
-    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
+    <!-- Edit toggle button — hanya Admin (dikontrol oleh applyPermissions) -->
+    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="display:none;position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
 
     <!-- Edit panel (hidden by default) -->
     <div id="homeEditPanel" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:25;background:rgba(10,15,40,0.92);backdrop-filter:blur(12px);padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,0.15);">
@@ -1395,7 +1395,7 @@ table:not(.stcr-page table) tbody td {
 
     <!-- Subtitle -->
     <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;z-index:10;pointer-events:none;">
-      <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Flight Delay Management System · Sriwijaya Air &amp; Nam Air</p>
+      <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Sriwijaya Air Group</p>
     </div>
   </div>
 </section>
@@ -8709,6 +8709,20 @@ function applyPermissions(){
     window.currentUserReadOnly = false;
   }
   
+  // ── Tombol Edit Home: hanya Admin ──
+  const btnHomeEdit = document.getElementById('btnHomeEditToggle');
+  const homeEditPanel = document.getElementById('homeEditPanel');
+  if(btnHomeEdit){
+    if(isAdmin){
+      btnHomeEdit.style.display = '';
+    } else {
+      btnHomeEdit.style.display = 'none';
+      // Pastikan panel edit tertutup jika user bukan Admin
+      if(homeEditPanel) homeEditPanel.style.display = 'none';
+      btnHomeEdit.textContent = '✏️ Edit';
+    }
+  }
+
   // User management capabilities
   window.currentUserCanDelete = isAdmin; // hanya Admin bisa delete
   window.currentUserCanAdd = isAdmin || isCoAdmin;
@@ -11129,6 +11143,9 @@ window.addEventListener('beforeunload', ()=>{
     if(isAdmin){
       // Admin selalu full akses — jalankan original
       if(_origApplyPermissions) _origApplyPermissions();
+      // Pastikan tombol Edit Home tampil untuk Admin (original tidak mengelola ini)
+      const _adminHomeEditBtn = document.getElementById('btnHomeEditToggle');
+      if(_adminHomeEditBtn) _adminHomeEditBtn.style.display = '';
       return;
     }
 
@@ -11208,6 +11225,14 @@ window.addEventListener('beforeunload', ()=>{
     const btnStartPeserta = document.getElementById('btnStartPeserta');
     if(btnStartPeserta) btnStartPeserta.style.display = canSee('feat-mulai') ? '' : 'none';
     window.currentUserReadOnly = !canSee('feat-edit');
+
+    // ── Tombol Edit Home: hanya Admin (non-Admin selalu hidden di sini) ──
+    const _nonAdminHomeEditBtn = document.getElementById('btnHomeEditToggle');
+    const _nonAdminHomePanel = document.getElementById('homeEditPanel');
+    if(_nonAdminHomeEditBtn){
+      _nonAdminHomeEditBtn.style.display = 'none';
+      if(_nonAdminHomePanel) _nonAdminHomePanel.style.display = 'none';
+    }
 
     window.currentUserCanDelete = canSee('feat-delete');
     window.currentUserCanAdd = isCoAdmin ? canSee('tab-admin') : false;
@@ -14936,6 +14961,11 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   };
 
   window.toggleHomeEdit = function(){
+    // Guard: hanya Admin yang bisa membuka panel edit Home
+    if(!window.currentUser || window.currentUser.role !== 'Admin'){
+      if(typeof showToast === 'function') showToast('Hanya Admin yang dapat mengedit tampilan Home', 'error');
+      return;
+    }
     const panel = document.getElementById('homeEditPanel');
     if(!panel) return;
     panel.style.display = panel.style.display==='none' ? 'block' : 'none';
