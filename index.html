@@ -6993,8 +6993,8 @@ async function cloudPush(silent=false){
     _lastCloudUpdatedAt = serverUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
     updateSyncStatus('connected');
-    cloudLog('✅ Data tersimpan ke Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
-    if(!silent) showToast('⚡ Supabase Sync berhasil! ('+data.length+' records)','success');
+    cloudLog('✅ Data tersimpan ke Supabase ('+mergedPayload.data.length+' delay, '+(mergedPayload.dfsData||[]).length+' DFS)', 'success');
+    if(!silent) showToast('⚡ Supabase Sync berhasil! ('+mergedPayload.data.length+' records)','success');
     saveCloudConfig();
     return true;
   } catch(err){
@@ -7021,10 +7021,15 @@ async function cloudPull(silent = false){
       .from('sjnam_sync')
       .select('updated_at')
       .eq('id', 'sjnam_main')
-      .single();
+      .maybeSingle();
 
     if(metaError) throw new Error(metaError.message);
-    if(!meta) throw new Error('Data tidak ditemukan di Supabase');
+    if(!meta){
+      // Record belum ada di Supabase — wajar saat pertama kali setup
+      cloudLog('ℹ️ Belum ada data di Supabase — lewati pull (pertama kali setup)', 'info');
+      updateSyncStatus('connected');
+      return;
+    }
 
     const cloudUpdatedAt = meta.updated_at;
 
@@ -7043,23 +7048,24 @@ async function cloudPull(silent = false){
       .from('sjnam_sync')
       .select('payload, updated_at')
       .eq('id', 'sjnam_main')
-      .single();
+      .maybeSingle();
 
     if(error) throw new Error(error.message);
-    if(!rows) throw new Error('Data tidak ditemukan di Supabase');
+    if(!rows){ cloudLog('ℹ️ Tidak ada data payload di Supabase', 'info'); updateSyncStatus('connected'); return; }
 
     const rec = rows.payload;
     const savedAt = cloudUpdatedAt ? new Date(cloudUpdatedAt).toLocaleString('id-ID') : '-';
 
     // Jika tidak silent, minta konfirmasi seperti sebelumnya
     if(!silent){
+      _cloudPullInProgress = true; // Blok push saat user sedang memutuskan
       const ok = await showConfirm('⚡ Tarik Data dari Supabase',
         `Data cloud: ${(rec.data||[]).length} delay records, ${(rec.dfsData||[]).length} DFS, disimpan ${savedAt}.\n\nData lokal saat ini akan DIGANTI. Lanjutkan?`
       );
-      if(!ok){ updateSyncStatus('connected'); return; }
+      if(!ok){ _cloudPullInProgress = false; updateSyncStatus('connected'); return; }
+    } else {
+      _cloudPullInProgress = true;
     }
-
-    _cloudPullInProgress = true;
     try {
     if(Array.isArray(rec.data)) { data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
     if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(stations)); }
@@ -7464,7 +7470,7 @@ setTimeout(async ()=>{
   if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
     console.log('[Smart-Sync] Cek perubahan data dari Supabase (hanya pull jika ada perubahan)...');
     await cloudPull(true); // silent = true, Smart Pull: skip jika tidak ada perubahan
-    startRealtimeSubscription();
+    // startRealtimeSubscription sudah dipanggil oleh initCloudUI() di atas — tidak perlu panggil lagi
   }
 }, 1200);
 
