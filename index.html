@@ -224,7 +224,7 @@ body { background: var(--page-bg, #f0f4f8); }
 .stcr-kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
 /* CHARTS */
 .stcr-charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px;}
-.stcr-chart-box{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px 20px;}
+.stcr-chart-box{background:var(--card-bg,#fff);border:1px solid var(--border);border-radius:10px;padding:18px 20px;min-height:280px;}
 .stcr-chart-box h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;}
 .stcr-page canvas{max-height:220px;}
 /* TABLE */
@@ -12296,6 +12296,10 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const revCanvas = $id('stcrRevenueChart');
     const stCanvas = $id('stcrStationChart');
     if(!trendCanvas || !pieCanvas || !revCanvas || !stCanvas) return;
+    // BUGFIX: jika container tersembunyi (tab belum aktif), canvas punya offsetWidth=0.
+    // Chart.js tidak bisa render dengan benar di atas canvas 0-dimensi — skip dulu,
+    // nanti onShowDashboard() akan memanggil renderCharts lagi saat tab sudah visible.
+    if(!trendCanvas.offsetWidth && !trendCanvas.offsetParent) return;
 
     const trendMap = {};
     data.forEach(d => {
@@ -12337,7 +12341,13 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
     const revMap = {};
     data.filter(d=>d['Price POB']>0).forEach(d=>{const k=`${d.Year}-${d.Month}`;revMap[k]=(revMap[k]||0)+d['Price POB'];});
-    const revKeys = sortedKeys.filter(k=>revMap[k]);
+    // BUGFIX: sebelumnya revKeys hanya dari sortedKeys (trendChart keys)
+    // yang bisa berbeda jika ada bulan dengan revenue tapi tidak ada di trendMap.
+    // Sekarang revKeys dibangun dari semua kunci di revMap, diurutkan kronologis.
+    const revKeys = Object.keys(revMap).sort((a,b)=>{
+      const [ya,ma] = a.split('-'), [yb,mb] = b.split('-');
+      return (ya-yb)||(MONTHS.indexOf(ma)-MONTHS.indexOf(mb));
+    });
 
     destroyChart('revenueChart');
     charts['revenueChart'] = new Chart(revCanvas,{
@@ -12356,6 +12366,8 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const topSt = Object.entries(stMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
     destroyChart('stationChart');
+    // BUGFIX: guard against empty station data to prevent empty chart
+    if(!topSt.length){ return; }
     charts['stationChart'] = new Chart(stCanvas,{
       type:'bar',
       data:{labels:topSt.map(s=>s[0]),datasets:[{label:'Request',data:topSt.map(s=>s[1]),backgroundColor:'#0B1E3A',borderRadius:4}]},
@@ -12374,6 +12386,8 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const yoyCanvas = $id('stcrYoYChart');
     const momCanvas = $id('stcrMoMChart');
     if(!yoyCanvas || !momCanvas) return;
+    // BUGFIX: same zero-dimension guard as renderCharts
+    if(!yoyCanvas.offsetWidth && !yoyCanvas.offsetParent) return;
 
     // ---- YoY: jumlah request per tahun ----
     const yearMap = {};
@@ -12978,7 +12992,18 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
   // Dipanggil setiap kali salah satu sub-tab Stretchercase & POB dibuka,
   // agar chart/tabel selalu fresh (terutama setelah resize / pertama kali render).
-  function onShowDashboard(){ init(); applyFilters(); }
+  function onShowDashboard(){
+    init();
+    applyFilters();
+    // BUGFIX: setelah tab menjadi visible, resize semua chart yang mungkin
+    // dibuat dengan dimensi 0 saat tab masih tersembunyi.
+    // Menggunakan requestAnimationFrame agar layout sudah settle dulu sebelum resize.
+    requestAnimationFrame(function(){
+      Object.values(charts).forEach(function(ch){
+        if(ch && typeof ch.resize === 'function') ch.resize();
+      });
+    });
+  }
   function onShowData(){ init(); currentPage = 1; renderTable(); }
   function onShowStation(){ init(); renderStation(); }
 
@@ -13068,11 +13093,18 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   window.STCR.saveData = saveStcrData;
   window.STCR.loadData = loadStcrData;
 
-  // Auto-init saat DOM siap (jaga-jaga bila tab dashboard adalah tab pertama yang aktif)
+  // BUGFIX: Jangan auto-init di page load — chart canvas punya dimensi 0 saat tab tersembunyi.
+  // onShowDashboard() akan memanggil init() saat user benar-benar membuka tab STCR Dashboard,
+  // sehingga chart.js mendapat dimensi canvas yang valid dan semua chart tampil dengan benar.
+  // Tetap init saat DOMContentLoaded HANYA jika STCR dashboard sudah aktif (mis. tab pertama).
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function(){
+      const stcrTab = document.getElementById('tab-stcr-dashboard');
+      if(stcrTab && stcrTab.classList.contains('active')) init();
+    });
   } else {
-    init();
+    const stcrTab = document.getElementById('tab-stcr-dashboard');
+    if(stcrTab && stcrTab.classList.contains('active')) init();
   }
 
   // ── STCR EXPORT FUNCTIONS ────────────────────────────────────────────
@@ -14378,6 +14410,9 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       else monthMap[ym].out += Number(t.qty)||0;
     });
     const months = Object.keys(monthMap).sort().slice(-12);
+    // BUGFIX: skip chart creation if container not visible (zero dimensions)
+    const _dgCanvas0 = document.getElementById('dgChartMonthly');
+    if(_dgCanvas0 && !_dgCanvas0.offsetWidth && !_dgCanvas0.offsetParent) return;
     destroyDgChart('monthly');
     const ctx1 = document.getElementById('dgChartMonthly');
     if(ctx1 && months.length){
@@ -15001,7 +15036,15 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     if(typeof _origSwitch === 'function') _origSwitch(tab);
     if(tab === 'drygoods-bankitem')  { renderDgBankItem(); }
     if(tab === 'drygoods-data')      { buildStationTabs(); renderDgTrx(); }
-    if(tab === 'drygoods-dashboard') { renderDgDashboard(); }
+    if(tab === 'drygoods-dashboard') {
+      renderDgDashboard();
+      // BUGFIX: force-resize after tab becomes visible
+      requestAnimationFrame(function(){
+        Object.values(dgCharts).forEach(function(ch){
+          if(ch && typeof ch.resize === 'function') ch.resize();
+        });
+      });
+    }
     if(tab === 'drygoods-ifs')       { buildStationTabs(); renderDgEmployees(); }
   };
 
