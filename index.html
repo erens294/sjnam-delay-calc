@@ -9184,35 +9184,54 @@ document.addEventListener('DOMContentLoaded', function(){
   const STCR_MENU_KEY    = 'sidenav_stcr_open'        + userSuffix;
   const SVC_RECOVERY_KEY = 'sidenav_svcrecovery_open' + userSuffix;
 
+  // Per-user key constants untuk Training & Drygoods (selaras dengan restoreMenuStates)
+  const TRAINING_MENU_KEY  = 'sjnam_training_menu_open'  + userSuffix;
+  const DRYGOODS_MENU_KEY  = 'sjnam_drygoods_menu_open'  + userSuffix;
+
   // Generic toggle helper — saves state, updates icon & aria
-  function setMenuState(key, contentId, iconId, open, save=true){
+  // BUG FIX: gunakan getElementById(btnId) eksplisit, bukan icon?.closest('button')
+  // agar aria-expanded selalu ter-update meski struktur DOM berubah.
+  function setMenuState(key, contentId, iconId, btnId, open, save=true){
     const content = document.getElementById(contentId);
     const icon    = document.getElementById(iconId);
+    const btn     = document.getElementById(btnId);
     if(!content) return;
     if(open){ content.classList.remove('collapsed'); content.setAttribute('aria-hidden','false'); }
     else     { content.classList.add('collapsed');   content.setAttribute('aria-hidden','true');  }
     if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
-    const btn = icon?.closest('button');
-    if(btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     if(save) try{ localStorage.setItem(key, open ? '1' : '0'); }catch(e){}
   }
 
   // Click handlers — toggle accordion & persist
+  // BUG FIX: semua 5 group menu sekarang terdaftar di sini (sebelumnya Training & Drygoods tidak ada)
   document.getElementById('toggleServiceRecoveryMenu')?.addEventListener('click', ()=>{
     const c = document.getElementById('serviceRecoveryMenuContent');
     if(!c) return;
-    const nowOpen = !c.classList.contains('collapsed');
-    setMenuState(SVC_RECOVERY_KEY, 'serviceRecoveryMenuContent', 'iconServiceRecoveryMenu', !nowOpen);
+    setMenuState(SVC_RECOVERY_KEY, 'serviceRecoveryMenuContent', 'iconServiceRecoveryMenu', 'toggleServiceRecoveryMenu', !c.classList.contains('collapsed'));
   });
   document.getElementById('toggleAdminMenu')?.addEventListener('click', ()=>{
     const c = document.getElementById('adminMenuContent');
     if(!c) return;
-    setMenuState(ADMIN_KEY, 'adminMenuContent', 'iconAdminMenu', !c.classList.contains('collapsed'));
+    setMenuState(ADMIN_KEY, 'adminMenuContent', 'iconAdminMenu', 'toggleAdminMenu', !c.classList.contains('collapsed'));
   });
   document.getElementById('toggleStcrMenu')?.addEventListener('click', ()=>{
     const c = document.getElementById('stcrMenuContent');
     if(!c) return;
-    setMenuState(STCR_MENU_KEY, 'stcrMenuContent', 'iconStcrMenu', !c.classList.contains('collapsed'));
+    setMenuState(STCR_MENU_KEY, 'stcrMenuContent', 'iconStcrMenu', 'toggleStcrMenu', !c.classList.contains('collapsed'));
+  });
+  // BUG FIX: Training toggle sebelumnya hanya ada di IIFE terpisah (baris ~10784) yang
+  // konflik & tidak sinkron dengan restoreMenuStates(). Dipindah ke sini agar konsisten.
+  document.getElementById('toggleTrainingMenu')?.addEventListener('click', ()=>{
+    const c = document.getElementById('trainingMenuContent');
+    if(!c) return;
+    setMenuState(TRAINING_MENU_KEY, 'trainingMenuContent', 'iconTrainingMenu', 'toggleTrainingMenu', !c.classList.contains('collapsed'));
+  });
+  // BUG FIX: Drygoods toggle tidak punya listener sama sekali sebelumnya.
+  document.getElementById('toggleDrygoodsMenu')?.addEventListener('click', ()=>{
+    const c = document.getElementById('drygoodsMenuContent');
+    if(!c) return;
+    setMenuState(DRYGOODS_MENU_KEY, 'drygoodsMenuContent', 'iconDrygoodsMenu', 'toggleDrygoodsMenu', !c.classList.contains('collapsed'));
   });
 
   
@@ -10781,45 +10800,10 @@ function renderCertificate(p, prefix){
   document.body.style.overflow = '';
 });
 
-// === TRAINING MENU TOGGLE ===
-(function(){
-  // Per-user key
-  let _trUserSuffix = '';
-  try {
-    const _s = JSON.parse(localStorage.getItem('sjnam_session_v1') || 'null');
-    if(_s && _s.username) _trUserSuffix = '_' + _s.username;
-  } catch(e){}
-  const TR_MENU_KEY = 'sjnam_training_menu_open' + _trUserSuffix;
-
-  function setTrainingMenuState(open, save){
-    const c    = document.getElementById('trainingMenuContent');
-    const icon = document.getElementById('iconTrainingMenu');
-    const btn  = document.getElementById('toggleTrainingMenu');
-    if(!c) return;
-    if(open){
-      c.classList.remove('collapsed');
-      c.setAttribute('aria-hidden', 'false');
-    } else {
-      c.classList.add('collapsed');
-      c.setAttribute('aria-hidden', 'true');
-    }
-    if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
-    if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if(save !== false) try{ localStorage.setItem(TR_MENU_KEY, open ? '1' : '0'); }catch(e){}
-  }
-
-  // Restore saved state on load (default: open)
-  const saved = localStorage.getItem(TR_MENU_KEY);
-  setTrainingMenuState(saved !== '0', false);
-
-  document.getElementById('toggleTrainingMenu')?.addEventListener('click', ()=>{
-    const c = document.getElementById('trainingMenuContent');
-    if(!c) return;
-    const isCurrentlyOpen = !c.classList.contains('collapsed');
-    setTrainingMenuState(!isCurrentlyOpen);
-  });
-})();
-// NOTE: toggleStcrMenu sudah ditangani di sidebar DOMContentLoaded block di atas (dengan localStorage persistence). Tidak perlu listener duplikat di sini.
+// NOTE: toggleTrainingMenu & toggleDrygoodsMenu sudah ditangani di sidebar
+// DOMContentLoaded block di atas (dengan localStorage persistence per-user).
+// IIFE Training Menu Toggle yang lama dihapus untuk menghilangkan listener duplikat
+// yang konflik dengan restoreMenuStates() dan setMenuState() di DOMContentLoaded.
 })();
 </script>
 <!-- PDF Viewer Modal -->
