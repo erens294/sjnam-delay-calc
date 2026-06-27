@@ -82,16 +82,29 @@
   table.mobile-hide{display:none}
 }
 
+/* ============================================================
+   ANTI-FLASH: Semua konten dimulai invisible, ditampilkan oleh JS
+   setelah permission selesai diapply. Ini mencegah flash apapun.
+   ============================================================ */
+#sidebar, #mainContent {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+#sidebar.perm-ready, #mainContent.perm-ready {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* Smooth accordion */
-/* Pre-collapse all group menus on load to prevent flash-of-open-menus */
+/* Pre-collapse all group menus — collapsed class di HTML memastikan tidak ada flash */
 #serviceRecoveryMenuContent, #adminMenuContent, #trainingMenuContent, #stcrMenuContent, #drygoodsMenuContent {
   overflow: hidden;
   max-height: 0;
   opacity: 0;
 }
-/* After JS init adds 'js-ready' to body, enable smooth transitions ONLY */
-/* max-height tidak di-set di sini — dikontrol sepenuhnya oleh class .collapsed */
-/* Ini mencegah flash singkat di mana menu expand setelah js-ready ditambahkan */
+/* js-ready hanya mengaktifkan transition, TIDAK membuka menu */
+/* Menu terbuka dikontrol oleh :not(.collapsed) di bawah */
 body.js-ready #serviceRecoveryMenuContent,
 body.js-ready #adminMenuContent,
 body.js-ready #trainingMenuContent,
@@ -99,7 +112,7 @@ body.js-ready #stcrMenuContent,
 body.js-ready #drygoodsMenuContent {
   transition: max-height 0.3s ease, opacity 0.25s ease;
 }
-/* Saat TIDAK collapsed: tampilkan dengan max-height besar */
+/* Saat terbuka (tidak collapsed) */
 body.js-ready #serviceRecoveryMenuContent:not(.collapsed),
 body.js-ready #adminMenuContent:not(.collapsed),
 body.js-ready #trainingMenuContent:not(.collapsed),
@@ -108,6 +121,7 @@ body.js-ready #drygoodsMenuContent:not(.collapsed) {
   max-height: 1200px;
   opacity: 1;
 }
+/* Saat collapsed */
 body.js-ready #serviceRecoveryMenuContent.collapsed,
 body.js-ready #adminMenuContent.collapsed,
 body.js-ready #trainingMenuContent.collapsed,
@@ -370,7 +384,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
 
 <!-- SIDEBAR -->
-<aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-[#050505] shadow-2xl z-40 flex flex-col transition-all duration-300 border-r border-neutral-800" style="visibility:hidden">
+<aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-[#050505] shadow-2xl z-40 flex flex-col transition-all duration-300 border-r border-neutral-800">
   <div class="p-4 border-b border-neutral-800">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -617,8 +631,8 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       <div id="logo-nam-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">✈ NAM Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
     </div>
 
-    <!-- Edit toggle button — hanya Admin (disembunyikan default, ditampilkan oleh applyPermissions) -->
-    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="display:none;position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
+    <!-- Edit toggle button -->
+    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
 
     <!-- Edit panel (hidden by default) -->
     <div id="homeEditPanel" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:25;background:rgba(10,15,40,0.92);backdrop-filter:blur(12px);padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,0.15);">
@@ -665,7 +679,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
     <!-- Subtitle -->
     <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;z-index:10;pointer-events:none;">
-      <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Sriwijaya Air Group</p>
+      <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Flight Delay Management System · Sriwijaya Air &amp; Nam Air</p>
     </div>
   </div>
 </section>
@@ -7679,11 +7693,10 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
     return;
   }
 
-  // Login success - reset brute force
+  // Login success
   resetBFState(username);
-  
   currentUser = {username:user.username, role:user.role, name:user.name, loginTime:Date.now()};
-  window.currentUser = currentUser; // Expose globally for patched functions
+  window.currentUser = currentUser;
   localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
   
   document.getElementById('loginOverlay').style.display = 'none';
@@ -7692,29 +7705,43 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   document.getElementById('userPanel').classList.add('flex');
   document.getElementById('userNameDisplay').textContent = user.name;
   document.getElementById('userRoleDisplay').textContent = user.role;
-  // Also update sidebar user panel
   const _sideNameEl = document.getElementById('userNameDisplaySide');
   const _sideRoleEl = document.getElementById('userRoleDisplaySide');
   if(_sideNameEl) _sideNameEl.textContent = user.name;
   if(_sideRoleEl) _sideRoleEl.textContent = user.role;
   if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
-  
-  // Pre-hide restricted menu groups to prevent flash before applyPermissions runs
-  if(user.role !== 'Admin'){
-    ['toggleAdminMenu','toggleTrainingMenu','toggleStcrMenu','toggleDrygoodsMenu'].forEach(id=>{
-      const grp = document.getElementById(id)?.closest('div');
-      if(grp) grp.style.display = 'none';
-    });
-  }
-  // By login time all <script> blocks have loaded — the dynamic patch is in place.
-  // Pastikan js-ready sudah ada dulu agar CSS transition tidak aktif saat applyPermissions
-  // menyembunyikan/menampilkan menu group (fix flash setelah login).
+
+  // Restore menu state untuk user yang baru login
+  (function(){
+    const sfx = '_' + user.username;
+    function _sm(contentId, iconId, btnId, key, defaultOpen){
+      const c = document.getElementById(contentId);
+      const icon = document.getElementById(iconId);
+      const btn  = document.getElementById(btnId);
+      const saved = localStorage.getItem(key);
+      const open  = saved !== null ? saved === '1' : defaultOpen;
+      if(!c) return;
+      if(open){ c.classList.remove('collapsed'); c.setAttribute('aria-hidden','false'); }
+      else    { c.classList.add('collapsed');    c.setAttribute('aria-hidden','true');  }
+      if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
+      if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    const isAdminOrCo = user.role === 'Admin' || user.role === 'Co-Admin';
+    _sm('serviceRecoveryMenuContent','iconServiceRecoveryMenu','toggleServiceRecoveryMenu','sidenav_svcrecovery_open'+sfx, true);
+    _sm('adminMenuContent',          'iconAdminMenu',           'toggleAdminMenu',          'sidenav_admin_open'+sfx,        isAdminOrCo);
+    _sm('stcrMenuContent',           'iconStcrMenu',            'toggleStcrMenu',           'sidenav_stcr_open'+sfx,         true);
+    _sm('trainingMenuContent',       'iconTrainingMenu',        'toggleTrainingMenu',       'sjnam_training_menu_open'+sfx,  true);
+    _sm('drygoodsMenuContent',       'iconDrygoodsMenu',        'toggleDrygoodsMenu',       'sjnam_drygoods_menu_open'+sfx,  true);
+  })();
+
+  // Apply permissions, restore tab, kemudian reveal
   document.body.classList.add('js-ready');
   (window.applyPermissions || applyPermissions)();
-  // Make sidebar visible AFTER permissions have been applied (no flash)
-  const _loginSidebar = document.getElementById('sidebar');
-  if(_loginSidebar) _loginSidebar.style.visibility = 'visible';
   restoreSession();
+  const _loginSidebar = document.getElementById('sidebar');
+  if(_loginSidebar) _loginSidebar.classList.add('perm-ready');
+  const _loginMain = document.getElementById('mainContent');
+  if(_loginMain) _loginMain.classList.add('perm-ready');
   showToast('Selamat datang, ' + user.name + '!', 'success');
 });
 
@@ -7856,9 +7883,6 @@ function applyPermissions(){
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
     if(trainingMenuGroup) trainingMenuGroup.style.display = '';
-    // Sembunyikan tombol Edit Home untuk Peserta
-    const _btnHEP = document.getElementById('btnHomeEditToggle');
-    if(_btnHEP) _btnHEP.style.display = 'none';
   } else if(isUser){
     // User: Home, Input, Data (read-only), Dashboard + Service Training (Mulai Training sub-tab)
     if(tabAdminBtn) tabAdminBtn.style.display = 'none';
@@ -7877,41 +7901,32 @@ function applyPermissions(){
     if(stcrMenuGroup) stcrMenuGroup.style.display = '';
     // Tampilkan Drygoods menu group
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
-    // Sembunyikan tombol Edit Home untuk User
-    const _btnHEU = document.getElementById('btnHomeEditToggle');
-    if(_btnHEU) _btnHEU.style.display = 'none';
     // Sembunyikan tombol Import & Hapus Semua di tab Data (read-only untuk User)
-    setTimeout(()=>{
-      const elImport = document.getElementById('fileImportJson')?.closest('label');
-      if(elImport) elImport.style.display = 'none';
-      const elHapusSemua = document.getElementById('btnHapusSemua');
-      if(elHapusSemua) elHapusSemua.style.display = 'none';
-      // Sembunyikan sub-tab "Bank Soal" di dalam tab Soal (User tidak boleh kelola soal)
-      const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
-      if(btnBankSoalTab) btnBankSoalTab.style.display = 'none';
-      // Sembunyikan tombol Hapus Semua Data di Bank Data Peserta
-      const btnClearPeserta = document.getElementById('btnClearPeserta');
-      if(btnClearPeserta) btnClearPeserta.style.display = 'none';
-      // Sembunyikan sync & mulai training peserta buttons di header tab-soal (admin only)
-      const btnSyncService = document.getElementById('btnSyncService');
-      if(btnSyncService) btnSyncService.style.display = 'none';
-      const btnStartPeserta = document.getElementById('btnStartPeserta');
-      if(btnStartPeserta) btnStartPeserta.style.display = 'none';
-      // Auto-switch ke sub-tab Peserta saat tab Soal dibuka
-      const soalSubBank = document.getElementById('soalSubBank');
-      const soalSubPeserta = document.getElementById('soalSubPeserta');
-      const btnPesertaTab = document.querySelector('[data-soal-subtab="peserta"]');
-      if(soalSubBank) soalSubBank.classList.add('hidden');
-      if(soalSubPeserta){ soalSubPeserta.classList.remove('hidden'); }
-      if(btnPesertaTab){ 
-        document.querySelectorAll('.soal-subtab-btn').forEach(b=>{
-          b.classList.remove('active','border-blue-600','text-blue-600');
-          b.classList.add('border-transparent','text-slate-500');
-        });
-        btnPesertaTab.classList.add('active','border-blue-600','text-blue-600');
-        btnPesertaTab.classList.remove('border-transparent','text-slate-500');
-      }
-    }, 100);
+    const elImport = document.getElementById('fileImportJson')?.closest('label');
+    if(elImport) elImport.style.display = 'none';
+    const elHapusSemua = document.getElementById('btnHapusSemua');
+    if(elHapusSemua) elHapusSemua.style.display = 'none';
+    const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
+    if(btnBankSoalTab) btnBankSoalTab.style.display = 'none';
+    const btnClearPeserta = document.getElementById('btnClearPeserta');
+    if(btnClearPeserta) btnClearPeserta.style.display = 'none';
+    const btnSyncService = document.getElementById('btnSyncService');
+    if(btnSyncService) btnSyncService.style.display = 'none';
+    const btnStartPeserta = document.getElementById('btnStartPeserta');
+    if(btnStartPeserta) btnStartPeserta.style.display = 'none';
+    const soalSubBank = document.getElementById('soalSubBank');
+    const soalSubPeserta = document.getElementById('soalSubPeserta');
+    const btnPesertaTab = document.querySelector('[data-soal-subtab="peserta"]');
+    if(soalSubBank) soalSubBank.classList.add('hidden');
+    if(soalSubPeserta) soalSubPeserta.classList.remove('hidden');
+    if(btnPesertaTab){
+      document.querySelectorAll('.soal-subtab-btn').forEach(b=>{
+        b.classList.remove('active','border-blue-600','text-blue-600');
+        b.classList.add('border-transparent','text-slate-500');
+      });
+      btnPesertaTab.classList.add('active','border-blue-600','text-blue-600');
+      btnPesertaTab.classList.remove('border-transparent','text-slate-500');
+    }
     // Sembunyikan tombol Edit & Del di tabel data (read-only)
     window.currentUserReadOnly = true;
   } else {
@@ -7928,27 +7943,19 @@ function applyPermissions(){
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
     if(stcrMenuGroup) stcrMenuGroup.style.display = '';
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
-    // Tombol Edit Home hanya untuk Admin (Co-Admin tidak bisa edit tampilan Home)
-    const _btnHomeEdit = document.getElementById('btnHomeEditToggle');
-    if(_btnHomeEdit) _btnHomeEdit.style.display = (role === 'Admin') ? '' : 'none';
-    // Pastikan tombol import/hapus semua tampil lagi
-    setTimeout(()=>{
-      const elImport2 = document.getElementById('fileImportJson')?.closest('label');
-      if(elImport2) elImport2.style.display = '';
-      const elHapusSemua2 = document.getElementById('btnHapusSemua');
-      if(elHapusSemua2) elHapusSemua2.style.display = '';
-      // Restore sub-tab Bank Soal
-      const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
-      if(btnBankSoalTab) btnBankSoalTab.style.display = '';
-      // Restore Hapus Semua Data Peserta
-      const btnClearPeserta = document.getElementById('btnClearPeserta');
-      if(btnClearPeserta) btnClearPeserta.style.display = '';
-      // Restore sync & mulai peserta buttons
-      const btnSyncService = document.getElementById('btnSyncService');
-      if(btnSyncService) btnSyncService.style.display = '';
-      const btnStartPeserta = document.getElementById('btnStartPeserta');
-      if(btnStartPeserta) btnStartPeserta.style.display = '';
-    }, 100);
+    // Restore semua tombol yang mungkin tersembunyi
+    const elImport2 = document.getElementById('fileImportJson')?.closest('label');
+    if(elImport2) elImport2.style.display = '';
+    const elHapusSemua2 = document.getElementById('btnHapusSemua');
+    if(elHapusSemua2) elHapusSemua2.style.display = '';
+    const btnBankSoalTab2 = document.querySelector('[data-soal-subtab="bank"]');
+    if(btnBankSoalTab2) btnBankSoalTab2.style.display = '';
+    const btnClearPeserta2 = document.getElementById('btnClearPeserta');
+    if(btnClearPeserta2) btnClearPeserta2.style.display = '';
+    const btnSyncService2 = document.getElementById('btnSyncService');
+    if(btnSyncService2) btnSyncService2.style.display = '';
+    const btnStartPeserta2 = document.getElementById('btnStartPeserta');
+    if(btnStartPeserta2) btnStartPeserta2.style.display = '';
     window.currentUserReadOnly = false;
   }
   
@@ -7958,9 +7965,9 @@ function applyPermissions(){
   
   renderUserTable();
 
-  // Reveal sidebar NOW — permissions are set, safe to show
+  // Reveal sidebar — pakai perm-ready class (bukan visibility)
   const _origSb = document.getElementById('sidebar');
-  if(_origSb) _origSb.style.visibility = 'visible';
+  if(_origSb && !_origSb.classList.contains('perm-ready')) _origSb.classList.add('perm-ready');
 
   // Peserta langsung diarahkan ke wizard "Mulai Training Peserta"
   if(isPeserta){
@@ -8240,33 +8247,29 @@ window.switchTab = function(tab){
 // Restore session on load
 function restoreSession(){
   if(currentUser && currentUser.role === 'Peserta'){
-    // Peserta: always go to training wizard, with enough delay for perms to apply
-    setTimeout(()=> window.switchTab('soal-peserta'), 250);
+    // Peserta: selalu ke training wizard
+    window.switchTab('soal-peserta');
     return;
   }
   const savedTab = localStorage.getItem(CURRENT_TAB_KEY) || 'home';
-  // Use 250ms delay — permission DOM changes (including the 120ms setTimeout inside
-  // applyPermissions) must complete before we check tab visibility.
-  setTimeout(() => {
-    if(document.querySelector(`[data-tab="${savedTab}"]`)?.style.display !== 'none'){
+  // Permission sudah diapply sebelum restoreSession dipanggil — tidak perlu delay
+  // Cukup gunakan requestAnimationFrame agar DOM update selesai dulu
+  requestAnimationFrame(()=>{
+    const tabBtn = document.querySelector(`[data-tab="${savedTab}"]`);
+    if(tabBtn && tabBtn.style.display !== 'none'){
       window.switchTab(savedTab);
-    } else if(document.querySelector('[data-tab="home"]')?.style.display !== 'none'){
-      window.switchTab('home');
     } else {
-      // BUGFIX: role kustom (UserXXX/UserXX/UserX) defaultnya TANPA akses sama sekali,
-      // sehingga tab "home" pun bisa disembunyikan. Sebelumnya kode langsung memaksa
-      // switchTab('home') yang akan di-block diam-diam oleh guard switchTab, membuat
-      // tampilan kosong tanpa penjelasan. Sekarang cari tab pertama yang memang
-      // diizinkan untuk role ini dan arahkan ke sana; jika benar-benar tidak ada satu
-      // tab pun yang diizinkan, beri tahu user agar menghubungi Admin.
-      const firstVisibleTab = document.querySelector('.sidebar-btn[data-tab]:not([style*="display: none"])')?.dataset?.tab;
-      if(firstVisibleTab){
-        window.switchTab(firstVisibleTab);
-      } else if(typeof showToast === 'function'){
-        showToast('Akun Anda belum diberi akses ke fitur apa pun. Hubungi Admin.', 'error');
+      const homeBtn = document.querySelector('[data-tab="home"]');
+      if(homeBtn && homeBtn.style.display !== 'none'){
+        window.switchTab('home');
+      } else {
+        // Role kustom tanpa akses home: cari tab pertama yang visible
+        const firstVisible = document.querySelector('.sidebar-btn[data-tab]:not([style*="display: none"])')?.dataset?.tab;
+        if(firstVisible) window.switchTab(firstVisible);
+        else if(typeof showToast === 'function') showToast('Akun belum diberi akses. Hubungi Admin.','error');
       }
     }
-  }, 250);
+  });
 }
 
 // Check session on page load
@@ -8275,51 +8278,100 @@ function restoreSession(){
   const session = localStorage.getItem(SESSION_KEY);
   if(session){
     try {
-      currentUser = JSON.parse(session);
-      window.currentUser = currentUser; // Expose globally
+      const savedSession = JSON.parse(session);
+      // Verifikasi user masih ada dan aktif
+      const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+      const stillValid = allUsers.find(u =>
+        u.username.toLowerCase() === savedSession.username.toLowerCase() && u.active
+      );
+      if(!stillValid){
+        localStorage.removeItem(SESSION_KEY);
+        document.body.style.overflow = 'hidden';
+        // Tampilkan konten (login form) segera
+        requestAnimationFrame(()=>{
+          document.getElementById('sidebar').classList.add('perm-ready');
+          document.getElementById('mainContent').classList.add('perm-ready');
+        });
+        return;
+      }
+      // Refresh data dari server (role/name bisa berubah oleh Admin)
+      currentUser = {
+        username: stillValid.username,
+        role:     stillValid.role,
+        name:     stillValid.name,
+        loginTime: savedSession.loginTime || Date.now()
+      };
+      window.currentUser = currentUser;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+
+      // Update UI header
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('userPanel').classList.remove('hidden');
       document.getElementById('userPanel').classList.add('flex');
       document.getElementById('userNameDisplay').textContent = currentUser.name;
       document.getElementById('userRoleDisplay').textContent = currentUser.role;
-      // Also update sidebar user panel
       const sideNameEl = document.getElementById('userNameDisplaySide');
       const sideRoleEl = document.getElementById('userRoleDisplaySide');
       if(sideNameEl) sideNameEl.textContent = currentUser.name;
       if(sideRoleEl) sideRoleEl.textContent = currentUser.role;
       if(document.getElementById('userPanelSidebar')) document.getElementById('userPanelSidebar').classList.remove('hidden');
-      // IMPORTANT: defer so that the dynamic FEATURE-1 permission patch (installed by a later
-      // <script> block) is already in place before we call window.applyPermissions().
-      // We use requestAnimationFrame (instead of setTimeout 0) to ensure DOM is ready
-      // but we ALSO hide all restricted menu groups immediately here (before the async call)
-      // to prevent the "flash" where non-admin users briefly see all menus.
-      (function hideSidebarGroupsImmediately(){
-        // Pre-hide all optional menu groups; applyPermissions will restore what's allowed.
-        const _role = currentUser ? currentUser.role : null;
-        const _isAdmin = _role === 'Admin';
-        if(!_isAdmin){
-          // Hide all menu groups except Home — applyPermissions will reveal the correct ones
-          ['toggleAdminMenu','toggleTrainingMenu','toggleStcrMenu','toggleDrygoodsMenu'].forEach(id=>{
-            const grp = document.getElementById(id)?.closest('div');
-            if(grp) grp.style.display = 'none';
-          });
+
+      // === KUNCI: Semua permission + menu state diapply SEBELUM reveal ===
+      // Tidak ada setTimeout — semua synchronous, tidak ada jendela waktu untuk flash
+
+      // 1. Restore menu state dari localStorage (accordion open/close per-user)
+      (function restoreMenuStates(){
+        const sfx = '_' + currentUser.username;
+        function _sm(contentId, iconId, btnId, key, defaultOpen){
+          const c = document.getElementById(contentId);
+          const icon = document.getElementById(iconId);
+          const btn = document.getElementById(btnId);
+          const saved = localStorage.getItem(key);
+          const open = saved !== null ? saved === '1' : defaultOpen;
+          if(!c) return;
+          if(open){ c.classList.remove('collapsed'); c.setAttribute('aria-hidden','false'); }
+          else    { c.classList.add('collapsed');    c.setAttribute('aria-hidden','true');  }
+          if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
+          if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
+        const isAdminOrCo = currentUser.role === 'Admin' || currentUser.role === 'Co-Admin';
+        _sm('serviceRecoveryMenuContent','iconServiceRecoveryMenu','toggleServiceRecoveryMenu','sidenav_svcrecovery_open'+sfx, true);
+        _sm('adminMenuContent',          'iconAdminMenu',           'toggleAdminMenu',          'sidenav_admin_open'+sfx,        isAdminOrCo);
+        _sm('stcrMenuContent',           'iconStcrMenu',            'toggleStcrMenu',           'sidenav_stcr_open'+sfx,         true);
+        _sm('trainingMenuContent',       'iconTrainingMenu',        'toggleTrainingMenu',       'sjnam_training_menu_open'+sfx,  true);
+        _sm('drygoodsMenuContent',       'iconDrygoodsMenu',        'toggleDrygoodsMenu',       'sjnam_drygoods_menu_open'+sfx,  true);
       })();
-      // Make sidebar visible NOW (after groups are pre-hidden) so there's no flicker
-      const _sidebarEl = document.getElementById('sidebar');
-      if(_sidebarEl) _sidebarEl.style.visibility = 'visible';
-      // Jalankan applyPermissions setelah js-ready class ditambahkan (50ms) agar
-      // CSS transition tidak aktif saat menu group disembunyikan/ditampilkan.
-      setTimeout(()=>{
-        (window.applyPermissions || applyPermissions)();
-        restoreSession();
-      }, 60);
+
+      // 2. Apply permissions (sembunyikan/tampilkan menu group & tab sesuai role)
+      //    window.applyPermissions sudah di-patch oleh modul perm yang diload lebih awal
+      (window.applyPermissions || applyPermissions)();
+
+      // 3. Restore tab terakhir
+      restoreSession();
+
+      // 4. Aktifkan CSS transition LALU reveal — satu requestAnimationFrame cukup (<16ms)
+      //    js-ready mengaktifkan accordion transition, perm-ready meng-opacity-1 sidebar+content
+      document.body.classList.add('js-ready');
+      requestAnimationFrame(()=>{
+        document.getElementById('sidebar').classList.add('perm-ready');
+        document.getElementById('mainContent').classList.add('perm-ready');
+      });
+
     } catch(e){
       localStorage.removeItem(SESSION_KEY);
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(()=>{
+        document.getElementById('sidebar').classList.add('perm-ready');
+        document.getElementById('mainContent').classList.add('perm-ready');
+      });
     }
   } else {
-    // Show login, hide app content
+    // Belum login — tampilkan halaman login
     document.body.style.overflow = 'hidden';
+    requestAnimationFrame(()=>{
+      document.getElementById('sidebar').classList.add('perm-ready');
+      document.getElementById('mainContent').classList.add('perm-ready');
+    });
   }
 })();
 
@@ -8335,109 +8387,50 @@ console.log('[AUTH] Sistem Administrasi aktif - Supabase auto-sync ON');
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  // Make sidebar visible only if checkAuth hasn't already done it (i.e., user was NOT logged in)
-  const _sb = document.getElementById('sidebar');
-  if(_sb && _sb.style.visibility !== 'visible'){
-    // Not logged in — keep sidebar hidden (loginOverlay covers everything anyway)
-    // Sidebar will become visible after successful login via applyPermissions
-  }
-  // If checkAuth already made sidebar visible (logged-in session), nothing extra needed here.
-  // Either way, proceed with sidebar wiring below.
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('mainContent');
   const btnCollapse = document.getElementById('btnCollapseSidebar');
   const sidebarBtns = document.querySelectorAll('.sidebar-btn');
   const COLLAPSE_KEY = 'sidenav_collapsed';
-  
-  
-  // Minimize Home and Admin menus - per user + smooth
-  const getUser = () => {
-    try { return JSON.parse(localStorage.getItem('sjnam_session_v1') || 'null'); } catch(e){ return null; }
-  };
+
+  // Per-user menu key helper (used by click handlers to persist state)
+  const getUser = () => { try{ return JSON.parse(localStorage.getItem('sjnam_session_v1')||'null'); }catch(e){ return null; } };
   const user = getUser();
   const userSuffix = user ? '_' + user.username : '';
-  const HOME_KEY = 'sidenav_home_open' + userSuffix;
-  const ADMIN_KEY = 'sidenav_admin_open' + userSuffix;
-  const STCR_MENU_KEY = 'sidenav_stcr_open' + userSuffix;
+  const ADMIN_KEY        = 'sidenav_admin_open'       + userSuffix;
+  const STCR_MENU_KEY    = 'sidenav_stcr_open'        + userSuffix;
   const SVC_RECOVERY_KEY = 'sidenav_svcrecovery_open' + userSuffix;
-  const homeContent = null; // Home tab is now standalone, no group
-  const adminContent = document.getElementById('adminMenuContent');
-  const stcrMenuContentEl = document.getElementById('stcrMenuContent');
-  const svcRecoveryContentEl = document.getElementById('serviceRecoveryMenuContent');
-  const iconHome = null;
-  const iconAdmin = document.getElementById('iconAdminMenu');
-  const iconStcrMenu = document.getElementById('iconStcrMenu');
-  const iconSvcRecovery = document.getElementById('iconServiceRecoveryMenu');
-  
-  function setMenuState(key, content, icon, open, save=true){
+
+  // Generic toggle helper — saves state, updates icon & aria
+  function setMenuState(key, contentId, iconId, open, save=true){
+    const content = document.getElementById(contentId);
+    const icon    = document.getElementById(iconId);
     if(!content) return;
-    if(open){
-      content.classList.remove('collapsed');
-      content.setAttribute('aria-hidden','false');
-    } else {
-      content.classList.add('collapsed');
-      content.setAttribute('aria-hidden','true');
-    }
+    if(open){ content.classList.remove('collapsed'); content.setAttribute('aria-hidden','false'); }
+    else     { content.classList.add('collapsed');   content.setAttribute('aria-hidden','true');  }
     if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
     const btn = icon?.closest('button');
     if(btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if(save) try{localStorage.setItem(key, open ? '1' : '0');}catch(e){}
+    if(save) try{ localStorage.setItem(key, open ? '1' : '0'); }catch(e){}
   }
-  
-  // Defaults: Service Recovery open, Admin open for Admin/Co-Admin, closed for User
-  const defaultHome = true;
-  const defaultAdmin = user ? (user.role === 'Admin' || user.role === 'Co-Admin') : true;
-  const defaultStcrMenu = true;
-  const defaultSvcRecovery = true;
-  const adminOpen = (localStorage.getItem(ADMIN_KEY) ?? (defaultAdmin?'1':'0')) === '1';
-  const stcrMenuOpen = (localStorage.getItem(STCR_MENU_KEY) ?? (defaultStcrMenu?'1':'0')) === '1';
-  const svcRecoveryOpen = (localStorage.getItem(SVC_RECOVERY_KEY) ?? (defaultSvcRecovery?'1':'0')) === '1';
-  setMenuState(ADMIN_KEY, adminContent, iconAdmin, adminOpen, false);
-  setMenuState(STCR_MENU_KEY, stcrMenuContentEl, iconStcrMenu, stcrMenuOpen, false);
-  setMenuState(SVC_RECOVERY_KEY, svcRecoveryContentEl, iconSvcRecovery, svcRecoveryOpen, false);
-  // Restore saved training & drygoods menu state juga di sini (sebelum js-ready)
-  // agar tidak ada flash saat modul training/drygoods baru diinit lebih lambat
-  (function restoreExtraMenus(){
-    let _suffix = '';
-    try { const _s = JSON.parse(localStorage.getItem('sjnam_session_v1')||'null'); if(_s && _s.username) _suffix = '_' + _s.username; } catch(e){}
-    const _tmKey = 'sjnam_training_menu_open' + _suffix;
-    const _dgKey = 'sjnam_drygoods_menu_open' + _suffix;
-    const tmEl = document.getElementById('trainingMenuContent');
-    const dgEl = document.getElementById('drygoodsMenuContent');
-    const tmSaved = localStorage.getItem(_tmKey);
-    const dgSaved = localStorage.getItem(_dgKey);
-    // Default open (null = belum pernah disimpan)
-    const tmOpen = tmSaved !== '0';
-    const dgOpen = dgSaved !== '0';
-    if(tmEl){ if(tmOpen){ tmEl.classList.remove('collapsed'); tmEl.setAttribute('aria-hidden','false'); } else { tmEl.classList.add('collapsed'); tmEl.setAttribute('aria-hidden','true'); } }
-    if(dgEl){ if(dgOpen){ dgEl.classList.remove('collapsed'); dgEl.setAttribute('aria-hidden','false'); } else { dgEl.classList.add('collapsed'); dgEl.setAttribute('aria-hidden','true'); } }
-  })();
 
-  // Mark body ready SETELAH semua state awal di-set dan SETELAH applyPermissions selesai.
-  // Ini mencegah CSS transition aktif saat menu sedang disembunyikan/ditampilkan oleh permission,
-  // yang menjadi penyebab utama "flash" menu terbuka sekilas saat refresh.
-  // js-ready ditambahkan via setTimeout agar applyPermissions (setTimeout 60ms di checkAuth) selesai dulu.
-  setTimeout(()=>{ document.body.classList.add('js-ready'); }, 50);
-  
+  // Click handlers — toggle accordion & persist
   document.getElementById('toggleServiceRecoveryMenu')?.addEventListener('click', ()=>{
-    if(!svcRecoveryContentEl) return;
-    const isOpen = !svcRecoveryContentEl.classList.contains('collapsed');
-    setMenuState(SVC_RECOVERY_KEY, svcRecoveryContentEl, iconSvcRecovery, !isOpen);
+    const c = document.getElementById('serviceRecoveryMenuContent');
+    if(!c) return;
+    const nowOpen = !c.classList.contains('collapsed');
+    setMenuState(SVC_RECOVERY_KEY, 'serviceRecoveryMenuContent', 'iconServiceRecoveryMenu', !nowOpen);
   });
   document.getElementById('toggleAdminMenu')?.addEventListener('click', ()=>{
-    if(!adminContent) return;
-    const isOpen = !adminContent.classList.contains('collapsed');
-    setMenuState(ADMIN_KEY, adminContent, iconAdmin, !isOpen);
+    const c = document.getElementById('adminMenuContent');
+    if(!c) return;
+    setMenuState(ADMIN_KEY, 'adminMenuContent', 'iconAdminMenu', !c.classList.contains('collapsed'));
   });
   document.getElementById('toggleStcrMenu')?.addEventListener('click', ()=>{
-    if(!stcrMenuContentEl) return;
-    const isOpen = !stcrMenuContentEl.classList.contains('collapsed');
-    setMenuState(STCR_MENU_KEY, stcrMenuContentEl, iconStcrMenu, !isOpen);
+    const c = document.getElementById('stcrMenuContent');
+    if(!c) return;
+    setMenuState(STCR_MENU_KEY, 'stcrMenuContent', 'iconStcrMenu', !c.classList.contains('collapsed'));
   });
-  
-  // Per-user menu state will be re-evaluated on login via getUser()
-
-  // duplicate listeners removed - fixed
 
   
   // Sync sidebar active state with tab changes
@@ -10369,9 +10362,6 @@ window.addEventListener('beforeunload', ()=>{
     if(isAdmin){
       // Admin selalu full akses — jalankan original
       if(_origApplyPermissions) _origApplyPermissions();
-      // Pastikan tombol Edit Home tampil untuk Admin
-      const _btnHE = document.getElementById('btnHomeEditToggle');
-      if(_btnHE) _btnHE.style.display = '';
       return;
     }
 
@@ -10436,44 +10426,33 @@ window.addEventListener('beforeunload', ()=>{
     const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = canSee('feat-mulai') ? '' : 'none';
 
-    // Tombol Edit Home: hanya Admin (semua role lain tidak boleh)
-    const _btnHomeEdit2 = document.getElementById('btnHomeEditToggle');
-    if(_btnHomeEdit2) _btnHomeEdit2.style.display = 'none';
-
     // Functional features with delay
-    setTimeout(()=>{
-      const elImport = document.getElementById('fileImportJson')?.closest('label');
-      if(elImport) elImport.style.display = canSee('feat-import') ? '' : 'none';
-      const elHapusSemua = document.getElementById('btnHapusSemua');
-      if(elHapusSemua) elHapusSemua.style.display = canSee('feat-delete') ? '' : 'none';
-      const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
-      if(btnBankSoalTab) btnBankSoalTab.style.display = (isCoAdmin||canSee('tab-soal')) ? '' : 'none';
-      const btnClearPeserta = document.getElementById('btnClearPeserta');
-      if(btnClearPeserta) btnClearPeserta.style.display = canSee('feat-delete') ? '' : 'none';
-      const btnSyncService = document.getElementById('btnSyncService');
-      if(btnSyncService) btnSyncService.style.display = canSee('tab-soal') ? '' : 'none';
-      const btnStartPeserta = document.getElementById('btnStartPeserta');
-      if(btnStartPeserta) btnStartPeserta.style.display = canSee('feat-mulai') ? '' : 'none';
-      // Read-only mode for user
-      window.currentUserReadOnly = !canSee('feat-edit');
-    }, 120);
+    // Apply functional feature visibility synchronously (no setTimeout)
+    const elImport = document.getElementById('fileImportJson')?.closest('label');
+    if(elImport) elImport.style.display = canSee('feat-import') ? '' : 'none';
+    const elHapusSemua = document.getElementById('btnHapusSemua');
+    if(elHapusSemua) elHapusSemua.style.display = canSee('feat-delete') ? '' : 'none';
+    const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
+    if(btnBankSoalTab) btnBankSoalTab.style.display = (isCoAdmin||canSee('tab-soal')) ? '' : 'none';
+    const btnClearPeserta = document.getElementById('btnClearPeserta');
+    if(btnClearPeserta) btnClearPeserta.style.display = canSee('feat-delete') ? '' : 'none';
+    const btnSyncService = document.getElementById('btnSyncService');
+    if(btnSyncService) btnSyncService.style.display = canSee('tab-soal') ? '' : 'none';
+    const btnStartPeserta = document.getElementById('btnStartPeserta');
+    if(btnStartPeserta) btnStartPeserta.style.display = canSee('feat-mulai') ? '' : 'none';
+    window.currentUserReadOnly = !canSee('feat-edit');
 
     window.currentUserCanDelete = canSee('feat-delete');
-    // currentUserCanAdd controls user-management (Add/Edit user buttons) — separate from data editing
-    // Co-Admin can manage users if they have tab-admin access; User/Peserta never
     window.currentUserCanAdd = isCoAdmin ? canSee('tab-admin') : false;
-    // currentUserCanEdit controls data record editing (delay records, DFS, etc.)
-    window.currentUserReadOnly = !canSee('feat-edit'); // also set immediately (not just in setTimeout)
     if(typeof renderUserTable === 'function') renderUserTable();
-
-    // Reveal sidebar NOW — permissions have been applied, no more flash risk
-    const _patchedSb = document.getElementById('sidebar');
-    if(_patchedSb) _patchedSb.style.visibility = 'visible';
 
     // Peserta auto redirect
     if(isPeserta && canSee('feat-mulai')){
       setTimeout(()=>{ document.getElementById('btnStartPeserta')?.click(); }, 200);
     }
+    // Reveal sidebar (perm-ready pattern)
+    const _patchedSb = document.getElementById('sidebar');
+    if(_patchedSb && !_patchedSb.classList.contains('perm-ready')) _patchedSb.classList.add('perm-ready');
   };
 
 })();
