@@ -98,7 +98,7 @@
 }
 
 /* Accordion sidebar: .collapsed=tutup, tanpa .collapsed=buka.
-   body.js-ready hanya untuk transition animation. */
+   body.js-ready hanya untuk transition animation — bukan untuk visibility. */
 #serviceRecoveryMenuContent,
 #adminMenuContent,
 #trainingMenuContent,
@@ -6835,10 +6835,6 @@ document.addEventListener('keydown',e=>{
 var cloudConfig = { supabaseUrl:'', supabaseKey:'' };
 var _cloudPullInProgress = false;
 var _autoSyncTimer = null;
-// Tracks the exact time rolePerms were last saved LOCALLY (not from cloud).
-// Used to prevent cloudPull/realtime from overwriting newer local perm changes.
-var _rolePermsLocalChangedAt = null;
-try { _rolePermsLocalChangedAt = localStorage.getItem('sjnam_role_perms_local_ts_v1') || null; } catch(e){}
 // Persist _lastCloudUpdatedAt ke localStorage agar saat halaman dibuka ulang,
 // Smart Pull bisa langsung bandingkan — tidak perlu pull jika tidak ada perubahan.
 var _LAST_PULL_TS_KEY = 'sjnam_last_cloud_pull_ts_v1';
@@ -7462,7 +7458,6 @@ _realtimeChannel = null;
 // Restore dari localStorage agar Smart Pull tidak pull ulang jika tidak ada perubahan data
 _lastCloudUpdatedAt = (function(){ try{ return localStorage.getItem(_LAST_PULL_TS_KEY)||null; }catch(e){ return null; } })();
 _lastPushedHash = null;        // hash payload terakhir yang berhasil di-push
-_rolePermsLocalChangedAt = null;  // reset flag pending perms saat koneksi ulang
 // Deklarasi di sini agar tersedia untuk semua fungsi di bawah (fix hoisting bug)
 _autoSyncTimer = null;
 _cloudPullInProgress = false;
@@ -7728,9 +7723,8 @@ async function cloudPush(silent=false){
     _lastPushedHash = _hashPayload(mergedPayload);
     _lastCloudUpdatedAt = serverUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
-    // Push berhasil → hapus flag pending rolePerms lokal karena sudah ter-upload
-    _rolePermsLocalChangedAt = null;
-    try { localStorage.removeItem('sjnam_role_perms_local_ts_v1'); } catch(e){}
+    // Push berhasil → hapus flag pending rolePerms (sudah tersimpan di cloud)
+    window._pendingRolePermsChange = false;
     updateSyncStatus('connected');
     cloudLog('✅ Data tersimpan ke Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
     if(!silent) showToast('⚡ Supabase Sync berhasil! ('+data.length+' records)','success');
@@ -7831,23 +7825,14 @@ async function cloudPull(silent = false){
         window.DRYGOODS.renderAll();
       }
     }
-    // Restore hak akses per-role — LAST-WRITE-WINS berdasarkan timestamp
-    // Jika Admin baru saja menyimpan perms secara lokal (_rolePermsLocalChangedAt),
-    // dan timestamp lokal > updated_at cloud yang sedang di-pull → SKIP,
-    // jangan timpa perms lokal yang lebih baru dengan data lama dari cloud.
+    // Restore hak akses per-role
+    // BUGFIX: jika Admin baru saja menyimpan perms (_pendingRolePermsChange=true),
+    // jangan timpa dengan data lama dari cloud — biarkan push lokal yang menang.
     if(rec.rolePerms){
-      const _cloudTs = cloudUpdatedAt || null;
-      const _localPermsTs = (typeof _rolePermsLocalChangedAt !== 'undefined') ? _rolePermsLocalChangedAt : null;
-      const _localIsNewer = _localPermsTs && _cloudTs && _localPermsTs > _cloudTs;
-      if(_localIsNewer){
-        cloudLog('⏭️ Pull: rolePerms lokal lebih baru ('+_localPermsTs+' > '+_cloudTs+') — skip overwrite', 'info');
-        // Jangan timpa, tapi tetap push perms lokal ke cloud agar sinkron
-        setTimeout(()=>{ if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl) cloudPush(true); }, 200);
+      if(window._pendingRolePermsChange){
+        cloudLog('⏭️ Pull: skip rolePerms dari cloud — ada perubahan lokal yang belum ter-push', 'info');
       } else {
         localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
-        // Tandai bahwa perms ini datang dari cloud (bukan perubahan lokal)
-        _rolePermsLocalChangedAt = null;
-        try { localStorage.removeItem('sjnam_role_perms_local_ts_v1'); } catch(e){}
         if(typeof window.renderPermTable === 'function') window.renderPermTable();
         if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
       }
@@ -7871,9 +7856,8 @@ async function cloudPull(silent = false){
     }
     // Simpan timestamp & hash SEBELUM melepas flag, agar triggerAutoSync tidak push balik
     // Batalkan push timer yang mungkin sedang menunggu (debounce) — data sudah diambil dari cloud
-    // KECUALI: jika ada rolePerms lokal yang lebih baru (sudah dihandle di blok rolePerms di atas).
-    const _pullHasPendingPerms = (typeof _rolePermsLocalChangedAt !== 'undefined') && _rolePermsLocalChangedAt;
-    if(!_pullHasPendingPerms){
+    // BUGFIX: jangan batalkan timer jika Ada perubahan rolePerms lokal yang belum ter-push
+    if(!window._pendingRolePermsChange){
       if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
     }
     _lastCloudUpdatedAt = cloudUpdatedAt;
@@ -7985,21 +7969,17 @@ function startRealtimeSubscription(){
               window.DRYGOODS.renderAll();
             }
           }
-          // Restore hak akses per-role dari realtime — LAST-WRITE-WINS
-          // Cek apakah perms lokal lebih baru dari data yang datang via realtime.
-          // Jika ya, skip overwrite dan push balik perms lokal ke cloud.
+          // Restore hak akses per-role dari realtime
+          // BUGFIX: jangan timpa perms lokal yang baru disimpan Admin
           if(rec.rolePerms){
-            const _rtCloudTs = payload.new?.updated_at || null;
-            const _rtLocalTs = (typeof _rolePermsLocalChangedAt !== 'undefined') ? _rolePermsLocalChangedAt : null;
-            const _rtLocalNewer = _rtLocalTs && _rtCloudTs && _rtLocalTs > _rtCloudTs;
-            if(_rtLocalNewer){
-              cloudLog('⏭️ Realtime: rolePerms lokal lebih baru — skip overwrite, push balik', 'info');
-              // Push balik setelah delay singkat
-              setTimeout(()=>{ if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl) cloudPush(true); }, 500);
+            if(window._pendingRolePermsChange){
+              cloudLog('⏭️ Realtime: skip rolePerms dari cloud — ada perubahan lokal yang belum ter-push', 'info');
+              // Push balik perms lokal agar cloud sinkron dengan perubahan Admin
+              if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl){
+                setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._pendingRolePermsChange = false; }); }, 300);
+              }
             } else {
               localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
-              _rolePermsLocalChangedAt = null;
-              try { localStorage.removeItem('sjnam_role_perms_local_ts_v1'); } catch(e){}
               if(typeof window.renderPermTable === 'function') window.renderPermTable();
               if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
             }
@@ -8024,10 +8004,8 @@ function startRealtimeSubscription(){
           // Simpan server timestamp — PENTING: gunakan updated_at dari server, bukan waktu lokal
           if(payload.new?.updated_at){ _lastCloudUpdatedAt = payload.new.updated_at; try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){} }
           // Batalkan push timer yang mungkin sedang menunggu — data sudah datang dari cloud
-          // KECUALI: jika ada perubahan rolePerms lokal yang belum ter-push (lebih baru dari data RT).
-          // Dalam hal itu, biarkan timer berjalan (atau re-schedule) agar perms lokal tetap di-push.
-          const _rtHasPendingPerms = (typeof _rolePermsLocalChangedAt !== 'undefined') && _rolePermsLocalChangedAt;
-          if(!_rtHasPendingPerms){
+          // BUGFIX: jangan batalkan timer jika ada perubahan rolePerms lokal yang belum ter-push
+          if(!window._pendingRolePermsChange){
             if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
           }
           // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
@@ -8745,18 +8723,18 @@ function applyPermissions(){
     if(btnStartPeserta2) btnStartPeserta2.style.display = '';
     window.currentUserReadOnly = false;
   } else {
-    // Custom roles (UserXXX/UserXX/UserX) — fail-closed: semua hidden.
-    // Patched window.applyPermissions yang mengatur akses berdasarkan tabel permission.
+    // Custom roles (UserXXX/UserXX/UserX dll) — fail-closed: semua tab hidden.
+    // window.applyPermissions (patched) yang mengatur akses berdasarkan tabel permission.
     [tabAdminBtn,tabStations,tabDfs,tabRequest,tabSettings,tabHome,
-     tabInput,tabData,tabDashboard,tabMateri,tabSoal,tabSertifikat].forEach(el=>{
+     tabInput,tabData,tabDashboard,tabMateri,tabSoal,tabSertifikat].forEach(function(el){
       if(el) el.style.display = 'none';
     });
     if(adminMenuGroup) adminMenuGroup.style.display = 'none';
     if(trainingMenuGroup) trainingMenuGroup.style.display = 'none';
     if(stcrMenuGroup) stcrMenuGroup.style.display = 'none';
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
-    const _svcGrpTmp = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
-    if(_svcGrpTmp) _svcGrpTmp.style.display = 'none';
+    var _svcG = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
+    if(_svcG) _svcG.style.display = 'none';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = 'none';
     window.currentUserReadOnly = true;
   }
@@ -11069,21 +11047,21 @@ window.addEventListener('beforeunload', ()=>{
     try { return JSON.parse(localStorage.getItem(PERM_KEY)) || null; } catch(e){ return null; }
   }
   function savePerms(p){
-    // Catat waktu perubahan lokal SEBELUM simpan — dipakai untuk last-write-wins
-    // saat pull dari cloud/realtime agar perms yang baru disimpan tidak tertiban.
-    const _ts = new Date().toISOString();
-    _rolePermsLocalChangedAt = _ts;
-    try { localStorage.setItem('sjnam_role_perms_local_ts_v1', _ts); } catch(e){}
+    // Simpan ke localStorage
     localStorage.setItem(PERM_KEY, JSON.stringify(p));
-    // Push SEGERA ke cloud (bypass debounce) karena role perms adalah pengaturan
-    // kritis yang tidak boleh hilang tertiban pull/realtime dari device lain.
-    if(typeof cloudPush === 'function' && cloudConfig && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
-      // Beri sedikit jeda (100ms) agar localStorage sudah settled, lalu push langsung.
-      setTimeout(()=>{ cloudPush(true); }, 100);
-    } else {
-      // Fallback: gunakan debounced triggerAutoSync jika cloud belum dikonfigurasi.
-      if(typeof triggerAutoSync === 'function') triggerAutoSync();
+    // Tandai bahwa ada perubahan rolePerms lokal yang belum ter-push ke cloud
+    // Flag ini mencegah cloudPull/realtime menimpa perms baru sebelum sempat di-push
+    window._pendingRolePermsChange = true;
+    // Push SEGERA ke cloud — jangan pakai debounce karena rolePerms adalah
+    // pengaturan kritis dan timer debounce bisa dibatalkan oleh cloudPull/realtime
+    if(typeof cloudPush === 'function' && typeof cloudConfig !== 'undefined'
+       && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
+      cloudPush(true).then(function(ok){
+        if(ok) window._pendingRolePermsChange = false;
+      }).catch(function(){ /* silent — triggerAutoSync sebagai fallback */ });
     }
+    // Tetap trigger autoSync sebagai fallback jika cloud belum dikonfigurasi
+    if(typeof triggerAutoSync === 'function') triggerAutoSync();
   }
   function getDefaultPerms(){
     const p = {};
