@@ -1118,6 +1118,16 @@ table:not(.stcr-page table) tbody td {
 #mainContent { margin-left: 256px; }
 #mainContent.collapsed { margin-left: 4rem; }
 @media (max-width: 768px) { #mainContent { margin-left: 0 !important; } }
+
+/* === USER MANAGEMENT MODALS === */
+#editUserModal.modal-overlay,
+#userBulkDeleteModal.modal-overlay { z-index: 500 !important; }
+#editUserModal .modal-box,
+#userBulkDeleteModal .modal-box { max-width: 440px; }
+/* Checkbox accent */
+.user-row-chk:checked { accent-color: #2563eb; }
+/* Bulk toolbar transition */
+#userBulkToolbar { transition: all 0.2s ease; }
 </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300"><div id="syncLight" class="sync-light" title="Data diperbarui dari device lain"></div><div id="autoSyncLight" class="sync-light-blue" title="Auto-Sync: data terbaru dimuat"></div><div id="errorLight" class="error-light" title="Ada kesalahan sistem"></div>
@@ -1483,14 +1493,15 @@ table:not(.stcr-page table) tbody td {
   <!-- SUB-TAB: USER MANAGEMENT -->
   <div id="adminSubUsers" class="admin-subtab-pane hidden">
   <div class="card p-5 md:p-6">
-    <div class="flex items-center justify-between mb-5">
+    <!-- Header -->
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
         <h2 class="text-lg font-bold">Manajemen User</h2>
         <p class="text-xs text-slate-500 mt-0.5">Kelola akun login. Role Master melekat ke sistem (password khusus). Nama &amp; data pribadi karyawan dikelola di tab <strong>Data Karyawan</strong>.</p>
-        <p id="userPesertaCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Akun Peserta: 0 / 150</p>
+        <p id="userPesertaCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Total Akun: 0 | Akun Peserta: 0 / 150</p>
       </div>
       <div class="flex flex-wrap gap-2 items-center">
-        <button id="btnAddUser" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Tambah User</button>
+        <button id="btnAddUser" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">＋ Tambah User</button>
         <div class="relative inline-block" id="btnAddRoleWrap">
           <button id="btnAddRole" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1">
             ＋ Tambah Role <span class="text-xs opacity-70">▾</span>
@@ -1511,11 +1522,11 @@ table:not(.stcr-page table) tbody td {
               <span class="badge bg-emerald-100 text-emerald-700 text-xs">User-All</span>
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-SR">
-              <span class="badge bg-blue-100 text-blue-700 text-xs">User-SR</span>
+              <span class="badge bg-sky-100 text-sky-700 text-xs">User-SR</span>
               <span class="text-xs text-slate-400">Service Recovery</span>
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-STCR">
-              <span class="badge bg-purple-100 text-purple-700 text-xs">User-STCR</span>
+              <span class="badge bg-purple-100 text-purple-600 text-xs">User-STCR</span>
               <span class="text-xs text-slate-400">Stretchercase</span>
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-ST">
@@ -1535,11 +1546,51 @@ table:not(.stcr-page table) tbody td {
         </div>
       </div>
     </div>
-    
-    <div class="overflow-x-auto">
+
+    <!-- Search & Filter Bar -->
+    <div class="flex flex-wrap gap-2 mb-3">
+      <input id="userSearchInput" type="text" placeholder="🔍 Cari username / nama..." class="input text-sm flex-1 min-w-[180px]">
+      <select id="userFilterRole" class="input text-sm" style="min-width:140px">
+        <option value="">Semua Role</option>
+        <option value="Master">Master</option>
+        <option value="Admin">Admin</option>
+        <option value="Co-Admin">Co-Admin</option>
+        <option value="User-All">User-All</option>
+        <option value="User-SR">User-SR</option>
+        <option value="User-STCR">User-STCR</option>
+        <option value="User-ST">User-ST</option>
+        <option value="User-DRG">User-DRG</option>
+        <option value="User">User</option>
+        <option value="Peserta">Peserta</option>
+      </select>
+      <select id="userFilterStatus" class="input text-sm" style="min-width:120px">
+        <option value="">Semua Status</option>
+        <option value="active">Aktif</option>
+        <option value="inactive">Nonaktif</option>
+      </select>
+      <button id="btnUserResetFilter" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-sm font-semibold rounded-xl">Reset</button>
+    </div>
+
+    <!-- Bulk Action Toolbar (tampil saat ada yang dicentang) -->
+    <div id="userBulkToolbar" class="hidden mb-3 px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 flex flex-wrap items-center gap-3">
+      <span class="text-sm font-semibold text-red-700 dark:text-red-300">
+        <span id="userSelectedCount">0</span> user dipilih
+      </span>
+      <button id="btnUserDeleteSelected" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg flex items-center gap-1.5">
+        🗑️ Hapus Terpilih
+      </button>
+      <button id="btnUserToggleActive" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg flex items-center gap-1.5">
+        ⏸ Toggle Aktif/Nonaktif
+      </button>
+      <button id="btnUserClearSelection" class="ml-auto text-xs text-slate-500 hover:text-red-600 font-medium">✖ Batalkan Pilihan</button>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
       <table class="w-full text-sm">
         <thead class="bg-slate-50 dark:bg-slate-800">
           <tr class="text-left">
+            <th class="p-3 w-10"><input type="checkbox" id="userCheckAll" class="accent-blue-600 cursor-pointer w-4 h-4" title="Pilih Semua"></th>
             <th class="p-3 font-semibold">Role</th>
             <th class="p-3 font-semibold">Status</th>
             <th class="p-3 font-semibold text-right">Aksi</th>
@@ -1548,7 +1599,70 @@ table:not(.stcr-page table) tbody td {
         <tbody id="userTableBody" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
       </table>
     </div>
+    <p class="text-xs text-slate-400 mt-2" id="userTableFooter"></p>
   </div>
+
+  <!-- MODAL EDIT USER -->
+  <div id="editUserModal" class="modal-overlay hidden">
+    <div class="modal-box max-w-md">
+      <h3 class="text-lg font-bold mb-4">✏️ Edit User</h3>
+      <input type="hidden" id="editUserId">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Username</label>
+          <input type="text" id="editUserUsername" class="input bg-slate-100 dark:bg-slate-700" readonly>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Nama Lengkap</label>
+          <input type="text" id="editUserName" class="input" placeholder="Nama lengkap">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Role</label>
+          <select id="editUserRole" class="input">
+            <option value="Master">Master</option>
+            <option value="Admin">Admin</option>
+            <option value="Co-Admin">Co-Admin</option>
+            <option value="User-All">User-All</option>
+            <option value="User-SR">User-SR</option>
+            <option value="User-STCR">User-STCR</option>
+            <option value="User-ST">User-ST</option>
+            <option value="User-DRG">User-DRG</option>
+            <option value="User">User</option>
+            <option value="Peserta">Peserta</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Password Baru <span class="text-slate-400 font-normal normal-case">(kosongkan jika tidak diubah)</span></label>
+          <input type="password" id="editUserPassword" class="input" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div id="editUserStatusWrap">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="editUserActive" class="accent-emerald-600 w-4 h-4">
+            <span class="text-sm font-medium">Akun Aktif</span>
+          </label>
+        </div>
+      </div>
+      <div class="flex gap-3 justify-end mt-5">
+        <button id="editUserModalCancel" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-semibold rounded-xl text-sm">Batal</button>
+        <button id="editUserModalSave" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm">💾 Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS BULK -->
+  <div id="userBulkDeleteModal" class="modal-overlay hidden">
+    <div class="modal-box max-w-md">
+      <h3 class="text-lg font-bold mb-2 text-red-600">🗑️ Konfirmasi Hapus</h3>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-1" id="userBulkDeleteMsg">Apakah Anda yakin ingin menghapus user yang dipilih?</p>
+      <div id="userBulkDeleteList" class="max-h-40 overflow-y-auto bg-slate-50 dark:bg-slate-800 rounded-lg p-3 mb-4 text-xs font-mono text-slate-600 dark:text-slate-300 space-y-1"></div>
+      <p class="text-xs text-red-500 font-semibold mb-4">⚠️ Aksi ini tidak dapat dibatalkan. Akun Master dan akun Anda sendiri tidak akan dihapus.</p>
+      <div class="flex gap-3 justify-end">
+        <button id="userBulkDeleteCancel" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-semibold rounded-xl text-sm">Batal</button>
+        <button id="userBulkDeleteConfirm" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm">🗑️ Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
   </div><!-- end adminSubUsers -->
 
   <!-- SUB-TAB: PERMISSION MANAGEMENT -->
@@ -5487,10 +5601,10 @@ function showConfirm(title,message){
   </div>`;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-  document.getElementById('errorLogClose').addEventListener('click', ()=>{
+  document.getElementById('errorLogClose')?.addEventListener('click', ()=>{
     document.getElementById('errorLogModal').style.display = 'none';
   });
-  document.getElementById('errorLogClear').addEventListener('click', ()=>{
+  document.getElementById('errorLogClear')?.addEventListener('click', ()=>{
     window._errorLog = [];
     document.getElementById('errorLogList').innerHTML = '<p style="color:#94a3b8;text-align:center;padding:16px">Log kosong</p>';
     const eLight = document.getElementById('errorLight');
@@ -7078,7 +7192,7 @@ document.addEventListener('keydown',e=>{
   if(!window.currentUser) return;
   if(e.ctrlKey&&e.key==='s'){e.preventDefault();$('#btnSimpan').click();}
   if(e.ctrlKey&&e.key==='n'){e.preventDefault();resetForm();switchTab('input');}
-  if(e.altKey&&e.key==='s'){e.preventDefault(); cloudPush().then(ok=>{ if(!ok) showToast('Sync gagal — cek koneksi','error'); else showToast('✅ Sync selesai','success'); }); /* BUGFIX: chain .then() untuk feedback user */ }
+  if(e.altKey&&e.key==='s'){e.preventDefault(); cloudPush().then(ok=>{ if(!ok) showToast('Sync gagal — cek koneksi','error'); else showToast('✅ Sync selesai','success').catch(err=>{ console.warn('[Sync]',err); }); }); /* BUGFIX: chain .then() untuk feedback user */ }
 });
 
 // === FIX: pre-declare cloud-sync state so it's safe to call saveStations()/triggerAutoSync()
@@ -8349,6 +8463,7 @@ async function cloudPull(silent = false){
         _mergedUsers = Array.from(_userMap.values());
       }
       localStorage.setItem('sjnam_users_v1', JSON.stringify(_mergedUsers));
+      if(window._userSelectedIds) window._userSelectedIds.clear(); // clear stale selections
       if(typeof renderUserTable === 'function') renderUserTable();
     }
     // Restore Data Karyawan — merge by id (local wins on conflict) supaya karyawan
@@ -8390,7 +8505,7 @@ async function cloudPull(silent = false){
         cloudLog('⏭️ Pull: skip rolePerms dari cloud — ada perubahan lokal yang belum ter-push', 'info');
         // Jadwalkan push ulang agar perms lokal tidak hilang
         if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl){
-          setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._rolePermsLocalDirty=false; }); }, 200);
+          setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._rolePermsLocalDirty=false; }).catch(function(e){ console.warn('[RolePerms push]', e); }); }, 200);
         }
       } else {
         localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
@@ -8530,6 +8645,7 @@ function startRealtimeSubscription(){
                 _rtMU = Array.from(_m.values());
               }
               localStorage.setItem('sjnam_users_v1', JSON.stringify(_rtMU));
+              if(window._userSelectedIds) window._userSelectedIds.clear();
               if(typeof renderUserTable === 'function') renderUserTable();
           }
           // Restore Data Karyawan dari realtime — merge by id, sama seperti cloudPull
@@ -8569,7 +8685,7 @@ function startRealtimeSubscription(){
               cloudLog('⏭️ Realtime: skip rolePerms dari cloud — ada perubahan lokal yang belum ter-push', 'info');
               // Push balik perms lokal agar cloud sinkron
               if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl){
-                setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._rolePermsLocalDirty=false; }); }, 300);
+                setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._rolePermsLocalDirty=false; }).catch(function(e){ console.warn('[RolePerms push]', e); }); }, 300);
               }
             } else {
               localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
@@ -8898,6 +9014,29 @@ function saveUsers(users){
 }
 window.saveUsers = saveUsers;
 
+// ── Utility: hapus username link dari karyawan saat user dihapus ──
+// Dipanggil setiap kali satu atau lebih user dihapus agar Data Karyawan
+// tidak menyimpan referensi ke akun yang sudah tidak ada (dangling reference).
+function _unlinkKaryawanByUsernames(usernameList){
+  if(!Array.isArray(usernameList) || !usernameList.length) return;
+  try {
+    const kar = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+    let changed = false;
+    kar.forEach(function(k){
+      if(k.username && usernameList.includes(k.username)){
+        k.username = '';
+        changed = true;
+      }
+    });
+    if(changed){
+      localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(kar));
+      if(typeof triggerAutoSync === 'function') triggerAutoSync('karyawan');
+      if(typeof window.renderKaryawanTable === 'function') window.renderKaryawanTable();
+    }
+  } catch(e){ console.warn('[unlinkKaryawan]', e); }
+}
+window._unlinkKaryawanByUsernames = _unlinkKaryawanByUsernames;
+
 
 // === PATCH LOGIN v5.1 - fix key mismatch ===
 (function(){
@@ -8948,6 +9087,7 @@ window.saveUsers = saveUsers;
           _addMaster('Nu55y294gpx'); // SHA-256 belum dimuat — plain, bypass login tetap berlaku
         }
       } else {
+        // Master sudah ada — langsung simpan (tidak perlu sha256 karena tidak ada perubahan password)
         localStorage.setItem(NEW_KEY, JSON.stringify(users));
       }
     }
@@ -9105,7 +9245,23 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
 
   // Login success
   resetBFState(username);
-  currentUser = {username:user.username, role:user.role, name:user.name, loginTime:Date.now()};
+  // Sync name from karyawan if linked (supports NIP-as-username pattern)
+  let _displayName = user.name;
+  try {
+    const _kar = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+    const _karMe = _kar.find(k => k.username === user.username);
+    if(_karMe && _karMe.nama) _displayName = _karMe.nama;
+  } catch(e){}
+  if(_displayName !== user.name){
+    // Update users[] so future sessions also use the correct name
+    try {
+      const _usrs = JSON.parse(localStorage.getItem(USERS_KEY)||'[]');
+      const _u = _usrs.find(x=>x.username===user.username);
+      if(_u){ _u.name = _displayName; localStorage.setItem(USERS_KEY, JSON.stringify(_usrs)); }
+    } catch(e){}
+    user.name = _displayName;
+  }
+  currentUser = {username:user.username, role:user.role, name:_displayName, loginTime:Date.now()};
   window.currentUser = currentUser;
   localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
   
@@ -9113,7 +9269,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   document.body.style.overflow = '';
   document.getElementById('userPanel').classList.remove('hidden');
   document.getElementById('userPanel').classList.add('flex');
-  document.getElementById('userNameDisplay').textContent = user.name;
+  document.getElementById('userNameDisplay').textContent = _displayName;
   const _roleDisplayEl = document.getElementById('userRoleDisplay');
   if(_roleDisplayEl){
     // Hanya tampilkan badge role untuk Admin dan Co-Admin — role lain tidak perlu ditampilkan
@@ -9491,59 +9647,295 @@ function applyPermissions(){
 if(typeof window.esc !== 'function'){
   window.esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); };
 }
+// ============================================================
+// MANAJEMEN USER — renderUserTable, bulk select, edit modal, delete
+// ============================================================
+// State untuk checkbox selection
+window._userSelectedIds = new Set();
+
+function _getUserDisplayList(){
+  const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  if(!currentUser) return { displayUsers: [], allUsers };
+  let displayUsers = allUsers;
+  const role = currentUser.role;
+  const isMasterOrAdmin = role === 'Master' || role === 'Admin';
+  if(role === 'Co-Admin'){
+    displayUsers = allUsers.filter(u =>
+      u.role !== 'Admin' && u.role !== 'Master' &&
+      !(u.role === 'Co-Admin' && u.username !== currentUser.username)
+    );
+  } else if(!isMasterOrAdmin){
+    displayUsers = [];
+  }
+  // Apply search filter
+  const search = (document.getElementById('userSearchInput')?.value || '').toLowerCase();
+  const filterRole = document.getElementById('userFilterRole')?.value || '';
+  const filterStatus = document.getElementById('userFilterStatus')?.value || '';
+  if(search) displayUsers = displayUsers.filter(u =>
+    (u.username||'').toLowerCase().includes(search) ||
+    (u.name||'').toLowerCase().includes(search)
+  );
+  if(filterRole) displayUsers = displayUsers.filter(u => u.role === filterRole);
+  if(filterStatus === 'active') displayUsers = displayUsers.filter(u => u.active);
+  if(filterStatus === 'inactive') displayUsers = displayUsers.filter(u => !u.active);
+  return { displayUsers, allUsers };
+}
+
+function _updateUserBulkToolbar(){
+  if(!window.currentUser && typeof currentUser === 'undefined') return; // not logged in yet
+  const sel = window._userSelectedIds || new Set();
+  const toolbar = document.getElementById('userBulkToolbar');
+  const countEl = document.getElementById('userSelectedCount');
+  if(toolbar){ toolbar.classList.toggle('hidden', sel.size === 0); }
+  if(countEl) countEl.textContent = sel.size;
+  // Update check-all state
+  const chkAll = document.getElementById('userCheckAll');
+  if(chkAll){
+    const { displayUsers } = _getUserDisplayList();
+    const selectableIds = displayUsers
+      .filter(u => u.username !== currentUser.username && u.role !== 'Master')
+      .map(u => String(u.id));
+    const allSelected = selectableIds.length > 0 && selectableIds.every(id => sel.has(id));
+    chkAll.checked = allSelected;
+    chkAll.indeterminate = !allSelected && selectableIds.some(id => sel.has(id));
+  }
+}
+
 function renderUserTable(){
   const tbody = document.getElementById('userTableBody');
   if(!tbody || !currentUser) return;
-  
-  let allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  let displayUsers = allUsers;
+
+  const { displayUsers, allUsers } = _getUserDisplayList();
   const canDelete = window.currentUserCanDelete;
-  const canEdit = window.currentUserCanAdd;
-  // Filter berdasarkan role
-  if(currentUser.role === 'Co-Admin'){
-    // Co-Admin tidak bisa melihat akun Admin, Master, atau Co-Admin lain
-    displayUsers = allUsers.filter(u => u.role !== 'Admin' && u.role !== 'Master' && !(u.role === 'Co-Admin' && u.username !== currentUser.username));
-  } else if(currentUser.role === 'User' || currentUser.role === 'Peserta'){
-    // User dan Peserta tidak boleh lihat siapapun
-    displayUsers = [];
+  const canEdit   = window.currentUserCanAdd;
+  const sel = window._userSelectedIds;
+
+  if(!displayUsers.length){
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Tidak ada user ditemukan.</td></tr>';
+  } else {
+    tbody.innerHTML = displayUsers.map(u => {
+      const isMasterRow = u.role === 'Master';
+      const isSelf      = u.username === currentUser.username;
+      const canEditThis   = canEdit && !(isMasterRow && currentUser.role !== 'Master');
+      const canDeleteThis = canDelete && !isSelf && !(isMasterRow && currentUser.role !== 'Master');
+      const isSelectable  = canDeleteThis; // hanya yang bisa dihapus yang bisa dicentang
+      const isChecked     = sel.has(String(u.id));
+      const systemBadge   = isMasterRow ? '<span class="text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold ml-1">⚙ sistem</span>' : '';
+      const selfBadge     = isSelf ? '<span class="text-[10px] text-slate-400 ml-1">(Anda)</span>' : '';
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isChecked ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${isMasterRow ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}" data-user-id="${u.id}">
+        <td class="p-3 w-10">
+          ${isSelectable
+            ? `<input type="checkbox" class="user-row-chk accent-blue-600 w-4 h-4 cursor-pointer" data-uid="${u.id}" ${isChecked ? 'checked' : ''}>`
+            : `<span class="inline-block w-4 h-4"></span>`}
+        </td>
+        <td class="p-3">
+          <div class="flex items-center gap-1 flex-wrap">
+            <span class="badge ${getRoleBadgeClass(u.role)}">${esc(u.role)}</span>${systemBadge}${selfBadge}
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono mt-0.5">${esc(u.username)}</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">${esc(u.name || '')}</div>
+        </td>
+        <td class="p-3">
+          <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${u.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}">
+            ${u.active ? '● Aktif' : '○ Nonaktif'}
+          </span>
+        </td>
+        <td class="p-3 text-right whitespace-nowrap">
+          ${canEditThis ? `<button onclick="openEditUserModal(${u.id})" class="text-xs px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg mr-1 font-semibold transition">✏️ Edit</button>` : ''}
+          ${canDeleteThis ? `<button onclick="deleteSingleUser(${u.id})" class="text-xs px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition">🗑️</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
   }
-  // Peserta count always from FULL list so number is accurate
+
+  // Count & info
   const pesertaCount = allUsers.filter(u=>u.role==='Peserta').length;
-
-  // Tabel disederhanakan jadi Role / Status / Aksi (Username & Nama dikelola via
-  // tab Data Karyawan). Username tetap ditampilkan kecil di bawah badge role agar
-  // Admin masih bisa membedakan akun mana yang sedang diedit/dihapus — kredensial
-  // login (username) tidak hilang dari sistem, hanya tidak diberi kolom sendiri.
-  tbody.innerHTML = displayUsers.map(u => {
-    const isMasterRow = u.role === 'Master';
-    const canEditThis = canEdit && !(isMasterRow && currentUser.role !== 'Master');
-    const canDeleteThis = canDelete && u.username !== currentUser.username && !(isMasterRow && currentUser.role !== 'Master');
-    const systemBadge = isMasterRow ? '<span class="text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold ml-1">⚙ sistem</span>' : '';
-    return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isMasterRow ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}">
-      <td class="p-3">
-        <div class="flex items-center gap-1 flex-wrap">
-          <span class="badge ${getRoleBadgeClass(u.role)}">${esc(u.role)}</span>${systemBadge}
-        </div>
-        <div class="text-[11px] text-slate-400 font-mono mt-0.5">${esc(u.username)}</div>
-      </td>
-      <td class="p-3"><span class="text-xs ${u.active?'text-emerald-600':'text-red-600'}">${u.active?'Aktif':'Nonaktif'}</span></td>
-      <td class="p-3 text-right">
-        ${canEditThis ? `<button onclick="editUser(${u.id})" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>` : ''}
-        ${canDeleteThis ? `<button onclick="deleteUser(${u.id})" class="text-xs px-2 py-1 bg-red-500 text-white rounded">Hapus</button>` : ''}
-      </td>
-    </tr>`;
-  }).join('');
-
-  const pesertaInfo = document.getElementById('userPesertaCountInfo');
-  const totalUsers = allUsers.length;
+  const totalUsers   = allUsers.length;
+  const pesertaInfo  = document.getElementById('userPesertaCountInfo');
   if(pesertaInfo) pesertaInfo.textContent = `Total Akun: ${totalUsers} | Akun Peserta: ${pesertaCount} / 150`;
+  const footer = document.getElementById('userTableFooter');
+  if(footer) footer.textContent = displayUsers.length < allUsers.length
+    ? `Menampilkan ${displayUsers.length} dari ${totalUsers} akun`
+    : `Total: ${totalUsers} akun`;
 
-  // Refresh dropdown User & tabel Data Karyawan tiap kali tabel user berubah,
-  // supaya daftar username/role yang tersedia DAN badge role yang ditampilkan
-  // di tabel Data Karyawan selalu sinkron (mis. setelah editUser() ganti role).
+  // Re-wire checkbox events
+  tbody.querySelectorAll('.user-row-chk').forEach(chk => {
+    chk.addEventListener('change', function(){
+      const uid = this.dataset.uid;
+      if(this.checked) window._userSelectedIds.add(uid);
+      else window._userSelectedIds.delete(uid);
+      _updateUserBulkToolbar();
+      // Update row highlight
+      const row = this.closest('tr');
+      if(row){
+        row.classList.toggle('bg-blue-50', this.checked);
+        row.classList.toggle('dark:bg-blue-900/20', this.checked);
+      }
+    });
+  });
+
+  _updateUserBulkToolbar();
+
+  // Refresh Data Karyawan
   if(typeof window.renderKaryawanUserOptions === 'function') window.renderKaryawanUserOptions();
   if(typeof window.renderKaryawanTable === 'function') window.renderKaryawanTable();
 }
+
+// ── SELECT ALL CHECKBOX ──
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'userCheckAll'){
+    if(!currentUser) return;
+    window._userSelectedIds = window._userSelectedIds || new Set();
+    const { displayUsers } = _getUserDisplayList();
+    const checked = e.target.checked;
+    displayUsers.forEach(u => {
+      if(u.username !== currentUser.username && u.role !== 'Master'){
+        if(checked) window._userSelectedIds.add(String(u.id));
+        else        window._userSelectedIds.delete(String(u.id));
+      }
+    });
+    renderUserTable();
+  }
+});
+
+// ── SEARCH & FILTER LIVE ──
+document.addEventListener('input', function(e){
+  if(e.target && e.target.id === 'userSearchInput') renderUserTable();
+});
+document.addEventListener('change', function(e){
+  if(e.target && (e.target.id === 'userFilterRole' || e.target.id === 'userFilterStatus')) renderUserTable();
+});
+document.getElementById('btnUserResetFilter')?.addEventListener('click', function(){
+  const s = document.getElementById('userSearchInput');
+  const r = document.getElementById('userFilterRole');
+  const st = document.getElementById('userFilterStatus');
+  if(s) s.value = '';
+  if(r) r.value = '';
+  if(st) st.value = '';
+  window._userSelectedIds.clear();
+  renderUserTable();
+});
+
+// ── CLEAR SELECTION ──
+document.getElementById('btnUserClearSelection')?.addEventListener('click', function(){
+  window._userSelectedIds.clear();
+  renderUserTable();
+});
+
+// ── TOGGLE AKTIF/NONAKTIF BULK ──
+document.getElementById('btnUserToggleActive')?.addEventListener('click', function(){
+  if(!window.currentUserCanDelete){ showToast('Akses ditolak', 'error'); return; }
+  const ids = Array.from(window._userSelectedIds);
+  if(!ids.length){ showToast('Pilih user terlebih dahulu', 'error'); return; }
+  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  let changed = 0;
+  users = users.map(u => {
+    if(ids.includes(String(u.id)) && u.username !== currentUser.username && u.role !== 'Master'){
+      changed++;
+      return { ...u, active: !u.active };
+    }
+    return u;
+  });
+  saveUsers(users);
+  window._userSelectedIds.clear();
+  renderUserTable();
+  showToast(`${changed} akun berhasil di-toggle status aktif/nonaktif`, 'success');
+});
+
+// ── BULK DELETE BUTTON ──
+document.getElementById('btnUserDeleteSelected')?.addEventListener('click', function(){
+  if(!window.currentUserCanDelete){ showToast('Akses ditolak', 'error'); return; }
+  const ids = Array.from(window._userSelectedIds);
+  if(!ids.length){ showToast('Pilih user terlebih dahulu', 'error'); return; }
+  const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const toDelete = allUsers.filter(u =>
+    ids.includes(String(u.id)) &&
+    u.username !== currentUser.username &&
+    u.role !== 'Master'
+  );
+  if(!toDelete.length){
+    showToast('Tidak ada user yang dapat dihapus dari pilihan ini', 'error');
+    return;
+  }
+  // Tampilkan modal konfirmasi
+  const modal = document.getElementById('userBulkDeleteModal');
+  const msg   = document.getElementById('userBulkDeleteMsg');
+  const list  = document.getElementById('userBulkDeleteList');
+  if(msg)  msg.textContent  = `Anda akan menghapus ${toDelete.length} akun berikut:`;
+  if(list) list.innerHTML   = toDelete.map(u =>
+    `<div class="flex items-center gap-2">
+      <span class="badge ${getRoleBadgeClass(u.role)} text-[10px]">${esc(u.role)}</span>
+      <span>${esc(u.username)}</span>
+      ${u.name ? `<span class="text-slate-400">— ${esc(u.name)}</span>` : ''}
+    </div>`
+  ).join('');
+  window._pendingBulkDeleteIds = toDelete.map(u => u.id);
+  window._pendingBulkDeleteTargets = toDelete.map(u => ({ id: u.id, username: u.username }));
+  if(modal) modal.classList.remove('hidden');
+});
+
+// ── BULK DELETE CONFIRM ──
+document.getElementById('userBulkDeleteConfirm')?.addEventListener('click', function(){
+  const ids = window._pendingBulkDeleteIds || [];
+  const targets = window._pendingBulkDeleteTargets || [];
+  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const before = users.length;
+  users = users.filter(u =>
+    !ids.includes(u.id) ||
+    u.username === currentUser.username ||
+    u.role === 'Master'
+  );
+  const deleted = before - users.length;
+  saveUsers(users);
+  // Unlink karyawan references untuk semua user yang dihapus
+  const deletedUsernames = targets.map(t => t.username).filter(Boolean);
+  if(deletedUsernames.length) _unlinkKaryawanByUsernames(deletedUsernames);
+  window._userSelectedIds.clear();
+  window._pendingBulkDeleteIds = [];
+  window._pendingBulkDeleteTargets = [];
+  document.getElementById('userBulkDeleteModal')?.classList.add('hidden');
+  renderUserTable();
+  showToast(`${deleted} akun berhasil dihapus`, 'success');
+});
+
+document.getElementById('userBulkDeleteCancel')?.addEventListener('click', function(){
+  document.getElementById('userBulkDeleteModal')?.classList.add('hidden');
+  window._pendingBulkDeleteIds = [];
+});
+// Backdrop click-to-close for both modals
+document.getElementById('userBulkDeleteModal')?.addEventListener('click', function(e){
+  if(e.target === this){ this.classList.add('hidden'); window._pendingBulkDeleteIds = []; }
+});
+
+// ── SINGLE DELETE (baris individual) ──
+function deleteSingleUser(id){
+  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master')){
+    showToast('Hanya Admin/Master yang dapat menghapus user', 'error');
+    return;
+  }
+  const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const target = allUsers.find(u => u.id === id);
+  if(!target){ showToast('User tidak ditemukan', 'error'); return; }
+  if(target.role === 'Master' && currentUser.role !== 'Master'){
+    showToast('Akun Master hanya dapat dihapus oleh Master', 'error'); return;
+  }
+  if(target.username === currentUser.username){
+    showToast('Tidak dapat menghapus akun Anda sendiri', 'error'); return;
+  }
+  window._pendingBulkDeleteTargets = [{ id, username: target.username }];
+  window._pendingBulkDeleteIds = [id];
+  const modal = document.getElementById('userBulkDeleteModal');
+  const msg   = document.getElementById('userBulkDeleteMsg');
+  const list  = document.getElementById('userBulkDeleteList');
+  if(msg)  msg.textContent = 'Anda akan menghapus akun berikut:';
+  if(list) list.innerHTML  = `<div class="flex items-center gap-2">
+    <span class="badge ${getRoleBadgeClass(target.role)} text-[10px]">${esc(target.role)}</span>
+    <span>${esc(target.username)}</span>
+    ${target.name ? `<span class="text-slate-400">— ${esc(target.name)}</span>` : ''}
+  </div>`;
+  if(modal) modal.classList.remove('hidden');
+}
+window.deleteSingleUser = deleteSingleUser;
 
 // Helper: kelas warna badge untuk setiap role, termasuk role kustom (UserXXX/UserXX/UserX).
 // Dipusatkan di sini agar konsisten dan mudah ditambah jika ada role baru lagi nanti.
@@ -9948,18 +10340,6 @@ function _doAddUser(preselectedRole){
   const defaultPw = role === 'Master' ? 'Nu55y294gpx' : '123456';
   const password = prompt('Password awal:', defaultPw);
   const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  if(users.find(u => u.username.toLowerCase() === username.toLowerCase())){
-    showToast('Username sudah ada', 'error');
-    return;
-  }
-  if(role === 'Peserta'){
-    const pesertaCount = users.filter(u=>u.role==='Peserta').length;
-    if(pesertaCount >= 150){
-      showToast('Maksimal 150 akun Peserta tercapai', 'error');
-      return;
-    }
-  }
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   if(users.find(u => u.username.toLowerCase() === username.trim().toLowerCase())){
     showToast('Username sudah ada', 'error');
     return;
@@ -9971,8 +10351,14 @@ function _doAddUser(preselectedRole){
       return;
     }
   }
+  // FIX-RACE: Re-read fresh users inside async callback to avoid stale closure race condition
   sha256((password != null ? password : '') || '123456').then(hashedPass => {
-    users.push({
+    const freshUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    if(freshUsers.find(u => u.username.toLowerCase() === username.trim().toLowerCase())){
+      showToast('Username sudah ada (ditambahkan oleh pengguna lain)', 'error');
+      return;
+    }
+    freshUsers.push({
       id: Date.now(),
       username: username.trim().toLowerCase(),
       password: hashedPass,
@@ -9981,7 +10367,7 @@ function _doAddUser(preselectedRole){
       active: true,
       created: new Date().toISOString().split('T')[0]
     });
-    saveUsers(users);
+    saveUsers(freshUsers);
     renderUserTable();
     showToast('User berhasil ditambahkan dengan role ' + role, 'success');
   });
@@ -9992,111 +10378,146 @@ document.getElementById('btnAddUser')?.addEventListener('click', function(){
   _doAddUser(null);
 });
 
-// Edit user
-function editUser(id){
-  // Guard: hanya Admin dan Co-Admin yang boleh edit user
-  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Co-Admin')){
+// ── EDIT USER MODAL ──
+function openEditUserModal(id){
+  const isMasterOrAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Master');
+  const isCoAdmin = currentUser && currentUser.role === 'Co-Admin';
+  if(!isMasterOrAdmin && !isCoAdmin){
     showToast('Akses ditolak: tidak ada izin untuk mengedit user', 'error');
     return;
   }
   const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  const user = users.find(u => u.id === id);
-  if(!user) return;
-  // Master hanya bisa diedit oleh Master
-  if(user.role === 'Master' && currentUser.role !== 'Master'){
-    showToast('Akun Master hanya dapat diedit oleh Master', 'error');
-    return;
-  }
-  // Co-Admin tidak bisa edit akun Admin atau Master
-  if(currentUser && currentUser.role === 'Co-Admin' && (user.role === 'Admin' || user.role === 'Master')){
-    showToast('Co-Admin tidak dapat mengubah akun Admin/Master', 'error');
-    return;
-  }
-  // Co-Admin tidak bisa mengedit akun sesama Co-Admin (hanya Admin yang bisa)
-  if(currentUser && currentUser.role === 'Co-Admin' && user.role === 'Co-Admin' && user.username !== currentUser.username){
-    showToast('Co-Admin tidak dapat mengubah akun Co-Admin lain. Hubungi Admin.', 'error');
-    return;
-  }
-  
-  const newName = prompt('Nama:', user.name);
-  if(newName === null) return; // user cancelled
-  if(newName.trim()) user.name = newName.trim();
-  
-  const newPass = prompt('Password baru (kosongkan jika tidak diubah):');
-  
-  if(currentUser.role === 'Admin'){
-    const allRolesEdit = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Master','Admin','Co-Admin','User','Peserta'];
-    const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
-    const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
-    if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
-      showToast('Role tidak valid. Role tidak diubah. Pilih: ' + allRolesEdit.join('/'), 'error');
-    }
-    if(newRole){
-      if(newRole === 'Peserta' && user.role !== 'Peserta'){
-        const pesertaCount = users.filter(u=>u.role==='Peserta').length;
-        if(pesertaCount >= 150){
-          showToast('Maksimal 150 akun Peserta tercapai, role tidak diubah','error');
-        } else {
-          user.role = newRole;
-        }
-      } else {
-        user.role = newRole;
-      }
-    }
-    // Admin can also toggle active/inactive
-    if(user.username !== currentUser.username){ // cannot deactivate self
-      const toggleActive = confirm(`Status akun saat ini: ${user.active ? 'Aktif' : 'Nonaktif'}.\nKlik OK untuk ${user.active ? 'NONAKTIFKAN' : 'AKTIFKAN'} akun ini.`);
-      if(toggleActive) user.active = !user.active;
-    }
-  }
-  
-  // Handle password change (async due to SHA-256)
-  if(newPass && newPass.trim()){
-    sha256(newPass.trim()).then(h=>{
-      user.password = h;
-      saveUsers(users);
-      renderUserTable();
-      showToast('User diperbarui (password di-hash SHA-256)', 'success');
-    });
-  } else {
-    saveUsers(users);
-    renderUserTable();
-    showToast('User diperbarui', 'success');
-  }
-}
+  const user  = users.find(u => u.id === id);
+  if(!user){ showToast('User tidak ditemukan', 'error'); return; }
 
-// Delete user
-function deleteUser(id){
-  // Guard: hanya Admin yang boleh hapus user
-  if(!currentUser || currentUser.role !== 'Admin'){
-    showToast('Hanya Admin yang dapat menghapus user', 'error');
-    return;
+  // Permission checks
+  if(user.role === 'Master' && currentUser.role !== 'Master'){
+    showToast('Akun Master hanya dapat diedit oleh Master', 'error'); return;
   }
-  if(!window.currentUserCanDelete){
-    showToast('Hanya Admin yang dapat menghapus user', 'error');
-    return;
+  if(isCoAdmin && (user.role === 'Admin' || user.role === 'Master')){
+    showToast('Co-Admin tidak dapat mengubah akun Admin/Master', 'error'); return;
   }
-  // Master tidak bisa dihapus kecuali oleh Master sendiri
-  const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  const targetUser = allUsers.find(u => u.id === id);
-  if(targetUser && targetUser.role === 'Master' && currentUser.role !== 'Master'){
-    showToast('Akun Master tidak dapat dihapus kecuali oleh Master sendiri', 'error');
-    return;
+  if(isCoAdmin && user.role === 'Co-Admin' && user.username !== currentUser.username){
+    showToast('Co-Admin tidak dapat mengubah akun Co-Admin lain', 'error'); return;
   }
-  // Co-Admin tidak bisa hapus akun Admin atau Master
-  if(currentUser && currentUser.role === 'Co-Admin' && targetUser && (targetUser.role === 'Admin' || targetUser.role === 'Master')){
-    showToast('Co-Admin tidak dapat menghapus akun Admin/Master', 'error');
-    return;
+
+  // Populate modal
+  document.getElementById('editUserId').value       = id;
+  document.getElementById('editUserUsername').value = user.username;
+  document.getElementById('editUserName').value     = user.name || '';
+  document.getElementById('editUserPassword').value = '';
+
+  // Build role dropdown sesuai hak caller
+  const roleSelect = document.getElementById('editUserRole');
+  if(roleSelect){
+    const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length)
+      ? window.ALL_ROLES
+      : ['Master','Admin','Co-Admin','User-All','User-SR','User-STCR','User-ST','User-DRG','User','Peserta'];
+    const allowedRoles = isMasterOrAdmin ? allRoles : allRoles.filter(r=>r!=='Admin'&&r!=='Master');
+    roleSelect.innerHTML = allowedRoles.map(r =>
+      `<option value="${r}" ${r===user.role?'selected':''}>${r}</option>`
+    ).join('');
+    // Jika Co-Admin — role select tidak perlu ditampilkan
+    roleSelect.disabled = isCoAdmin;
+    roleSelect.closest('div').style.opacity = isCoAdmin ? '0.5' : '';
   }
-  
-  if(!confirm('Hapus user ini?')) return;
-  
-  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  users = users.filter(u => u.id !== id);
-  saveUsers(users);
-  renderUserTable();
-  showToast('User dihapus', 'success');
+
+  // Active toggle: tidak bisa deactivate diri sendiri
+  const activeChk = document.getElementById('editUserActive');
+  if(activeChk){
+    activeChk.checked = !!user.active;
+    activeChk.disabled = (user.username === currentUser.username);
+    const wrap = document.getElementById('editUserStatusWrap');
+    if(wrap) wrap.style.opacity = (user.username === currentUser.username) ? '0.5' : '';
+  }
+
+  document.getElementById('editUserModal')?.classList.remove('hidden');
 }
+window.openEditUserModal = openEditUserModal;
+window.editUser = openEditUserModal; // backward compat alias
+
+// ── EDIT USER SAVE ──
+document.getElementById('editUserModalSave')?.addEventListener('click', function(){
+  const id      = parseInt(document.getElementById('editUserId')?.value || '');
+  if(isNaN(id)){ showToast('ID user tidak valid', 'error'); return; }
+  const newName = (document.getElementById('editUserName')?.value || '').trim();
+  const newPass = (document.getElementById('editUserPassword')?.value || '').trim();
+  const newRole = document.getElementById('editUserRole')?.value || '';
+  const isActive= document.getElementById('editUserActive')?.checked;
+
+  if(!newName){ showToast('Nama tidak boleh kosong', 'error'); return; }
+
+  const isMasterOrAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Master');
+  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const user = users.find(u => u.id === id);
+  if(!user){ showToast('User tidak ditemukan', 'error'); return; }
+
+  // Validasi role baru
+  if(isMasterOrAdmin && newRole && newRole !== user.role){
+    // Cek batas Peserta
+    if(newRole === 'Peserta' && user.role !== 'Peserta'){
+      const pc = users.filter(u=>u.role==='Peserta').length;
+      if(pc >= 150){ showToast('Maksimal 150 akun Peserta tercapai', 'error'); return; }
+    }
+    user.role = newRole;
+  }
+
+  user.name = newName;
+  // Status: tidak bisa ubah status diri sendiri
+  if(user.username !== currentUser.username) user.active = isActive;
+
+  // Sinkronkan nama ke Data Karyawan jika ada link
+  if(user.name){
+    try {
+      const kar = JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]');
+      const karEntry = kar.find(k=>k.username===user.username);
+      if(karEntry && karEntry.nama !== user.name){
+        karEntry.nama = user.name;
+        localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(kar));
+      }
+    } catch(e){}
+  }
+
+  // Update session jika edit diri sendiri — update name & role di sidebar
+  if(user.username === currentUser.username){
+    currentUser.name = user.name;
+    currentUser.role = user.role;
+    window.currentUser.name = user.name;
+    window.currentUser.role = user.role;
+    localStorage.setItem('sjnam_session_v1', JSON.stringify(currentUser));
+    const nameEls = ['userNameDisplay','userNameDisplaySide'];
+    nameEls.forEach(elId => { const el = document.getElementById(elId); if(el) el.textContent = user.name; });
+    const roleEl  = document.getElementById('userRoleDisplay');
+    const roleElS = document.getElementById('userRoleDisplaySide');
+    if(roleEl)  roleEl.textContent  = (user.role === 'Admin' || user.role === 'Co-Admin' || user.role === 'Master') ? user.role : '';
+    if(roleElS) roleElS.textContent = user.role;
+  }
+
+  const _doSave = () => {
+    saveUsers(users);
+    document.getElementById('editUserModal')?.classList.add('hidden');
+    renderUserTable();
+    showToast('User berhasil diperbarui', 'success');
+  };
+
+  if(newPass){
+    sha256(newPass).then(h => { user.password = h; _doSave(); });
+  } else {
+    _doSave();
+  }
+});
+
+// ── EDIT MODAL CANCEL & BACKDROP ──
+document.getElementById('editUserModalCancel')?.addEventListener('click', function(){
+  document.getElementById('editUserModal')?.classList.add('hidden');
+});
+document.getElementById('editUserModal')?.addEventListener('click', function(e){
+  if(e.target === this) this.classList.add('hidden');
+});
+
+// ── deleteUser alias untuk backward compat ──
+function deleteUser(id){ deleteSingleUser(id); }
+window.deleteUser = deleteUser;
 
 // Persist tab across refresh
 const originalSwitchTab = window.switchTab;
@@ -11884,7 +12305,7 @@ function renderCertificate(p, prefix){
     if(typeof renderPeserta === 'function') renderPeserta();
     // RULE BARU: langsung sync ke cloud saat peserta klik Selesai & Lihat Skor
     if(typeof cloudPush === 'function' && typeof cloudConfig !== 'undefined' && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
-      cloudPush(true).then(ok=>{ if(ok) showToast('✅ Data peserta langsung tersinkron ke Bank Data','success'); });
+      cloudPush(true).then(ok=>{ if(ok) showToast('✅ Data peserta langsung tersinkron ke Bank Data','success'); }).catch(err=>{ showToast('Sync peserta gagal — akan dicoba ulang','warning'); });
     }
 
     // Show result
@@ -12399,7 +12820,17 @@ _updateOfflineQueueBadge(); // cek langsung saat load
       pane.classList.remove('hidden');
       if(target === 'perms') renderPermTable();
       if(target === 'karyawan' && typeof window.renderKaryawanTable === 'function') window.renderKaryawanTable();
-      if(target === 'users' && typeof renderUserTable === 'function') renderUserTable();
+      if(target === 'users' && typeof renderUserTable === 'function'){
+        // Reset filter & selection saat subtab dibuka
+        window._userSelectedIds = window._userSelectedIds || new Set();
+        // Re-populate role filter dropdown dengan semua role dari ALL_ROLES
+        const rfSel = document.getElementById('userFilterRole');
+        if(rfSel && window.ALL_ROLES && rfSel.options.length <= 2){
+          rfSel.innerHTML = '<option value="">Semua Role</option>' +
+            (window.ALL_ROLES||[]).map(r=>`<option value="${r}">${r}</option>`).join('');
+        }
+        renderUserTable();
+      }
     }
   });
 
@@ -14863,7 +15294,14 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const type   = document.getElementById('dgFilterType')?.value||'';
     const from   = document.getElementById('dgFilterDateFrom')?.value||'';
     const to     = document.getElementById('dgFilterDateTo')?.value||'';
+    // FIX-DRG: enforce station restriction at DATA level for User-DRG
+    // This prevents bypass via DevTools console even if UI tabs are hidden
+    const _drgSt = (window.currentUser && window.currentUser.role === 'User-DRG')
+      ? (window._userDrgStation || '__NONE__')
+      : null;
     return dgData.transactions.filter(t=>{
+      // User-DRG: hard-block access to other stations at data level
+      if(_drgSt !== null && t.station !== _drgSt) return false;
       if(activeDgStation !== 'ALL' && t.station !== activeDgStation) return false;
       if(type && t.type !== type) return false;
       if(from && t.date < from) return false;
@@ -16295,9 +16733,9 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   };
 
   window.toggleHomeEdit = function(){
-    // Guard: hanya Admin yang bisa membuka panel edit Home
-    if(!window.currentUser || window.currentUser.role !== 'Admin'){
-      if(typeof showToast === 'function') showToast('Hanya Admin yang dapat mengedit tampilan Home', 'error');
+    // Guard: Admin dan Master bisa membuka panel edit Home
+    if(!window.currentUser || (window.currentUser.role !== 'Admin' && window.currentUser.role !== 'Master')){
+      if(typeof showToast === 'function') showToast('Hanya Admin/Master yang dapat mengedit tampilan Home', 'error');
       return;
     }
     const panel = document.getElementById('homeEditPanel');
