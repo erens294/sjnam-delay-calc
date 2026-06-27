@@ -6743,6 +6743,41 @@ function _hashPayload(payload){
   } catch(e){ return null; }
 }
 
+// SMART-SYNC FIX: Hash per-tabel agar deteksi perubahan lebih efisien.
+// Daripada JSON.stringify seluruh payload (bisa beberapa MB), setiap section
+// di-hash secara terpisah. triggerAutoSync hanya push jika minimal 1 section berubah.
+const _HASH_KEY = 'sjnam_section_hashes_v1';
+var _sectionHashes = (function(){
+  try { return JSON.parse(localStorage.getItem(_HASH_KEY) || '{}'); } catch(e){ return {}; }
+})();
+
+function _getSectionHashes(){
+  return {
+    data:        _hashPayload(data),
+    dfsData:     _hashPayload(dfsData),
+    stations:    _hashPayload(stations),
+    settings:    _hashPayload(settings),
+    stcrData:    _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_stcr_data_v1') : null),
+    drygoodsData:_hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_drygoods_v1') : null),
+    training:    _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjn_training_v1') : null),
+    users:       _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_users_v1') : null),
+    rolePerms:   _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_role_perms_v1') : null),
+  };
+}
+
+function _saveSectionHashes(hashes){
+  _sectionHashes = hashes;
+  try { localStorage.setItem(_HASH_KEY, JSON.stringify(hashes)); } catch(e){}
+}
+
+function _hasAnySectionChanged(){
+  const current = _getSectionHashes();
+  for(const key of Object.keys(current)){
+    if(current[key] !== _sectionHashes[key]) return true;
+  }
+  return false;
+}
+
 function saveCloudConfig(){
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudConfig));
 }
@@ -6989,6 +7024,8 @@ async function cloudPush(silent=false){
 
     // Gunakan updated_at dari server (bukan waktu lokal) agar perbandingan timestamp realtime akurat
     const serverUpdatedAt = upsertResult?.updated_at || mergedPayload._pushedAt;
+    // SMART-SYNC FIX: update section hashes setelah push berhasil
+    _saveSectionHashes(_getSectionHashes());
     _lastPushedHash = _hashPayload(mergedPayload);
     _lastCloudUpdatedAt = serverUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
@@ -7021,22 +7058,21 @@ async function cloudPull(silent = false){
       .from('sjnam_sync')
       .select('updated_at')
       .eq('id', 'sjnam_main')
-      .maybeSingle();
+      .single();
 
     if(metaError) throw new Error(metaError.message);
-    if(!meta){
-      // Record belum ada di Supabase — wajar saat pertama kali setup
-      cloudLog('ℹ️ Belum ada data di Supabase — lewati pull (pertama kali setup)', 'info');
-      updateSyncStatus('connected');
-      return;
-    }
+    if(!meta) throw new Error('Data tidak ditemukan di Supabase');
 
     const cloudUpdatedAt = meta.updated_at;
 
     // Tidak ada perubahan dari device lain → skip total, tidak ada payload yang ditarik.
     // Berlaku untuk silent (auto/realtime) maupun manual — keduanya tidak perlu pull
     // kalau memang tidak ada apa-apa yang baru di cloud.
-    if(_lastCloudUpdatedAt && cloudUpdatedAt && cloudUpdatedAt <= _lastCloudUpdatedAt){
+    // BUG FIX: gunakan Date.getTime() bukan string comparison — ISO string dari server
+    // kadang beda format (dengan/tanpa milidetik) yang membuat < operator tidak akurat.
+    const cloudTs  = cloudUpdatedAt  ? new Date(cloudUpdatedAt).getTime()  : 0;
+    const localTs  = _lastCloudUpdatedAt ? new Date(_lastCloudUpdatedAt).getTime() : 0;
+    if(localTs > 0 && cloudTs > 0 && cloudTs <= localTs){
       cloudLog('⏭️ Smart Pull: tidak ada perubahan data antar device, skip pull (payload tidak diunduh)', 'info');
       updateSyncStatus('connected');
       if(!silent) showToast('Data sudah paling baru — tidak ada perubahan dari device lain','info');
@@ -7048,24 +7084,23 @@ async function cloudPull(silent = false){
       .from('sjnam_sync')
       .select('payload, updated_at')
       .eq('id', 'sjnam_main')
-      .maybeSingle();
+      .single();
 
     if(error) throw new Error(error.message);
-    if(!rows){ cloudLog('ℹ️ Tidak ada data payload di Supabase', 'info'); updateSyncStatus('connected'); return; }
+    if(!rows) throw new Error('Data tidak ditemukan di Supabase');
 
     const rec = rows.payload;
     const savedAt = cloudUpdatedAt ? new Date(cloudUpdatedAt).toLocaleString('id-ID') : '-';
 
     // Jika tidak silent, minta konfirmasi seperti sebelumnya
     if(!silent){
-      _cloudPullInProgress = true; // Blok push saat user sedang memutuskan
       const ok = await showConfirm('⚡ Tarik Data dari Supabase',
         `Data cloud: ${(rec.data||[]).length} delay records, ${(rec.dfsData||[]).length} DFS, disimpan ${savedAt}.\n\nData lokal saat ini akan DIGANTI. Lanjutkan?`
       );
-      if(!ok){ _cloudPullInProgress = false; updateSyncStatus('connected'); return; }
-    } else {
-      _cloudPullInProgress = true;
+      if(!ok){ updateSyncStatus('connected'); return; }
     }
+
+    _cloudPullInProgress = true;
     try {
     if(Array.isArray(rec.data)) { data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
     if(Array.isArray(rec.stations) && rec.stations.length > 0) { stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(stations)); }
@@ -7127,6 +7162,8 @@ async function cloudPull(silent = false){
     _lastCloudUpdatedAt = cloudUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
     _lastPushedHash = _hashPayload(getAllCloudData());
+    // SMART-SYNC FIX: update section hashes setelah pull agar tidak push balik
+    _saveSectionHashes(_getSectionHashes());
     } finally {
     _cloudPullInProgress = false;  // always reset — prevents deadlock on error
     }
@@ -7252,6 +7289,8 @@ function startRealtimeSubscription(){
         if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
         // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
         _lastPushedHash = _hashPayload(getAllCloudData());
+        // SMART-SYNC FIX: update section hashes setelah realtime pull agar tidak push balik
+        _saveSectionHashes(_getSectionHashes());
         } finally {
         _cloudPullInProgress = false; // always reset — prevents deadlock
         }
@@ -7286,43 +7325,38 @@ function startRealtimeSubscription(){
     
     if(lastBackup === today) return; // Sudah backup hari ini
     
-    console.log('[DAILY BACKUP] Menjalankan backup harian...');
+    console.log('[DAILY BACKUP] Menjalankan backup harian ke Supabase...');
     
-    // 1. Export JSON lokal
-    try {
-      const allData = {
-        data: JSON.parse(localStorage.getItem('sjn_delay_pro_v4')||'[]'),
-        stations: JSON.parse(localStorage.getItem('sjn_stations_v2')||'[]'),
-        dfsData: JSON.parse(localStorage.getItem('sjn_dfs_bank_v1')||'[]'),
-        settings: JSON.parse(localStorage.getItem('sjn_settings_v4')||'{}'),
-        users: JSON.parse(localStorage.getItem('sjnam_users_v1')||'[]'),
-        stcrData: JSON.parse(localStorage.getItem('sjnam_stcr_data_v1')||'[]'),
-        exportDate: now.toISOString(),
-        exportType: 'daily_scheduled'
-      };
-      const blob = new Blob([JSON.stringify(allData,null,2)], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sjnam_backup_${today}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      console.log('[DAILY BACKUP] JSON exported: sjnam_backup_'+today+'.json');
-    } catch(e) {
-      console.warn('[DAILY BACKUP] JSON export gagal:', e.message);
-    }
-    
-    // 2. Push ke Supabase (silent)
-    if(typeof cloudPush === 'function'){
-      const ok = await cloudPush(true);
-      if(ok) console.log('[DAILY BACKUP] Supabase push sukses');
-      else console.warn('[DAILY BACKUP] Supabase push gagal (mungkin belum dikonfigurasi)');
+    // SMART-SYNC FIX: Backup hanya ke Supabase, bukan auto-download JSON per-device.
+    // Auto-download menyebabkan setiap device (browser) men-download file sendiri-sendiri,
+    // tidak efisien dan mengganggu. Supabase sudah menyimpan data secara terpusat.
+    // Untuk export manual, user bisa pakai tombol Export JSON di tab Settings.
+    const sb = typeof cloudConfig !== 'undefined' && cloudConfig.supabaseUrl && cloudConfig.supabaseKey ? getSupabaseClient() : null;
+    if(sb){
+      try {
+        const allData = getAllCloudData();
+        await sb.from('sjnam_backups').upsert({
+          id: 'backup_' + today,
+          payload: allData,
+          backup_date: today,
+          created_at: now.toISOString()
+        }, { onConflict: 'id' });
+        console.log('[DAILY BACKUP] Supabase backup sukses: backup_' + today);
+        showToast('📦 Backup harian ke Supabase selesai (' + today + ')', 'success');
+      } catch(e) {
+        console.warn('[DAILY BACKUP] Supabase backup gagal:', e.message);
+        // Fallback: push ke tabel sync utama (sudah pasti ada)
+        if(typeof cloudPush === 'function') await cloudPush(true);
+      }
+    } else {
+      // Supabase belum dikonfigurasi — push ke tabel sync utama saja
+      if(typeof cloudPush === 'function'){
+        const ok = await cloudPush(true);
+        if(ok) console.log('[DAILY BACKUP] Fallback push ke sjnam_sync sukses');
+      }
     }
     
     localStorage.setItem(BACKUP_KEY, today);
-    showToast('📦 Backup harian selesai: JSON + Supabase', 'success');
   }
 
   // Jalankan backup saat login & setiap jam cek apakah sudah backup hari ini
@@ -7351,20 +7385,21 @@ function triggerAutoSync(){
   if(_cloudPullInProgress) return;
   if(!cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) return;
   // Debounce 800ms — cukup lama untuk menunggu serangkaian save selesai semuanya,
-  // tapi cukup cepat agar user tidak menunggu. Setelah debounce, cek hash dulu.
+  // tapi cukup cepat agar user tidak menunggu. Setelah debounce, cek hash per-section dulu.
   clearTimeout(_autoSyncTimer);
   _autoSyncTimer = setTimeout(async ()=>{
     // Guard kedua di dalam setTimeout — pastikan pull tidak sedang berjalan
     if(_cloudPullInProgress) return;
-    const localPayload = getAllCloudData();
-    const currentHash = _hashPayload(localPayload);
-    if(currentHash && currentHash === _lastPushedHash){
-      // Hash sama = tidak ada perubahan nyata → skip, tidak kirim ke cloud
+    // SMART-SYNC FIX: cek per-section hash, jauh lebih efisien daripada hash seluruh payload
+    if(!_hasAnySectionChanged()){
+      // Tidak ada perubahan di section mana pun → skip, tidak kirim ke cloud
       return;
     }
     // Ada perubahan → push sekarang (silent)
     const ok = await cloudPush(true);
     if(ok){
+      // Setelah push berhasil, simpan hash state saat ini
+      _saveSectionHashes(_getSectionHashes());
       const el = document.getElementById('smartSyncLastPush');
       if(el) el.textContent = 'Terakhir sync: ' + new Date().toLocaleTimeString('id-ID');
     }
@@ -7470,7 +7505,7 @@ setTimeout(async ()=>{
   if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
     console.log('[Smart-Sync] Cek perubahan data dari Supabase (hanya pull jika ada perubahan)...');
     await cloudPull(true); // silent = true, Smart Pull: skip jika tidak ada perubahan
-    // startRealtimeSubscription sudah dipanggil oleh initCloudUI() di atas — tidak perlu panggil lagi
+    // startRealtimeSubscription sudah dipanggil oleh initCloudUI() — tidak perlu panggil lagi di sini
   }
 }, 1200);
 
@@ -7484,11 +7519,7 @@ async function sha256(str){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-// Hash password sinkron (fallback ke plain jika crypto tidak tersedia)
-function hashPasswordSync(pass){
-  // Gunakan async sha256 via promise, stored hasil di cache
-  return pass; // Placeholder — proses async di bawah
-}
+// Hash password (selalu gunakan sha256 async — hashPasswordSync dihapus karena hanya return plain text)
 
 // Untuk backward compat: cek password bisa jadi hash atau plain
 async function verifyPassword(inputPass, storedPass){
@@ -7592,10 +7623,9 @@ function quickLogin(u,p){
   localStorage.setItem(MIGRATED_KEY, '1');
 })();
 
-// Login handler
 // Brute-force protection
 const BF_KEY = 'sjnam_bf_v1';
-function getBFState(username){
+function getBFState(){
   try{ return JSON.parse(localStorage.getItem(BF_KEY)||'{}'); }catch(e){ return {}; }
 }
 function setBFState(state){ localStorage.setItem(BF_KEY, JSON.stringify(state)); }
@@ -7609,12 +7639,12 @@ function checkBFLocked(username){
 function recordBFFail(username){
   const state = getBFState();
   if(!state[username]) state[username] = {fails:0, lockedUntil:0};
-  const locked = state[username].lockedUntil && Date.now() < state[username].lockedUntil;
-  if(locked) return;
+  // Jika masih dalam masa lock, jangan tambah counter lagi
+  if(state[username].lockedUntil && Date.now() < state[username].lockedUntil) return;
   state[username].fails = (state[username].fails||0) + 1;
   if(state[username].fails >= 5){
     state[username].lockedUntil = Date.now() + 5*60*1000;
-    state[username].fails = 0;
+    state[username].fails = 0; // reset counter SETELAH lock diterapkan
   }
   setBFState(state);
 }
@@ -7753,11 +7783,14 @@ document.getElementById('btnLogout')?.addEventListener('click', function(){
   const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 menit
   const WARN_BEFORE  = 60 * 1000;       // peringatan 1 menit sebelum
   let idleTimer, warnTimer, warnShown = false;
+  let _cdInterval = null; // BUG FIX: simpan referensi countdown interval agar bisa di-clear
 
   function resetIdle(){
     if(!currentUser) return;
     clearTimeout(idleTimer);
     clearTimeout(warnTimer);
+    // BUG FIX: clear interval countdown yang mungkin sedang berjalan sebelum buat yang baru
+    if(_cdInterval){ clearInterval(_cdInterval); _cdInterval = null; }
     warnShown = false;
     // Sembunyikan warning banner jika ada
     const wb = document.getElementById('idleWarnBanner');
@@ -7779,10 +7812,11 @@ document.getElementById('btnLogout')?.addEventListener('click', function(){
       
       let secs = 60;
       const countEl = document.getElementById('idleCountdown');
-      const cdInterval = setInterval(()=>{
+      // BUG FIX: simpan referensi interval di closure agar resetIdle bisa clear
+      _cdInterval = setInterval(()=>{
         secs--;
         if(countEl) countEl.textContent = secs;
-        if(secs <= 0) clearInterval(cdInterval);
+        if(secs <= 0){ clearInterval(_cdInterval); _cdInterval = null; }
       }, 1000);
     }, IDLE_TIMEOUT - WARN_BEFORE);
 
@@ -8105,24 +8139,27 @@ function editUser(id){
   
   if(currentUser.role === 'Admin'){
     const allRolesEdit = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Admin','Co-Admin','User','Peserta'];
-    const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
-    const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
-    if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
-      showToast('Role tidak valid. Role tidak diubah. Pilih: ' + allRolesEdit.join('/'), 'error');
-    }
-    if(newRole){
-      if(newRole === 'Peserta' && user.role !== 'Peserta'){
-        const pesertaCount = users.filter(u=>u.role==='Peserta').length;
-        if(pesertaCount >= 150){
-          showToast('Maksimal 150 akun Peserta tercapai, role tidak diubah','error');
+    // BUG FIX: Admin tidak boleh mengubah role akunnya sendiri — bisa terkunci diri sendiri
+    if(user.username !== currentUser.username){
+      const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
+      const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
+      if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
+        showToast('Role tidak valid. Role tidak diubah. Pilih: ' + allRolesEdit.join('/'), 'error');
+      }
+      if(newRole){
+        if(newRole === 'Peserta' && user.role !== 'Peserta'){
+          const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+          if(pesertaCount >= 150){
+            showToast('Maksimal 150 akun Peserta tercapai, role tidak diubah','error');
+          } else {
+            user.role = newRole;
+          }
         } else {
           user.role = newRole;
         }
-      } else {
-        user.role = newRole;
       }
     }
-    // Admin can also toggle active/inactive
+    // Admin can also toggle active/inactive (but not self)
     if(user.username !== currentUser.username){ // cannot deactivate self
       const toggleActive = confirm(`Status akun saat ini: ${user.active ? 'Aktif' : 'Nonaktif'}.\nKlik OK untuk ${user.active ? 'NONAKTIFKAN' : 'AKTIFKAN'} akun ini.`);
       if(toggleActive) user.active = !user.active;
@@ -8151,22 +8188,15 @@ function deleteUser(id){
     showToast('Hanya Admin yang dapat menghapus user', 'error');
     return;
   }
-  if(!window.currentUserCanDelete){
-    showToast('Hanya Admin yang dapat menghapus user', 'error');
-    return;
-  }
-  // Co-Admin tidak bisa hapus akun Admin
   const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   const targetUser = allUsers.find(u => u.id === id);
-  if(currentUser && currentUser.role === 'Co-Admin' && targetUser && targetUser.role === 'Admin'){
-    showToast('Co-Admin tidak dapat menghapus akun Admin', 'error');
+  // Tidak boleh hapus diri sendiri
+  if(targetUser && targetUser.username === currentUser.username){
+    showToast('Tidak dapat menghapus akun yang sedang digunakan', 'error');
     return;
   }
-  
   if(!confirm('Hapus user ini?')) return;
-  
-  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  users = users.filter(u => u.id !== id);
+  let users = allUsers.filter(u => u.id !== id);
   saveUsers(users);
   renderUserTable();
   showToast('User dihapus', 'success');
@@ -8261,8 +8291,29 @@ function restoreSession(){
   const session = localStorage.getItem(SESSION_KEY);
   if(session){
     try {
-      currentUser = JSON.parse(session);
+      const savedSession = JSON.parse(session);
+      // BUG FIX: Verifikasi user masih ada dan masih aktif di daftar users.
+      // Tanpa ini, user yang sudah dihapus atau dinonaktifkan Admin tetap bisa
+      // masuk menggunakan session lama yang tersimpan di localStorage.
+      const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+      const stillValid = allUsers.find(u =>
+        u.username.toLowerCase() === savedSession.username.toLowerCase() && u.active
+      );
+      if(!stillValid){
+        // Session tidak valid lagi (user dihapus atau dinonaktifkan)
+        localStorage.removeItem(SESSION_KEY);
+        document.body.style.overflow = 'hidden';
+        return;
+      }
+      // Refresh data dari daftar users (role/name mungkin sudah diubah Admin)
+      currentUser = {
+        username: stillValid.username,
+        role:     stillValid.role,
+        name:     stillValid.name,
+        loginTime: savedSession.loginTime || Date.now()
+      };
       window.currentUser = currentUser; // Expose globally
+      localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser)); // simpan yang sudah direfresh
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('userPanel').classList.remove('hidden');
       document.getElementById('userPanel').classList.add('flex');
