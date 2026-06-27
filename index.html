@@ -89,13 +89,22 @@
   max-height: 0;
   opacity: 0;
 }
-/* After JS init adds 'js-ready' to body, enable smooth transitions */
+/* After JS init adds 'js-ready' to body, enable smooth transitions ONLY */
+/* max-height tidak di-set di sini — dikontrol sepenuhnya oleh class .collapsed */
+/* Ini mencegah flash singkat di mana menu expand setelah js-ready ditambahkan */
 body.js-ready #serviceRecoveryMenuContent,
 body.js-ready #adminMenuContent,
 body.js-ready #trainingMenuContent,
 body.js-ready #stcrMenuContent,
 body.js-ready #drygoodsMenuContent {
   transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+/* Saat TIDAK collapsed: tampilkan dengan max-height besar */
+body.js-ready #serviceRecoveryMenuContent:not(.collapsed),
+body.js-ready #adminMenuContent:not(.collapsed),
+body.js-ready #trainingMenuContent:not(.collapsed),
+body.js-ready #stcrMenuContent:not(.collapsed),
+body.js-ready #drygoodsMenuContent:not(.collapsed) {
   max-height: 1200px;
   opacity: 1;
 }
@@ -389,11 +398,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
     <!-- Service Recovery GroupTab -->
     <div class="mb-1 border-t border-neutral-800 pt-4">
-      <button id="toggleServiceRecoveryMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="serviceRecoveryMenuContent">
+      <button id="toggleServiceRecoveryMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="serviceRecoveryMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Service Recovery</p>
         <svg id="iconServiceRecoveryMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div id="serviceRecoveryMenuContent" class="space-y-1" aria-hidden="false">
+      <div id="serviceRecoveryMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="input" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Input" type="button">
           <span class="text-lg w-6 text-center">✈️</span> <span class="sidebar-text">Input</span>
         </button>
@@ -412,11 +421,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       </div>
     </div>
     <div class="mt-4 pt-4 border-t border-neutral-800">
-      <button id="toggleStcrMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="stcrMenuContent">
+      <button id="toggleStcrMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="stcrMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Stretchercase &amp; POB Request</p>
         <svg id="iconStcrMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div id="stcrMenuContent" class="space-y-1" aria-hidden="false">
+      <div id="stcrMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="stcr-dashboard" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Stretchercase & POB Dashboard" type="button">
           <span class="text-lg w-6 text-center">📊</span> <span class="sidebar-text">Dashboard</span>
         </button>
@@ -429,11 +438,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       </div>
     </div>
     <div class="mt-4 pt-4 border-t border-neutral-800">
-      <button id="toggleTrainingMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="trainingMenuContent">
+      <button id="toggleTrainingMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="trainingMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Service Training</p>
         <svg id="iconTrainingMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div id="trainingMenuContent" class="space-y-1" aria-hidden="false">
+      <div id="trainingMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="materi" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Materi Training" type="button">
           <span class="text-lg w-6 text-center">📚</span> <span class="sidebar-text">Materi Training</span>
         </button>
@@ -451,11 +460,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
     
     <div class="mt-4 pt-4 border-t border-neutral-800">
-      <button id="toggleAdminMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="adminMenuContent">
+      <button id="toggleAdminMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="adminMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Admin</p>
         <svg id="iconAdminMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div id="adminMenuContent" class="space-y-1" aria-hidden="false">
+      <div id="adminMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="admin" id="tabAdminBtn" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Admin" type="button">
           <span class="text-lg w-6 text-center">👥</span> <span class="sidebar-text">Admin</span>
         </button>
@@ -470,11 +479,11 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
     <!-- DRYGOODS GroupTab -->
     <div class="mt-4 pt-4 border-t border-neutral-800">
-      <button id="toggleDrygoodsMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="true" aria-controls="drygoodsMenuContent">
+      <button id="toggleDrygoodsMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="drygoodsMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-amber-600 font-semibold">Drygoods</p>
         <svg id="iconDrygoodsMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div id="drygoodsMenuContent" class="space-y-1" aria-hidden="false">
+      <div id="drygoodsMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="drygoods-bankitem" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Bank Item Drygoods" type="button">
           <span class="text-lg w-6 text-center">🗂️</span> <span class="sidebar-text">Bank Item</span>
         </button>
@@ -608,8 +617,8 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
       <div id="logo-nam-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">✈ NAM Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
     </div>
 
-    <!-- Edit toggle button -->
-    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
+    <!-- Edit toggle button — hanya Admin (disembunyikan default, ditampilkan oleh applyPermissions) -->
+    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="display:none;position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
 
     <!-- Edit panel (hidden by default) -->
     <div id="homeEditPanel" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:25;background:rgba(10,15,40,0.92);backdrop-filter:blur(12px);padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,0.15);">
@@ -656,7 +665,7 @@ body { background: radial-gradient(ellipse at top, #0f172a 0%, #020617 100%); }
 
     <!-- Subtitle -->
     <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;z-index:10;pointer-events:none;">
-      <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Flight Delay Management System · Sriwijaya Air &amp; Nam Air</p>
+      <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Sriwijaya Air Group</p>
     </div>
   </div>
 </section>
@@ -6743,41 +6752,6 @@ function _hashPayload(payload){
   } catch(e){ return null; }
 }
 
-// SMART-SYNC FIX: Hash per-tabel agar deteksi perubahan lebih efisien.
-// Daripada JSON.stringify seluruh payload (bisa beberapa MB), setiap section
-// di-hash secara terpisah. triggerAutoSync hanya push jika minimal 1 section berubah.
-const _HASH_KEY = 'sjnam_section_hashes_v1';
-var _sectionHashes = (function(){
-  try { return JSON.parse(localStorage.getItem(_HASH_KEY) || '{}'); } catch(e){ return {}; }
-})();
-
-function _getSectionHashes(){
-  return {
-    data:        _hashPayload(data),
-    dfsData:     _hashPayload(dfsData),
-    stations:    _hashPayload(stations),
-    settings:    _hashPayload(settings),
-    stcrData:    _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_stcr_data_v1') : null),
-    drygoodsData:_hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_drygoods_v1') : null),
-    training:    _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjn_training_v1') : null),
-    users:       _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_users_v1') : null),
-    rolePerms:   _hashPayload(typeof localStorage !== 'undefined' ? localStorage.getItem('sjnam_role_perms_v1') : null),
-  };
-}
-
-function _saveSectionHashes(hashes){
-  _sectionHashes = hashes;
-  try { localStorage.setItem(_HASH_KEY, JSON.stringify(hashes)); } catch(e){}
-}
-
-function _hasAnySectionChanged(){
-  const current = _getSectionHashes();
-  for(const key of Object.keys(current)){
-    if(current[key] !== _sectionHashes[key]) return true;
-  }
-  return false;
-}
-
 function saveCloudConfig(){
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudConfig));
 }
@@ -7024,14 +6998,12 @@ async function cloudPush(silent=false){
 
     // Gunakan updated_at dari server (bukan waktu lokal) agar perbandingan timestamp realtime akurat
     const serverUpdatedAt = upsertResult?.updated_at || mergedPayload._pushedAt;
-    // SMART-SYNC FIX: update section hashes setelah push berhasil
-    _saveSectionHashes(_getSectionHashes());
     _lastPushedHash = _hashPayload(mergedPayload);
     _lastCloudUpdatedAt = serverUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
     updateSyncStatus('connected');
-    cloudLog('✅ Data tersimpan ke Supabase ('+mergedPayload.data.length+' delay, '+(mergedPayload.dfsData||[]).length+' DFS)', 'success');
-    if(!silent) showToast('⚡ Supabase Sync berhasil! ('+mergedPayload.data.length+' records)','success');
+    cloudLog('✅ Data tersimpan ke Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
+    if(!silent) showToast('⚡ Supabase Sync berhasil! ('+data.length+' records)','success');
     saveCloudConfig();
     return true;
   } catch(err){
@@ -7068,11 +7040,7 @@ async function cloudPull(silent = false){
     // Tidak ada perubahan dari device lain → skip total, tidak ada payload yang ditarik.
     // Berlaku untuk silent (auto/realtime) maupun manual — keduanya tidak perlu pull
     // kalau memang tidak ada apa-apa yang baru di cloud.
-    // BUG FIX: gunakan Date.getTime() bukan string comparison — ISO string dari server
-    // kadang beda format (dengan/tanpa milidetik) yang membuat < operator tidak akurat.
-    const cloudTs  = cloudUpdatedAt  ? new Date(cloudUpdatedAt).getTime()  : 0;
-    const localTs  = _lastCloudUpdatedAt ? new Date(_lastCloudUpdatedAt).getTime() : 0;
-    if(localTs > 0 && cloudTs > 0 && cloudTs <= localTs){
+    if(_lastCloudUpdatedAt && cloudUpdatedAt && cloudUpdatedAt <= _lastCloudUpdatedAt){
       cloudLog('⏭️ Smart Pull: tidak ada perubahan data antar device, skip pull (payload tidak diunduh)', 'info');
       updateSyncStatus('connected');
       if(!silent) showToast('Data sudah paling baru — tidak ada perubahan dari device lain','info');
@@ -7162,8 +7130,6 @@ async function cloudPull(silent = false){
     _lastCloudUpdatedAt = cloudUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
     _lastPushedHash = _hashPayload(getAllCloudData());
-    // SMART-SYNC FIX: update section hashes setelah pull agar tidak push balik
-    _saveSectionHashes(_getSectionHashes());
     } finally {
     _cloudPullInProgress = false;  // always reset — prevents deadlock on error
     }
@@ -7289,8 +7255,6 @@ function startRealtimeSubscription(){
         if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
         // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
         _lastPushedHash = _hashPayload(getAllCloudData());
-        // SMART-SYNC FIX: update section hashes setelah realtime pull agar tidak push balik
-        _saveSectionHashes(_getSectionHashes());
         } finally {
         _cloudPullInProgress = false; // always reset — prevents deadlock
         }
@@ -7325,38 +7289,43 @@ function startRealtimeSubscription(){
     
     if(lastBackup === today) return; // Sudah backup hari ini
     
-    console.log('[DAILY BACKUP] Menjalankan backup harian ke Supabase...');
+    console.log('[DAILY BACKUP] Menjalankan backup harian...');
     
-    // SMART-SYNC FIX: Backup hanya ke Supabase, bukan auto-download JSON per-device.
-    // Auto-download menyebabkan setiap device (browser) men-download file sendiri-sendiri,
-    // tidak efisien dan mengganggu. Supabase sudah menyimpan data secara terpusat.
-    // Untuk export manual, user bisa pakai tombol Export JSON di tab Settings.
-    const sb = typeof cloudConfig !== 'undefined' && cloudConfig.supabaseUrl && cloudConfig.supabaseKey ? getSupabaseClient() : null;
-    if(sb){
-      try {
-        const allData = getAllCloudData();
-        await sb.from('sjnam_backups').upsert({
-          id: 'backup_' + today,
-          payload: allData,
-          backup_date: today,
-          created_at: now.toISOString()
-        }, { onConflict: 'id' });
-        console.log('[DAILY BACKUP] Supabase backup sukses: backup_' + today);
-        showToast('📦 Backup harian ke Supabase selesai (' + today + ')', 'success');
-      } catch(e) {
-        console.warn('[DAILY BACKUP] Supabase backup gagal:', e.message);
-        // Fallback: push ke tabel sync utama (sudah pasti ada)
-        if(typeof cloudPush === 'function') await cloudPush(true);
-      }
-    } else {
-      // Supabase belum dikonfigurasi — push ke tabel sync utama saja
-      if(typeof cloudPush === 'function'){
-        const ok = await cloudPush(true);
-        if(ok) console.log('[DAILY BACKUP] Fallback push ke sjnam_sync sukses');
-      }
+    // 1. Export JSON lokal
+    try {
+      const allData = {
+        data: JSON.parse(localStorage.getItem('sjn_delay_pro_v4')||'[]'),
+        stations: JSON.parse(localStorage.getItem('sjn_stations_v2')||'[]'),
+        dfsData: JSON.parse(localStorage.getItem('sjn_dfs_bank_v1')||'[]'),
+        settings: JSON.parse(localStorage.getItem('sjn_settings_v4')||'{}'),
+        users: JSON.parse(localStorage.getItem('sjnam_users_v1')||'[]'),
+        stcrData: JSON.parse(localStorage.getItem('sjnam_stcr_data_v1')||'[]'),
+        exportDate: now.toISOString(),
+        exportType: 'daily_scheduled'
+      };
+      const blob = new Blob([JSON.stringify(allData,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sjnam_backup_${today}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log('[DAILY BACKUP] JSON exported: sjnam_backup_'+today+'.json');
+    } catch(e) {
+      console.warn('[DAILY BACKUP] JSON export gagal:', e.message);
+    }
+    
+    // 2. Push ke Supabase (silent)
+    if(typeof cloudPush === 'function'){
+      const ok = await cloudPush(true);
+      if(ok) console.log('[DAILY BACKUP] Supabase push sukses');
+      else console.warn('[DAILY BACKUP] Supabase push gagal (mungkin belum dikonfigurasi)');
     }
     
     localStorage.setItem(BACKUP_KEY, today);
+    showToast('📦 Backup harian selesai: JSON + Supabase', 'success');
   }
 
   // Jalankan backup saat login & setiap jam cek apakah sudah backup hari ini
@@ -7385,21 +7354,20 @@ function triggerAutoSync(){
   if(_cloudPullInProgress) return;
   if(!cloudConfig.supabaseUrl || !cloudConfig.supabaseKey) return;
   // Debounce 800ms — cukup lama untuk menunggu serangkaian save selesai semuanya,
-  // tapi cukup cepat agar user tidak menunggu. Setelah debounce, cek hash per-section dulu.
+  // tapi cukup cepat agar user tidak menunggu. Setelah debounce, cek hash dulu.
   clearTimeout(_autoSyncTimer);
   _autoSyncTimer = setTimeout(async ()=>{
     // Guard kedua di dalam setTimeout — pastikan pull tidak sedang berjalan
     if(_cloudPullInProgress) return;
-    // SMART-SYNC FIX: cek per-section hash, jauh lebih efisien daripada hash seluruh payload
-    if(!_hasAnySectionChanged()){
-      // Tidak ada perubahan di section mana pun → skip, tidak kirim ke cloud
+    const localPayload = getAllCloudData();
+    const currentHash = _hashPayload(localPayload);
+    if(currentHash && currentHash === _lastPushedHash){
+      // Hash sama = tidak ada perubahan nyata → skip, tidak kirim ke cloud
       return;
     }
     // Ada perubahan → push sekarang (silent)
     const ok = await cloudPush(true);
     if(ok){
-      // Setelah push berhasil, simpan hash state saat ini
-      _saveSectionHashes(_getSectionHashes());
       const el = document.getElementById('smartSyncLastPush');
       if(el) el.textContent = 'Terakhir sync: ' + new Date().toLocaleTimeString('id-ID');
     }
@@ -7505,7 +7473,7 @@ setTimeout(async ()=>{
   if(cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
     console.log('[Smart-Sync] Cek perubahan data dari Supabase (hanya pull jika ada perubahan)...');
     await cloudPull(true); // silent = true, Smart Pull: skip jika tidak ada perubahan
-    // startRealtimeSubscription sudah dipanggil oleh initCloudUI() — tidak perlu panggil lagi di sini
+    startRealtimeSubscription();
   }
 }, 1200);
 
@@ -7519,7 +7487,11 @@ async function sha256(str){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-// Hash password (selalu gunakan sha256 async — hashPasswordSync dihapus karena hanya return plain text)
+// Hash password sinkron (fallback ke plain jika crypto tidak tersedia)
+function hashPasswordSync(pass){
+  // Gunakan async sha256 via promise, stored hasil di cache
+  return pass; // Placeholder — proses async di bawah
+}
 
 // Untuk backward compat: cek password bisa jadi hash atau plain
 async function verifyPassword(inputPass, storedPass){
@@ -7623,9 +7595,10 @@ function quickLogin(u,p){
   localStorage.setItem(MIGRATED_KEY, '1');
 })();
 
+// Login handler
 // Brute-force protection
 const BF_KEY = 'sjnam_bf_v1';
-function getBFState(){
+function getBFState(username){
   try{ return JSON.parse(localStorage.getItem(BF_KEY)||'{}'); }catch(e){ return {}; }
 }
 function setBFState(state){ localStorage.setItem(BF_KEY, JSON.stringify(state)); }
@@ -7639,12 +7612,12 @@ function checkBFLocked(username){
 function recordBFFail(username){
   const state = getBFState();
   if(!state[username]) state[username] = {fails:0, lockedUntil:0};
-  // Jika masih dalam masa lock, jangan tambah counter lagi
-  if(state[username].lockedUntil && Date.now() < state[username].lockedUntil) return;
+  const locked = state[username].lockedUntil && Date.now() < state[username].lockedUntil;
+  if(locked) return;
   state[username].fails = (state[username].fails||0) + 1;
   if(state[username].fails >= 5){
     state[username].lockedUntil = Date.now() + 5*60*1000;
-    state[username].fails = 0; // reset counter SETELAH lock diterapkan
+    state[username].fails = 0;
   }
   setBFState(state);
 }
@@ -7734,6 +7707,9 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
     });
   }
   // By login time all <script> blocks have loaded — the dynamic patch is in place.
+  // Pastikan js-ready sudah ada dulu agar CSS transition tidak aktif saat applyPermissions
+  // menyembunyikan/menampilkan menu group (fix flash setelah login).
+  document.body.classList.add('js-ready');
   (window.applyPermissions || applyPermissions)();
   // Make sidebar visible AFTER permissions have been applied (no flash)
   const _loginSidebar = document.getElementById('sidebar');
@@ -7783,14 +7759,11 @@ document.getElementById('btnLogout')?.addEventListener('click', function(){
   const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 menit
   const WARN_BEFORE  = 60 * 1000;       // peringatan 1 menit sebelum
   let idleTimer, warnTimer, warnShown = false;
-  let _cdInterval = null; // BUG FIX: simpan referensi countdown interval agar bisa di-clear
 
   function resetIdle(){
     if(!currentUser) return;
     clearTimeout(idleTimer);
     clearTimeout(warnTimer);
-    // BUG FIX: clear interval countdown yang mungkin sedang berjalan sebelum buat yang baru
-    if(_cdInterval){ clearInterval(_cdInterval); _cdInterval = null; }
     warnShown = false;
     // Sembunyikan warning banner jika ada
     const wb = document.getElementById('idleWarnBanner');
@@ -7812,11 +7785,10 @@ document.getElementById('btnLogout')?.addEventListener('click', function(){
       
       let secs = 60;
       const countEl = document.getElementById('idleCountdown');
-      // BUG FIX: simpan referensi interval di closure agar resetIdle bisa clear
-      _cdInterval = setInterval(()=>{
+      const cdInterval = setInterval(()=>{
         secs--;
         if(countEl) countEl.textContent = secs;
-        if(secs <= 0){ clearInterval(_cdInterval); _cdInterval = null; }
+        if(secs <= 0) clearInterval(cdInterval);
       }, 1000);
     }, IDLE_TIMEOUT - WARN_BEFORE);
 
@@ -7884,6 +7856,9 @@ function applyPermissions(){
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
     if(trainingMenuGroup) trainingMenuGroup.style.display = '';
+    // Sembunyikan tombol Edit Home untuk Peserta
+    const _btnHEP = document.getElementById('btnHomeEditToggle');
+    if(_btnHEP) _btnHEP.style.display = 'none';
   } else if(isUser){
     // User: Home, Input, Data (read-only), Dashboard + Service Training (Mulai Training sub-tab)
     if(tabAdminBtn) tabAdminBtn.style.display = 'none';
@@ -7898,11 +7873,13 @@ function applyPermissions(){
     // Tampilkan Training menu group & tombol Mulai Training Peserta
     if(trainingMenuGroup) trainingMenuGroup.style.display = '';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
-    // Tampilkan Home menu group
     // Tampilkan Stretchercase & POB menu group (User boleh akses Dashboard/Data/Station)
     if(stcrMenuGroup) stcrMenuGroup.style.display = '';
     // Tampilkan Drygoods menu group
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
+    // Sembunyikan tombol Edit Home untuk User
+    const _btnHEU = document.getElementById('btnHomeEditToggle');
+    if(_btnHEU) _btnHEU.style.display = 'none';
     // Sembunyikan tombol Import & Hapus Semua di tab Data (read-only untuk User)
     setTimeout(()=>{
       const elImport = document.getElementById('fileImportJson')?.closest('label');
@@ -7951,6 +7928,9 @@ function applyPermissions(){
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
     if(stcrMenuGroup) stcrMenuGroup.style.display = '';
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
+    // Tombol Edit Home hanya untuk Admin (Co-Admin tidak bisa edit tampilan Home)
+    const _btnHomeEdit = document.getElementById('btnHomeEditToggle');
+    if(_btnHomeEdit) _btnHomeEdit.style.display = (role === 'Admin') ? '' : 'none';
     // Pastikan tombol import/hapus semua tampil lagi
     setTimeout(()=>{
       const elImport2 = document.getElementById('fileImportJson')?.closest('label');
@@ -8139,27 +8119,24 @@ function editUser(id){
   
   if(currentUser.role === 'Admin'){
     const allRolesEdit = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES : ['Admin','Co-Admin','User','Peserta'];
-    // BUG FIX: Admin tidak boleh mengubah role akunnya sendiri — bisa terkunci diri sendiri
-    if(user.username !== currentUser.username){
-      const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
-      const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
-      if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
-        showToast('Role tidak valid. Role tidak diubah. Pilih: ' + allRolesEdit.join('/'), 'error');
-      }
-      if(newRole){
-        if(newRole === 'Peserta' && user.role !== 'Peserta'){
-          const pesertaCount = users.filter(u=>u.role==='Peserta').length;
-          if(pesertaCount >= 150){
-            showToast('Maksimal 150 akun Peserta tercapai, role tidak diubah','error');
-          } else {
-            user.role = newRole;
-          }
+    const newRoleInput = prompt(`Role (${allRolesEdit.join('/')}):`, user.role);
+    const newRole = newRoleInput !== null ? allRolesEdit.find(r=>r.toLowerCase() === newRoleInput.trim().toLowerCase()) : null;
+    if(newRoleInput !== null && newRoleInput.trim() !== '' && !newRole){
+      showToast('Role tidak valid. Role tidak diubah. Pilih: ' + allRolesEdit.join('/'), 'error');
+    }
+    if(newRole){
+      if(newRole === 'Peserta' && user.role !== 'Peserta'){
+        const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+        if(pesertaCount >= 150){
+          showToast('Maksimal 150 akun Peserta tercapai, role tidak diubah','error');
         } else {
           user.role = newRole;
         }
+      } else {
+        user.role = newRole;
       }
     }
-    // Admin can also toggle active/inactive (but not self)
+    // Admin can also toggle active/inactive
     if(user.username !== currentUser.username){ // cannot deactivate self
       const toggleActive = confirm(`Status akun saat ini: ${user.active ? 'Aktif' : 'Nonaktif'}.\nKlik OK untuk ${user.active ? 'NONAKTIFKAN' : 'AKTIFKAN'} akun ini.`);
       if(toggleActive) user.active = !user.active;
@@ -8188,15 +8165,22 @@ function deleteUser(id){
     showToast('Hanya Admin yang dapat menghapus user', 'error');
     return;
   }
-  const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  const targetUser = allUsers.find(u => u.id === id);
-  // Tidak boleh hapus diri sendiri
-  if(targetUser && targetUser.username === currentUser.username){
-    showToast('Tidak dapat menghapus akun yang sedang digunakan', 'error');
+  if(!window.currentUserCanDelete){
+    showToast('Hanya Admin yang dapat menghapus user', 'error');
     return;
   }
+  // Co-Admin tidak bisa hapus akun Admin
+  const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const targetUser = allUsers.find(u => u.id === id);
+  if(currentUser && currentUser.role === 'Co-Admin' && targetUser && targetUser.role === 'Admin'){
+    showToast('Co-Admin tidak dapat menghapus akun Admin', 'error');
+    return;
+  }
+  
   if(!confirm('Hapus user ini?')) return;
-  let users = allUsers.filter(u => u.id !== id);
+  
+  let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  users = users.filter(u => u.id !== id);
   saveUsers(users);
   renderUserTable();
   showToast('User dihapus', 'success');
@@ -8291,29 +8275,8 @@ function restoreSession(){
   const session = localStorage.getItem(SESSION_KEY);
   if(session){
     try {
-      const savedSession = JSON.parse(session);
-      // BUG FIX: Verifikasi user masih ada dan masih aktif di daftar users.
-      // Tanpa ini, user yang sudah dihapus atau dinonaktifkan Admin tetap bisa
-      // masuk menggunakan session lama yang tersimpan di localStorage.
-      const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-      const stillValid = allUsers.find(u =>
-        u.username.toLowerCase() === savedSession.username.toLowerCase() && u.active
-      );
-      if(!stillValid){
-        // Session tidak valid lagi (user dihapus atau dinonaktifkan)
-        localStorage.removeItem(SESSION_KEY);
-        document.body.style.overflow = 'hidden';
-        return;
-      }
-      // Refresh data dari daftar users (role/name mungkin sudah diubah Admin)
-      currentUser = {
-        username: stillValid.username,
-        role:     stillValid.role,
-        name:     stillValid.name,
-        loginTime: savedSession.loginTime || Date.now()
-      };
+      currentUser = JSON.parse(session);
       window.currentUser = currentUser; // Expose globally
-      localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser)); // simpan yang sudah direfresh
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('userPanel').classList.remove('hidden');
       document.getElementById('userPanel').classList.add('flex');
@@ -8345,10 +8308,12 @@ function restoreSession(){
       // Make sidebar visible NOW (after groups are pre-hidden) so there's no flicker
       const _sidebarEl = document.getElementById('sidebar');
       if(_sidebarEl) _sidebarEl.style.visibility = 'visible';
+      // Jalankan applyPermissions setelah js-ready class ditambahkan (50ms) agar
+      // CSS transition tidak aktif saat menu group disembunyikan/ditampilkan.
       setTimeout(()=>{
         (window.applyPermissions || applyPermissions)();
         restoreSession();
-      }, 0);
+      }, 60);
     } catch(e){
       localStorage.removeItem(SESSION_KEY);
     }
@@ -8430,8 +8395,29 @@ document.addEventListener('DOMContentLoaded', function(){
   setMenuState(ADMIN_KEY, adminContent, iconAdmin, adminOpen, false);
   setMenuState(STCR_MENU_KEY, stcrMenuContentEl, iconStcrMenu, stcrMenuOpen, false);
   setMenuState(SVC_RECOVERY_KEY, svcRecoveryContentEl, iconSvcRecovery, svcRecoveryOpen, false);
-  // Mark body ready — this enables CSS transitions and shows correct states instantly
-  requestAnimationFrame(()=>{ document.body.classList.add('js-ready'); });
+  // Restore saved training & drygoods menu state juga di sini (sebelum js-ready)
+  // agar tidak ada flash saat modul training/drygoods baru diinit lebih lambat
+  (function restoreExtraMenus(){
+    let _suffix = '';
+    try { const _s = JSON.parse(localStorage.getItem('sjnam_session_v1')||'null'); if(_s && _s.username) _suffix = '_' + _s.username; } catch(e){}
+    const _tmKey = 'sjnam_training_menu_open' + _suffix;
+    const _dgKey = 'sjnam_drygoods_menu_open' + _suffix;
+    const tmEl = document.getElementById('trainingMenuContent');
+    const dgEl = document.getElementById('drygoodsMenuContent');
+    const tmSaved = localStorage.getItem(_tmKey);
+    const dgSaved = localStorage.getItem(_dgKey);
+    // Default open (null = belum pernah disimpan)
+    const tmOpen = tmSaved !== '0';
+    const dgOpen = dgSaved !== '0';
+    if(tmEl){ if(tmOpen){ tmEl.classList.remove('collapsed'); tmEl.setAttribute('aria-hidden','false'); } else { tmEl.classList.add('collapsed'); tmEl.setAttribute('aria-hidden','true'); } }
+    if(dgEl){ if(dgOpen){ dgEl.classList.remove('collapsed'); dgEl.setAttribute('aria-hidden','false'); } else { dgEl.classList.add('collapsed'); dgEl.setAttribute('aria-hidden','true'); } }
+  })();
+
+  // Mark body ready SETELAH semua state awal di-set dan SETELAH applyPermissions selesai.
+  // Ini mencegah CSS transition aktif saat menu sedang disembunyikan/ditampilkan oleh permission,
+  // yang menjadi penyebab utama "flash" menu terbuka sekilas saat refresh.
+  // js-ready ditambahkan via setTimeout agar applyPermissions (setTimeout 60ms di checkAuth) selesai dulu.
+  setTimeout(()=>{ document.body.classList.add('js-ready'); }, 50);
   
   document.getElementById('toggleServiceRecoveryMenu')?.addEventListener('click', ()=>{
     if(!svcRecoveryContentEl) return;
@@ -10383,6 +10369,9 @@ window.addEventListener('beforeunload', ()=>{
     if(isAdmin){
       // Admin selalu full akses — jalankan original
       if(_origApplyPermissions) _origApplyPermissions();
+      // Pastikan tombol Edit Home tampil untuk Admin
+      const _btnHE = document.getElementById('btnHomeEditToggle');
+      if(_btnHE) _btnHE.style.display = '';
       return;
     }
 
@@ -10446,6 +10435,10 @@ window.addEventListener('beforeunload', ()=>{
 
     const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = canSee('feat-mulai') ? '' : 'none';
+
+    // Tombol Edit Home: hanya Admin (semua role lain tidak boleh)
+    const _btnHomeEdit2 = document.getElementById('btnHomeEditToggle');
+    if(_btnHomeEdit2) _btnHomeEdit2.style.display = 'none';
 
     // Functional features with delay
     setTimeout(()=>{
