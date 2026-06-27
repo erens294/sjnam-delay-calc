@@ -5601,8 +5601,8 @@ function updatePreviews(){
     }
 
     // Cost
-    const pax=parseInt($('#qtyPax').value||0);
-    const cost=parseInt($('#costPerPax').value||settings.costPerPax||300000);
+    const pax=parseInt($('#qtyPax').value||0, 10);
+    const cost=parseInt($('#costPerPax').value||settings.costPerPax||300000, 10);
     $('#calcCost').textContent=formatRupiah(pax*cost);
 
     // Delay Now = Waktu UTC sekarang - STD UTC (hanya untuk flight hari ini)
@@ -5726,8 +5726,8 @@ $('#btnSimpan').addEventListener('click',()=>{
     flightStatus: $('#flightStatus').value||'Delay Flight',
     approval: $('#approval').value,
     verifikasi: $('#verifikasi').value||'No',
-    qtyPax: parseInt($('#qtyPax').value||0),
-    costPerPax: parseInt($('#costPerPax').value||settings.costPerPax||300000),
+    qtyPax: parseInt($('#qtyPax').value||0, 10),
+    costPerPax: parseInt($('#costPerPax').value||settings.costPerPax||300000, 10),
     about: $('#about').value.trim(),
     keterangan: $('#keterangan').value.trim(),
     delayMenit: diff,
@@ -5916,8 +5916,8 @@ function renderTable(){
     return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
       <td class="px-2 py-2 text-slate-500 text-xs">${no}</td>
       <td class="px-2 py-2 whitespace-nowrap text-xs font-medium">${formatDateDMY(d.tanggal)}</td>
-      <td class="px-2 py-2 font-bold text-sm">${d.flightNumber}</td>
-      <td class="px-2 py-2 font-mono font-semibold text-xs">${d.route}</td>
+      <td class="px-2 py-2 font-bold text-sm">${esc(d.flightNumber)}</td>
+      <td class="px-2 py-2 font-mono font-semibold text-xs">${esc(d.route)}</td>
       <td class="px-2 py-2 text-xs">
         <div class="font-mono">${stdInfo.utc}</div>
         <div class="text-slate-400">${stdInfo.local} UTC+${stdInfo.tz}</div>
@@ -5963,8 +5963,8 @@ function renderTable(){
       return `<div class="card p-4 rounded-xl">
         <div class="flex items-start justify-between mb-2">
           <div>
-            <span class="font-bold text-base">${d.flightNumber}</span>
-            <span class="ml-2 font-mono text-sm text-slate-500">${d.route}</span>
+            <span class="font-bold text-base">${esc(d.flightNumber)}</span>
+            <span class="ml-2 font-mono text-sm text-slate-500">${esc(d.route)}</span>
           </div>
           <span class="font-bold text-lg ${delayColor}">${formatHM(d.delayMenit)}</span>
         </div>
@@ -6121,7 +6121,7 @@ $('#btnExportExcel').addEventListener('click',()=>{
   const ws=XLSX.utils.json_to_sheet(rows);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Delay');
-  XLSX.writeFile(wb,`Delay_SJNAM_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb,`Delay_SJNAM_${todayLocalStr()}.xlsx`);
   showToast('Excel diexport (lokal time + total)');
 });
 
@@ -6163,7 +6163,7 @@ $('#btnExportPdf').addEventListener('click',()=>{
     alternateRowStyles:{fillColor:[248,250,252]},
     footStyles:{fillColor:[226,232,240],textColor:[15,23,42],fontStyle:'bold'}
   });
-  doc.save(`Delay_SJNAM_${new Date().toISOString().slice(0,10)}.pdf`);
+  doc.save(`Delay_SJNAM_${todayLocalStr()}.pdf`);
   showToast('PDF diexport (lokal time + total)');
 });
 
@@ -6365,8 +6365,8 @@ function renderDashboard(){
     return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
       <td class="px-3 py-2 font-bold text-sm">${rankEmoji[i]}</td>
       <td class="px-3 py-2 text-xs whitespace-nowrap">${formatDateDMY(d.tanggal)}</td>
-      <td class="px-3 py-2 font-bold">${d.flightNumber}</td>
-      <td class="px-3 py-2 font-mono text-xs">${d.route}</td>
+      <td class="px-3 py-2 font-bold">${esc(d.flightNumber)}</td>
+      <td class="px-3 py-2 font-mono text-xs">${esc(d.route)}</td>
       <td class="px-3 py-2"><span class="badge bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-200 font-bold">${formatHM(d.delayMenit)}</span></td>
       <td class="px-3 py-2"><span class="badge ${katBadge[d.kategori]||'bg-slate-100 text-slate-700'}">${d.kategori}</span></td>
       <td class="px-3 py-2"><span class="flight-status-badge ${sColor} text-xs">${d.flightStatus||'Delay Flight'}</span></td>
@@ -6644,7 +6644,7 @@ $('#btnDashPdf').addEventListener('click', async ()=>{
     doc.text(`Halaman ${i} / ${totalPages}  |  Service Management SJNAM  |  Confidential`, W/2, 832, {align:'center'});
   }
 
-  doc.save(`Dashboard_SJNAM_${new Date().toISOString().slice(0,10)}.pdf`);
+  doc.save(`Dashboard_SJNAM_${todayLocalStr()}.pdf`);
   showToast('✅ Dashboard PDF berhasil diexport','success');
 });
 
@@ -6692,7 +6692,7 @@ $('#btnDashExcel').addEventListener('click',()=>{
     {KPI:'Flight Cancel',Nilai:filtered.filter(d=>d.flightStatus==='Cancel Flight').length},
   ]);
   XLSX.utils.book_append_sheet(wb,wsKpi,'KPI');
-  XLSX.writeFile(wb,`Dashboard_SJNAM_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb,`Dashboard_SJNAM_${todayLocalStr()}.xlsx`);
   showToast('Dashboard Excel diexport (lokal + total)');
 });
 
@@ -6719,8 +6719,8 @@ Berikut Kami Kirimkan Permohonan Approval PM89 CIU Insurance
 Untuk Rute Sebagai Berikut :
 
 DATE                    : ${formatDateDMY(d.tanggal)}
-Flight No                : ${d.flightNumber}
-Route                    : ${d.route}
+Flight No                : ${esc(d.flightNumber)}
+Route                    : ${esc(d.route)}
 Flight Status            : ${d.flightStatus||'Delay Flight'}
 STD (UTC)                : ${d.stdUtc.split('T')[1]} / ${stdInfo.local} ${tzLabel}
 ETD (UTC)                : ${d.etdUtc.split('T')[1]} / ${etdInfo.local} ${tzLabel}
@@ -6749,7 +6749,7 @@ function refreshRequestSelect(){
     );
   }
   sel.innerHTML='<option value="">-- Pilih Flight ('+list.length+') --</option>'+
-    list.map((d,i)=>`<option value="${d.id}">${i+1}. ${d.flightNumber} ${d.route} - ${formatDateDMY(d.tanggal)} (${formatHM(d.delayMenit)})</option>`).join('');
+    list.map((d,i)=>`<option value="${d.id}">${i+1}. ${esc(d.flightNumber)} ${esc(d.route)} - ${formatDateDMY(d.tanggal)} (${formatHM(d.delayMenit)})</option>`).join('');
 }
 $('#reqSearch')?.addEventListener('input',refreshRequestSelect);
 
@@ -6760,12 +6760,12 @@ $('#reqSelect').addEventListener('change',e=>{
 });
 ['reqNamaPenerima','reqStationPenerima','reqNamaPengirim','reqJabatanPengirim'].forEach(id=>{
   $('#'+id).addEventListener('input',()=>{
-    const selId=parseInt($('#reqSelect').value);
+    const selId=parseInt($('#reqSelect').value, 10);
     if(selId){const d=data.find(x=>x.id===selId);$('#requestPreview').textContent=buildRequestText(d);}
   });
 });
 $('#btnAmbilNo').addEventListener('click',()=>{
-  const no=parseInt($('#reqNo').value);
+  const no=parseInt($('#reqNo').value, 10);
   const filtered=getFilteredData();
   const d=filtered[no-1];
   if(d){$('#reqSelect').value=d.id;$('#requestPreview').textContent=buildRequestText(d);}
@@ -6802,7 +6802,7 @@ function renderStations(){
     return `
     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
       <td class="px-3 py-2.5 font-mono font-bold text-sm">${s.iata}</td>
-      <td class="px-3 py-2.5 text-sm">${s.name}</td>
+      <td class="px-3 py-2.5 text-sm">${esc(s.name)}</td>
       <td class="px-3 py-2.5"><span class="badge ${s.tz===7?'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300':s.tz===8?'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300':'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}">UTC+${s.tz}</span></td>
       <td class="px-3 py-2.5 font-mono text-xs text-slate-600 dark:text-slate-300" data-station-tz="${s.tz}">--:--:--</td>
       <td class="px-3 py-2.5 text-center">
@@ -6821,7 +6821,7 @@ $('#formStation').addEventListener('submit',e=>{
   e.preventDefault();
   const iata=$('#stIata').value.trim().toUpperCase();
   const name=$('#stName').value.trim();
-  const tz=parseInt($('#stTz').value);
+  const tz=parseInt($('#stTz').value, 10);
   if(!/^[A-Z]{3}$/.test(iata)) return showToast('IATA harus 3 huruf','error');
   const idx=stations.findIndex(s=>s.iata===iata);
   if(idx>-1) stations[idx]={iata,name,tz};
@@ -6852,7 +6852,7 @@ $('#btnExportAllJson').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify({data,stations,dfsData,settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download=`sjn_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.download=`sjn_backup_${todayLocalStr()}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
   showToast('Backup diexport');
@@ -6884,9 +6884,11 @@ $('#btnResetDb').addEventListener('click',async()=>{
 // KEYBOARD SHORTCUTS
 // =================================================================
 document.addEventListener('keydown',e=>{
+  // BUGFIX: ignore keyboard shortcuts when not logged in
+  if(!window.currentUser) return;
   if(e.ctrlKey&&e.key==='s'){e.preventDefault();$('#btnSimpan').click();}
   if(e.ctrlKey&&e.key==='n'){e.preventDefault();resetForm();switchTab('input');}
-  if(e.altKey&&e.key==='s'){e.preventDefault();cloudPush();}
+  if(e.altKey&&e.key==='s'){e.preventDefault(); cloudPush().then(ok=>{ if(!ok) showToast('Sync gagal — cek koneksi','error'); else showToast('✅ Sync selesai','success'); }); /* BUGFIX: chain .then() untuk feedback user */ }
 });
 
 // === FIX: pre-declare cloud-sync state so it's safe to call saveStations()/triggerAutoSync()
@@ -6946,7 +6948,7 @@ if(savedSort) sortOrder = savedSort;
 updateSortButton();
 
 $('#defaultCostPerPax').value=settings.costPerPax||300000;
-$('#tanggal').valueAsDate=new Date();
+$('#tanggal').value=todayLocalStr(); // BUGFIX: valueAsDate uses UTC which shows yesterday in WIB
 $('#costPerPax').value=settings.costPerPax||300000;
 
 // Dashboard default: 7 hari terakhir
@@ -7080,7 +7082,7 @@ function renderDfsTable(){
       return `
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
         <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">${formattedDate}</td>
-        <td class="px-3 py-2 font-mono font-bold text-sm ${f.flight.startsWith('SJ')?'text-blue-700 dark:text-blue-400':'text-amber-700 dark:text-amber-400'}">${f.flight}</td>
+        <td class="px-3 py-2 font-mono font-bold text-sm ${f.flight.startsWith('SJ')?'text-blue-700 dark:text-blue-400':'text-amber-700 dark:text-amber-400'}">${esc(f.flight)}</td>
         <td class="px-3 py-2 font-mono text-sm">${f.origin||''}-${f.dest||''}</td>
         <td class="px-3 py-2 font-mono text-sm font-semibold text-blue-700 dark:text-blue-400">${f.std_utc||'-'}</td>
         <td class="px-3 py-2 font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">${localTime}</td>
@@ -7155,7 +7157,7 @@ function dfsApplyToInput(f){
   // Update DFS hint in step 2
   const localFromDfs = dfsUtcToLocal(f.std_utc, f.origin);
   const hint = $('#dfsHintStd');
-  if(hint) hint.textContent = `DFS: ${f.flight} ${f.origin}-${f.dest} | Lokal: ${localFromDfs}`;
+  if(hint) hint.textContent = `DFS: ${esc(f.flight)} ${f.origin}-${f.dest} | Lokal: ${localFromDfs}`;
   updatePreviews();
   showToast('Data DFS dimuat: '+f.flight+' '+f.origin+'-'+f.dest+' STD UTC '+f.std_utc,'success');
 }
@@ -7217,9 +7219,9 @@ setTimeout(()=>{
         const originIata = f.origin;
         const localTime = dfsUtcToLocal(f.std_utc, originIata);
         const hint = $('#dfsHintStd');
-        if(hint) hint.textContent = `DFS: ${f.flight} ${f.route} | UTC+lokal: ${localTime}`;
+        if(hint) hint.textContent = `DFS: ${esc(f.flight)} ${f.route} | UTC+lokal: ${localTime}`;
         updatePreviews();
-        showToast(`STD UTC ${f.std_utc} (${localTime}) dari DFS Bank: ${f.flight}`,'success');
+        showToast(`STD UTC ${f.std_utc} (${localTime}) dari DFS Bank: ${esc(f.flight)}`,'success');
       }
       if($('#route') && !$('#route').value && f.route){
         $('#route').value = f.route;
@@ -7262,7 +7264,7 @@ function updateDfsAutocomplete(flightNum, date){
     }
     const localDfs = dfsUtcToLocal(f.std_utc, f.origin);
     const hint = $('#dfsHintStd');
-    if(hint) hint.textContent = `DFS: ${f.flight} ${f.origin}-${f.dest} | Lokal: ${localDfs}`;
+    if(hint) hint.textContent = `DFS: ${esc(f.flight)} ${f.origin}-${f.dest} | Lokal: ${localDfs}`;
     showToast('DFS: '+f.flight+' '+f.origin+'-'+f.dest+' STD UTC '+f.std_utc,'info');
     updatePreviews();
   }
@@ -7474,7 +7476,7 @@ $('#btnDfsExportExcel').addEventListener('click',()=>{
   ws['!cols'] = colWidths;
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'DFS Bank');
-  XLSX.writeFile(wb, `DFS_Bank_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `DFS_Bank_${todayLocalStr()}.xlsx`);
   showToast('DFS Bank diexport ke Excel ('+rows.length+' rows)');
 });
 
@@ -7515,6 +7517,20 @@ try {
     // autoSync & syncDelaySec dihapus — diganti Smart-Sync otomatis
   };
 } catch(e){}
+
+// BUGFIX: saveCloudConfig dipanggil di banyak tempat (btnCloudSave, btnCloudLoad,
+// btnCloudClear, input change, cloudPush) tapi tidak pernah didefinisikan —
+// menyebabkan "saveCloudConfig is not defined" ReferenceError setiap kali push/pull.
+function saveCloudConfig(){
+  try {
+    localStorage.setItem(CLOUD_KEY, JSON.stringify({
+      supabaseUrl: cloudConfig.supabaseUrl,
+      supabaseKey: cloudConfig.supabaseKey
+    }));
+  } catch(e){
+    console.warn('[CloudSync] Gagal simpan cloud config:', e.message);
+  }
+}
 
 _supabaseClient = null;
 _realtimeChannel = null;
@@ -8109,13 +8125,31 @@ async function cloudPull(silent = false){
     // Gunakan localStorage langsung (BUKAN saveSettings) agar tidak memicu triggerAutoSync di tengah pull
     if(rec.settings) { settings = {...settings, ...rec.settings}; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); applyDarkMode(); }
     if(rec.training){
-      localStorage.setItem('sjn_training_v1', JSON.stringify(rec.training));
+      // BUGFIX: sebelumnya overwrite langsung — peserta yang ditambahkan di device lain bisa hilang.
+      // Gunakan mergeTraining() agar peserta, materi, banks, dan questions dari kedua device digabung.
+      const _localTraining = (function(){ try{ return JSON.parse(localStorage.getItem('sjn_training_v1')||'null'); }catch(e){ return null; } })();
+      const _mergedTraining = (typeof mergeTraining === 'function' && _localTraining)
+        ? mergeTraining(_localTraining, rec.training)
+        : rec.training;
+      localStorage.setItem('sjn_training_v1', JSON.stringify(_mergedTraining));
       if(window.trainingData){
-        Object.assign(window.trainingData, rec.training);
+        Object.assign(window.trainingData, _mergedTraining);
       }
     }
     if(Array.isArray(rec.users)){
-      localStorage.setItem('sjnam_users_v1', JSON.stringify(rec.users));
+      // BUGFIX: merge users instead of overwrite to avoid losing users added on other devices.
+      // Local admin user (id=1) always wins to prevent lockout.
+      const _localUsers = (function(){ try{ return JSON.parse(localStorage.getItem('sjnam_users_v1')||'null'); }catch(e){ return null; } })();
+      let _mergedUsers = rec.users;
+      if(_localUsers && Array.isArray(_localUsers)){
+        const _userMap = new Map();
+        // Remote first (lower priority)
+        rec.users.forEach(u=>{ if(u.id) _userMap.set(u.id, u); });
+        // Local overwrites (higher priority — local admin changes win)
+        _localUsers.forEach(u=>{ if(u.id) _userMap.set(u.id, u); });
+        _mergedUsers = Array.from(_userMap.values());
+      }
+      localStorage.setItem('sjnam_users_v1', JSON.stringify(_mergedUsers));
       if(typeof renderUserTable === 'function') renderUserTable();
     }
     // Restore data STCR
@@ -8263,14 +8297,27 @@ function startRealtimeSubscription(){
           // Gunakan localStorage langsung (BUKAN saveSettings) agar tidak memicu triggerAutoSync
           if(rec.settings) { settings = {...settings, ...rec.settings}; localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); applyDarkMode(); }
           if(rec.training){
-            localStorage.setItem('sjn_training_v1', JSON.stringify(rec.training));
-            if(window.trainingData){ Object.assign(window.trainingData, rec.training); }
+            // BUGFIX: merge training instead of overwrite to prevent data loss across devices
+            const _rtLocalTr = (function(){ try{ return JSON.parse(localStorage.getItem('sjn_training_v1')||'null'); }catch(e){ return null; } })();
+            const _rtMergedTr = (typeof mergeTraining === 'function' && _rtLocalTr)
+              ? mergeTraining(_rtLocalTr, rec.training)
+              : rec.training;
+            localStorage.setItem('sjn_training_v1', JSON.stringify(_rtMergedTr));
+            if(window.trainingData){ Object.assign(window.trainingData, _rtMergedTr); }
           }
           if(Array.isArray(rec.users)){
-            localStorage.setItem('sjnam_users_v1', JSON.stringify(rec.users));
-            if(typeof renderUserTable === 'function') renderUserTable();
-          }
-          // Restore data STCR dari realtime
+              // BUGFIX: merge users dari realtime — lokal menang untuk mencegah kehilangan user baru
+              const _rtLU = (function(){ try{ return JSON.parse(localStorage.getItem('sjnam_users_v1')||'null'); }catch(e){ return null; } })();
+              let _rtMU = rec.users;
+              if(_rtLU && Array.isArray(_rtLU)){
+                const _m = new Map();
+                rec.users.forEach(u=>{ if(u.id) _m.set(u.id, u); });
+                _rtLU.forEach(u=>{ if(u.id) _m.set(u.id, u); });
+                _rtMU = Array.from(_m.values());
+              }
+              localStorage.setItem('sjnam_users_v1', JSON.stringify(_rtMU));
+              if(typeof renderUserTable === 'function') renderUserTable();
+          }          // Restore data STCR dari realtime
           if(Array.isArray(rec.stcrData) && rec.stcrData.length > 0){
             localStorage.setItem('sjnam_stcr_data_v1', JSON.stringify(rec.stcrData));
             if(window.STCR && typeof window.STCR.loadData === 'function'){
@@ -10144,7 +10191,7 @@ document.addEventListener('DOMContentLoaded', function(){
     ws['!cols'] = Object.keys(rows[0]).map(()=>({wch:18}));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data Peserta');
-    XLSX.writeFile(wb, `Bank_Data_Peserta_Training_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `Bank_Data_Peserta_Training_${todayLocalStr()}.xlsx`);
   });
 
   // =============================================================
@@ -10204,8 +10251,13 @@ document.addEventListener('DOMContentLoaded', function(){
   function addYears(dateStr, years){
     const d = new Date(dateStr);
     if(isNaN(d.getTime())) return '';
-    d.setFullYear(d.getFullYear()+years);
-    return d.toISOString().slice(0,10);
+    // BUGFIX: setFullYear kemudian format manual agar tidak ada UTC timezone shift
+    const ny = d.getFullYear() + years;
+    // Gunakan komponen lokal (bukan UTC) agar tanggal tidak geser di zona WIB/WITA/WIT
+    const yy = ny;
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yy}-${mm}-${dd}`;
   }
 
   // Render certificate into a given set of element-id prefixes
@@ -10814,6 +10866,9 @@ function renderCertificate(p, prefix){
   }, 500);
 
   async function downloadCertificate(previewElId, filenamePrefix, certNo){
+  // BUGFIX: wrap seluruh fungsi dalam try-catch agar kegagalan html2canvas/jsPDF
+  // tidak menyebabkan unhandled promise rejection tanpa feedback ke user.
+  try {
     const el = document.getElementById(previewElId);
     if(typeof html2canvas === 'undefined'){ showToast('html2canvas belum load','error'); return null; }
     showToast('Membuat PDF (kualitas tinggi)...','info');
@@ -10837,22 +10892,27 @@ function renderCertificate(p, prefix){
     pdf.save(`${filenamePrefix}-${certNo}.pdf`);
     showToast('PDF berhasil diunduh ✅','success');
     return imgData;
+  } catch(err){
+    // BUGFIX: catch PDF generation errors and show user-friendly message
+    showToast('Gagal membuat PDF: ' + err.message, 'error');
+    console.error('[downloadCertificate]', err);
+    return null;
   }
   window.downloadCertificate = downloadCertificate;
 
   function sendCertificateEmail(p){
     const airlinesName = p.airlines==='nam' ? 'NAM Air' : 'Sriwijaya Air';
-    const subject = `Sertifikat Training ${airlinesName} - ${p.nama} (${p.certNo})`;
+    const subject = `Sertifikat Training ${airlinesName} - ${esc(p.nama)} (${p.certNo})`;
     const body = [
-      `Yth. ${p.nama},`,
+      `Yth. ${esc(p.nama)},`,
       '',
       `Terima kasih telah menyelesaikan Soal Training Basic Service Indoctrination ${airlinesName}.`,
       '',
       `No Sertifikat : ${p.certNo}`,
       `Tanggal Training : ${fmtDate(p.tanggal)} pukul ${p.jam}`,
-      `Stasiun : ${p.stasiun}`,
-      `Perusahaan : ${p.perusahaan}`,
-      `Jabatan : ${p.jabatan}`,
+      `Stasiun : ${esc(p.stasiun)}`,
+      `Perusahaan : ${esc(p.perusahaan)}`,
+      `Jabatan : ${esc(p.jabatan)}`,
       `Skor : ${p.score} / ${p.maxScore}`,
       `Berlaku hingga : ${fmtDate(p.expiredDate)}`,
       '',
@@ -11107,11 +11167,20 @@ function renderCertificate(p, prefix){
       score,
       maxScore,
       createdAt: new Date().toISOString(),
-      expiredDate: addYears(tanggal || new Date().toISOString().slice(0,10), 2),
+      expiredDate: addYears(tanggal || todayLocalStr(), 2),
     };
     if(trainingData.peserta.length >= 150){ showToast("Maksimal 150 peserta tercapai","error"); return; }
-    trainingData.peserta.push(peserta);
-    saveTraining();
+    // BUGFIX: wrap dalam try-catch agar kegagalan saveTraining (misal localStorage penuh)
+    // tidak menyebabkan data peserta setengah tersimpan tanpa notifikasi ke user.
+    try {
+      trainingData.peserta.push(peserta);
+      saveTraining();
+    } catch(err){
+      showToast('Gagal menyimpan data peserta: ' + err.message, 'error');
+      // Rollback push jika saveTraining gagal
+      trainingData.peserta.pop();
+      return;
+    }
     if(typeof renderPeserta === 'function') renderPeserta();
     // RULE BARU: langsung sync ke cloud saat peserta klik Selesai & Lihat Skor
     if(typeof cloudPush === 'function' && typeof cloudConfig !== 'undefined' && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
@@ -11394,7 +11463,7 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     ws['!cols'] = [{wch:4},{wch:20},{wch:25},{wch:16},{wch:16},{wch:12}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Bank Station');
-    XLSX.writeFile(wb, `Bank_Station_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `Bank_Station_${todayLocalStr()}.xlsx`);
   });
 
   // =============================================================
@@ -12228,7 +12297,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
 
     destroyChart('trendChart');
-    charts.trendChart = new Chart(trendCanvas,{
+    charts.if(trendChart && typeof trendChart.destroy === "function"){ trendChart.destroy(); } trendChart = new Chart(trendCanvas,{
       type:'line',
       data:{labels:sortedKeys.map(k=>k.replace('-',' ')),datasets:[{
         label:'Jumlah Request',data:sortedKeys.map(k=>trendMap[k]),
@@ -12246,7 +12315,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const other = data.length-stcrCount-pobCount-bothCount;
 
     destroyChart('pieChart');
-    charts.pieChart = new Chart(pieCanvas,{
+    charts.if(pieChart && typeof pieChart.destroy === "function"){ pieChart.destroy(); } pieChart = new Chart(pieCanvas,{
       type:'doughnut',
       data:{labels:['STCR','POB','STCR & POB','Lainnya'],
         datasets:[{data:[stcrCount,pobCount,bothCount,other],backgroundColor:['#7C3AED','#0D6E8A','#E8A427','#9CA3AF'],borderWidth:2}]},
@@ -12260,7 +12329,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const revKeys = sortedKeys.filter(k=>revMap[k]);
 
     destroyChart('revenueChart');
-    charts.revenueChart = new Chart(revCanvas,{
+    charts.if(revenueChart && typeof revenueChart.destroy === "function"){ revenueChart.destroy(); } revenueChart = new Chart(revCanvas,{
       type:'bar',
       data:{labels:revKeys.map(k=>k.replace('-',' ')),datasets:[{
         label:'Revenue (juta Rp)',data:revKeys.map(k=>revMap[k]/1000000),
@@ -12276,7 +12345,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const topSt = Object.entries(stMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
     destroyChart('stationChart');
-    charts.stationChart = new Chart(stCanvas,{
+    charts.if(stationChart && typeof stationChart.destroy === "function"){ stationChart.destroy(); } stationChart = new Chart(stCanvas,{
       type:'bar',
       data:{labels:topSt.map(s=>s[0]),datasets:[{label:'Request',data:topSt.map(s=>s[1]),backgroundColor:'#0B1E3A',borderRadius:4}]},
       options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},
@@ -12312,7 +12381,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
 
     destroyChart('yoyChart');
-    charts.yoyChart = new Chart(yoyCanvas,{
+    charts.if(yoyChart && typeof yoyChart.destroy === "function"){ yoyChart.destroy(); } yoyChart = new Chart(yoyCanvas,{
       type:'bar',
       data:{labels:years,datasets:[{label:'Jumlah Request per Tahun',data:yoyCounts,backgroundColor:'#7C3AED',borderRadius:6}]},
       options:{responsive:true,plugins:{
@@ -12351,7 +12420,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     });
 
     destroyChart('momChart');
-    charts.momChart = new Chart(momCanvas,{
+    charts.if(momChart && typeof momChart.destroy === "function"){ momChart.destroy(); } momChart = new Chart(momCanvas,{
       type:'bar',
       data:{labels:momLabels,datasets:[{label:'Jumlah Request per Bulan',data:momCounts,backgroundColor:'#0EA5E9',borderRadius:6}]},
       options:{responsive:true,plugins:{
@@ -13273,37 +13342,37 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const dashExcelBtn = $id('btnStcrDashExportExcel');
     if(dashExcelBtn) dashExcelBtn.addEventListener('click', ()=>{
       const filteredDash = getFiltered();
-      stcrExportExcelData(filteredDash, 'STCR Dashboard', 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.xlsx');
+      stcrExportExcelData(filteredDash, 'STCR Dashboard', 'STCR_Dashboard_'+todayLocalStr()+'.xlsx');
     });
     const dashPdfBtn = $id('btnStcrDashExportPdf');
     if(dashPdfBtn) dashPdfBtn.addEventListener('click', async ()=>{
       const filterDesc = buildFilterLabel(['stcr-f-year','stcr-f-month','stcr-f-aoc','stcr-f-req','stcr-f-station']);
       if(typeof showToast==='function') showToast('⏳ Menyiapkan PDF Dashboard STCR…','info');
-      await stcrExportDashboardPdf(filterDesc, 'STCR_Dashboard_'+new Date().toISOString().slice(0,10)+'.pdf');
+      await stcrExportDashboardPdf(filterDesc, 'STCR_Dashboard_'+todayLocalStr()+'.pdf');
     });
 
     // Data Request exports (export filtered data)
     const dataExcelBtn = $id('btnStcrDataExportExcel');
     if(dataExcelBtn) dataExcelBtn.addEventListener('click', ()=>{
       const rows = getTableFiltered().map(r=>r.item);
-      stcrExportExcelData(rows, 'Data Request', 'STCR_DataRequest_'+new Date().toISOString().slice(0,10)+'.xlsx');
+      stcrExportExcelData(rows, 'Data Request', 'STCR_DataRequest_'+todayLocalStr()+'.xlsx');
     });
     const dataPdfBtn = $id('btnStcrDataExportPdf');
     if(dataPdfBtn) dataPdfBtn.addEventListener('click', ()=>{
       const rows = getTableFiltered().map(r=>r.item);
       const filterDesc = buildFilterLabel(['stcr-s-year','stcr-s-month','stcr-s-aoc','stcr-s-req','stcr-s-station']);
-      stcrExportPdfData(rows, 'STCR & POB — Data Request' + filterDesc, 'STCR_DataRequest_'+new Date().toISOString().slice(0,10)+'.pdf');
+      stcrExportPdfData(rows, 'STCR & POB — Data Request' + filterDesc, 'STCR_DataRequest_'+todayLocalStr()+'.pdf');
     });
 
     // Station exports
     const stExcelBtn = $id('btnStcrStationExportExcel');
     if(stExcelBtn) stExcelBtn.addEventListener('click', ()=>{
-      stcrExportStationExcel('STCR_PerStasiun_'+new Date().toISOString().slice(0,10)+'.xlsx');
+      stcrExportStationExcel('STCR_PerStasiun_'+todayLocalStr()+'.xlsx');
     });
     const stPdfBtn = $id('btnStcrStationExportPdf');
     if(stPdfBtn) stPdfBtn.addEventListener('click', async ()=>{
       if(typeof showToast==='function') showToast('⏳ Menyiapkan PDF Station STCR…','info');
-      await stcrExportStationPdf('STCR_PerStasiun_'+new Date().toISOString().slice(0,10)+'.pdf', buildFilterLabel(['stcr-st-year','stcr-st-month']));
+      await stcrExportStationPdf('STCR_PerStasiun_'+todayLocalStr()+'.pdf', buildFilterLabel(['stcr-st-year','stcr-st-month']));
     });
   }
 
@@ -14301,7 +14370,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     destroyDgChart('monthly');
     const ctx1 = document.getElementById('dgChartMonthly');
     if(ctx1 && months.length){
-      dgCharts.monthly = new Chart(ctx1,{type:'bar',data:{labels:months,datasets:[
+      dgCharts.if(monthly && typeof monthly.destroy === "function"){ monthly.destroy(); } monthly = new Chart(ctx1,{type:'bar',data:{labels:months,datasets:[
         {label:'IN',data:months.map(m=>monthMap[m].in),backgroundColor:'#10b981',borderRadius:4,
           datalabels:{display:true,color:'#065f46',font:{size:9,weight:'bold'},anchor:'end',align:'top',formatter:v=>v>0?v.toLocaleString('id-ID'):''}},
         {label:'OUT',data:months.map(m=>monthMap[m].out),backgroundColor:'#ef4444',borderRadius:4,
@@ -14316,7 +14385,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     destroyDgChart('topItems');
     const ctx2 = document.getElementById('dgChartTopItems');
     if(ctx2 && topItems.length){
-      dgCharts.topItems = new Chart(ctx2,{type:'bar',data:{labels:topItems.map(x=>x[0]),datasets:[{label:'Total OUT',data:topItems.map(x=>x[1]),backgroundColor:'#6366f1',borderRadius:4,
+      dgCharts.if(topItems && typeof topItems.destroy === "function"){ topItems.destroy(); } topItems = new Chart(ctx2,{type:'bar',data:{labels:topItems.map(x=>x[0]),datasets:[{label:'Total OUT',data:topItems.map(x=>x[1]),backgroundColor:'#6366f1',borderRadius:4,
         datalabels:{display:true,color:'#312e81',font:{size:9,weight:'bold'},anchor:'end',align:'right',formatter:v=>v>0?v.toLocaleString('id-ID'):''}}]},
       options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},datalabels:{display:true}},scales:{x:{ticks:{font:{size:9}}}}}});
     }
@@ -14328,7 +14397,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const ctx3 = document.getElementById('dgChartStation');
     if(ctx3 && Object.keys(stMap).length){
       const stTotal = Object.values(stMap).reduce((a,b)=>a+b,0);
-      dgCharts.station = new Chart(ctx3,{type:'pie',data:{labels:Object.keys(stMap),datasets:[{data:Object.values(stMap),backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'],
+      dgCharts.if(station && typeof station.destroy === "function"){ station.destroy(); } station = new Chart(ctx3,{type:'pie',data:{labels:Object.keys(stMap),datasets:[{data:Object.values(stMap),backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'],
         datalabels:{display:true,color:'#fff',font:{size:10,weight:'bold'},formatter:(v,ctx)=>{const pct=stTotal?Math.round(v/stTotal*100):0;return v>0?`${v.toLocaleString('id-ID')}\n${pct}%`:'';}}}]},options:{responsive:true,plugins:{legend:{display:true,position:'bottom'},datalabels:{display:true}}}});
     }
 
@@ -14637,7 +14706,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data Stok');
-    XLSX.writeFile(wb, `Drygoods_Stok_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `Drygoods_Stok_${todayLocalStr()}.xlsx`);
     showToast('Export Excel berhasil');
   });
 
@@ -14909,7 +14978,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'IFS Karyawan');
-    XLSX.writeFile(wb, `Drygoods_IFS_Karyawan_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `Drygoods_IFS_Karyawan_${todayLocalStr()}.xlsx`);
     showToast('Export Excel karyawan berhasil');
   });
 
@@ -15270,7 +15339,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Bank Item');
-    XLSX.writeFile(wb, `Drygoods_BankItem_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `Drygoods_BankItem_${todayLocalStr()}.xlsx`);
     showToast('Export Excel bank item berhasil');
   });
 
