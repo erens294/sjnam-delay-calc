@@ -98,7 +98,7 @@
 }
 
 /* Accordion sidebar: .collapsed=tutup, tanpa .collapsed=buka.
-   body.js-ready hanya untuk transition animation — bukan untuk visibility. */
+   body.js-ready hanya untuk animasi transition — tidak mengontrol visibility. */
 #serviceRecoveryMenuContent,
 #adminMenuContent,
 #trainingMenuContent,
@@ -1307,7 +1307,7 @@ table:not(.stcr-page table) tbody td {
           <span id="clockUtc" class="opacity-70"></span>
         </div>
         <span id="userNameDisplay" class="text-sm font-semibold text-slate-700 dark:text-slate-200"></span>
-        <span id="userRoleDisplay" class="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"></span>
+        <span id="userRoleDisplay" class="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" style="display:none"></span>
         <button id="btnLogout" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition">Keluar</button>
       </div>
       <div id="offlineBadge" class="hidden px-2 py-1 bg-red-500 text-white text-xs rounded ml-2">Offline</div>
@@ -7723,8 +7723,8 @@ async function cloudPush(silent=false){
     _lastPushedHash = _hashPayload(mergedPayload);
     _lastCloudUpdatedAt = serverUpdatedAt;
     try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){}
-    // Push berhasil → hapus flag pending rolePerms (sudah tersimpan di cloud)
-    window._pendingRolePermsChange = false;
+    // Push berhasil → rolePerms sudah aman di cloud, hapus flag dirty
+    window._rolePermsLocalDirty = false;
     updateSyncStatus('connected');
     cloudLog('✅ Data tersimpan ke Supabase ('+data.length+' delay, '+dfsData.length+' DFS)', 'success');
     if(!silent) showToast('⚡ Supabase Sync berhasil! ('+data.length+' records)','success');
@@ -7826,11 +7826,15 @@ async function cloudPull(silent = false){
       }
     }
     // Restore hak akses per-role
-    // BUGFIX: jika Admin baru saja menyimpan perms (_pendingRolePermsChange=true),
-    // jangan timpa dengan data lama dari cloud — biarkan push lokal yang menang.
+    // BUGFIX: jangan timpa rolePerms lokal yang baru disimpan Admin (_rolePermsLocalDirty=true)
+    // sebelum sempat di-push ke cloud. Biarkan push yang sudah dijadwalkan yang menang.
     if(rec.rolePerms){
-      if(window._pendingRolePermsChange){
+      if(window._rolePermsLocalDirty){
         cloudLog('⏭️ Pull: skip rolePerms dari cloud — ada perubahan lokal yang belum ter-push', 'info');
+        // Jadwalkan push ulang agar perms lokal tidak hilang
+        if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl){
+          setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._rolePermsLocalDirty=false; }); }, 200);
+        }
       } else {
         localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
         if(typeof window.renderPermTable === 'function') window.renderPermTable();
@@ -7856,8 +7860,8 @@ async function cloudPull(silent = false){
     }
     // Simpan timestamp & hash SEBELUM melepas flag, agar triggerAutoSync tidak push balik
     // Batalkan push timer yang mungkin sedang menunggu (debounce) — data sudah diambil dari cloud
-    // BUGFIX: jangan batalkan timer jika Ada perubahan rolePerms lokal yang belum ter-push
-    if(!window._pendingRolePermsChange){
+    // BUGFIX: jangan batalkan jika ada perubahan rolePerms lokal yang belum ter-push
+    if(!window._rolePermsLocalDirty){
       if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
     }
     _lastCloudUpdatedAt = cloudUpdatedAt;
@@ -7970,13 +7974,13 @@ function startRealtimeSubscription(){
             }
           }
           // Restore hak akses per-role dari realtime
-          // BUGFIX: jangan timpa perms lokal yang baru disimpan Admin
+          // BUGFIX: sama seperti cloudPull — jangan timpa perms lokal yang dirty
           if(rec.rolePerms){
-            if(window._pendingRolePermsChange){
+            if(window._rolePermsLocalDirty){
               cloudLog('⏭️ Realtime: skip rolePerms dari cloud — ada perubahan lokal yang belum ter-push', 'info');
-              // Push balik perms lokal agar cloud sinkron dengan perubahan Admin
+              // Push balik perms lokal agar cloud sinkron
               if(typeof cloudPush === 'function' && cloudConfig.supabaseUrl){
-                setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._pendingRolePermsChange = false; }); }, 300);
+                setTimeout(function(){ cloudPush(true).then(function(ok){ if(ok) window._rolePermsLocalDirty=false; }); }, 300);
               }
             } else {
               localStorage.setItem('sjnam_role_perms_v1', JSON.stringify(rec.rolePerms));
@@ -8004,8 +8008,8 @@ function startRealtimeSubscription(){
           // Simpan server timestamp — PENTING: gunakan updated_at dari server, bukan waktu lokal
           if(payload.new?.updated_at){ _lastCloudUpdatedAt = payload.new.updated_at; try{ localStorage.setItem(_LAST_PULL_TS_KEY, _lastCloudUpdatedAt); }catch(e){} }
           // Batalkan push timer yang mungkin sedang menunggu — data sudah datang dari cloud
-          // BUGFIX: jangan batalkan timer jika ada perubahan rolePerms lokal yang belum ter-push
-          if(!window._pendingRolePermsChange){
+          // BUGFIX: jangan batalkan jika ada perubahan rolePerms lokal yang belum ter-push
+          if(!window._rolePermsLocalDirty){
             if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); _autoSyncTimer = null; }
           }
           // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
@@ -8458,7 +8462,13 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   document.getElementById('userPanel').classList.remove('hidden');
   document.getElementById('userPanel').classList.add('flex');
   document.getElementById('userNameDisplay').textContent = user.name;
-  document.getElementById('userRoleDisplay').textContent = user.role;
+  const _roleDisplayEl = document.getElementById('userRoleDisplay');
+  if(_roleDisplayEl){
+    // Hanya tampilkan badge role untuk Admin dan Co-Admin — role lain tidak perlu ditampilkan
+    const _showRole = (user.role === 'Admin' || user.role === 'Co-Admin');
+    _roleDisplayEl.textContent = _showRole ? user.role : '';
+    _roleDisplayEl.style.display = _showRole ? '' : 'none';
+  }
   const _sideNameEl = document.getElementById('userNameDisplaySide');
   const _sideRoleEl = document.getElementById('userRoleDisplaySide');
   if(_sideNameEl) _sideNameEl.textContent = user.name;
@@ -8695,7 +8705,7 @@ function applyPermissions(){
     // Sembunyikan tombol Edit & Del di tabel data (read-only)
     window.currentUserReadOnly = true;
   } else if(isAdmin || isCoAdmin) {
-    // Admin & Co-Admin: semua tab
+    // Admin & Co-Admin saja: semua tab
     if(tabAdminBtn) tabAdminBtn.style.display = '';
     if(tabStations) tabStations.style.display = '';
     if(tabDfs) tabDfs.style.display = '';
@@ -8723,8 +8733,8 @@ function applyPermissions(){
     if(btnStartPeserta2) btnStartPeserta2.style.display = '';
     window.currentUserReadOnly = false;
   } else {
-    // Custom roles (UserXXX/UserXX/UserX dll) — fail-closed: semua tab hidden.
-    // window.applyPermissions (patched) yang mengatur akses berdasarkan tabel permission.
+    // Custom roles (UserXXX/UserXX/UserX dll): fail-closed — semua tab hidden.
+    // window.applyPermissions (patched) menangani akses sesuai tabel permission.
     [tabAdminBtn,tabStations,tabDfs,tabRequest,tabSettings,tabHome,
      tabInput,tabData,tabDashboard,tabMateri,tabSoal,tabSertifikat].forEach(function(el){
       if(el) el.style.display = 'none';
@@ -8733,8 +8743,8 @@ function applyPermissions(){
     if(trainingMenuGroup) trainingMenuGroup.style.display = 'none';
     if(stcrMenuGroup) stcrMenuGroup.style.display = 'none';
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
-    var _svcG = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
-    if(_svcG) _svcG.style.display = 'none';
+    var _svcG2 = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
+    if(_svcG2) _svcG2.style.display = 'none';
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = 'none';
     window.currentUserReadOnly = true;
   }
@@ -9106,7 +9116,12 @@ function restoreSession(){
       document.getElementById('userPanel').classList.remove('hidden');
       document.getElementById('userPanel').classList.add('flex');
       document.getElementById('userNameDisplay').textContent = currentUser.name;
-      document.getElementById('userRoleDisplay').textContent = currentUser.role;
+      const _roleDispEl = document.getElementById('userRoleDisplay');
+      if(_roleDispEl){
+        const _showRoleCh = (currentUser.role === 'Admin' || currentUser.role === 'Co-Admin');
+        _roleDispEl.textContent = _showRoleCh ? currentUser.role : '';
+        _roleDispEl.style.display = _showRoleCh ? '' : 'none';
+      }
       const sideNameEl = document.getElementById('userNameDisplaySide');
       const sideRoleEl = document.getElementById('userRoleDisplaySide');
       if(sideNameEl) sideNameEl.textContent = currentUser.name;
@@ -11047,21 +11062,27 @@ window.addEventListener('beforeunload', ()=>{
     try { return JSON.parse(localStorage.getItem(PERM_KEY)) || null; } catch(e){ return null; }
   }
   function savePerms(p){
-    // Simpan ke localStorage
     localStorage.setItem(PERM_KEY, JSON.stringify(p));
-    // Tandai bahwa ada perubahan rolePerms lokal yang belum ter-push ke cloud
-    // Flag ini mencegah cloudPull/realtime menimpa perms baru sebelum sempat di-push
-    window._pendingRolePermsChange = true;
-    // Push SEGERA ke cloud — jangan pakai debounce karena rolePerms adalah
-    // pengaturan kritis dan timer debounce bisa dibatalkan oleh cloudPull/realtime
-    if(typeof cloudPush === 'function' && typeof cloudConfig !== 'undefined'
+    // Tandai bahwa ada perubahan rolePerms lokal yang BELUM ter-push ke cloud.
+    // Flag ini melindungi dari overwrite oleh cloudPull/realtime sebelum push selesai.
+    window._rolePermsLocalDirty = true;
+    // Push LANGSUNG ke cloud (bypass debounce 800ms) karena:
+    // 1. rolePerms adalah pengaturan kritis — jangan bergantung pada debounce timer
+    //    yang bisa dibatalkan oleh cloudPull atau realtime event.
+    // 2. Ukuran payload kecil, aman di-push langsung.
+    if(typeof cloudPush === 'function'
+       && typeof cloudConfig !== 'undefined'
        && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
       cloudPush(true).then(function(ok){
-        if(ok) window._pendingRolePermsChange = false;
-      }).catch(function(){ /* silent — triggerAutoSync sebagai fallback */ });
+        if(ok) window._rolePermsLocalDirty = false;
+      }).catch(function(){
+        // Jika push gagal, fallback ke debounce trigger
+        if(typeof triggerAutoSync === 'function') triggerAutoSync();
+      });
+    } else {
+      // Cloud belum dikonfigurasi — pakai triggerAutoSync sebagai fallback
+      if(typeof triggerAutoSync === 'function') triggerAutoSync();
     }
-    // Tetap trigger autoSync sebagai fallback jika cloud belum dikonfigurasi
-    if(typeof triggerAutoSync === 'function') triggerAutoSync();
   }
   function getDefaultPerms(){
     const p = {};
@@ -11294,6 +11315,22 @@ window.addEventListener('beforeunload', ()=>{
     if(_patchedSb && !_patchedSb.classList.contains('perm-ready')) _patchedSb.classList.add('perm-ready');
     const _patchedMain = document.getElementById('mainContent');
     if(_patchedMain && !_patchedMain.classList.contains('perm-ready')) _patchedMain.classList.add('perm-ready');
+
+    // BUGFIX: Setelah permissions diterapkan, tab yang sedang aktif mungkin sudah
+    // disembunyikan (display:none). Pastikan tab yang ditampilkan sesuai dengan akses role.
+    requestAnimationFrame(function(){
+      var _ap = document.querySelector('.tab-pane.active');
+      var _apId = _ap ? _ap.id.replace('tab-','') : null;
+      if(_apId && !isAdmin){
+        var _fp = 'tab-' + _apId;
+        var _pr = (typeof window.getRolePerms==='function') ? window.getRolePerms() : null;
+        var _rk = (typeof window.roleNameToKey==='function') ? window.roleNameToKey(_cu.role) : null;
+        var _ok = _pr && _rk && _pr[_fp] && !!_pr[_fp][_rk];
+        if(!_ok && typeof restoreSession === 'function') restoreSession();
+      } else if(!_apId && typeof restoreSession === 'function'){
+        restoreSession();
+      }
+    });
   };
 
 })();
@@ -14452,7 +14489,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     showToast('Export Excel karyawan berhasil');
   });
 
-  // ── SIDEBAR TOGGLE — handled by DOMContentLoaded block ───────────────────────
+  // ── SIDEBAR TOGGLE — dikontrol sepenuhnya oleh DOMContentLoaded block ────────
 
   // ── TAB SWITCHING HOOK ───────────────────────────────────────────
   const _origSwitch = window.switchTab;
