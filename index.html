@@ -97,49 +97,36 @@
   pointer-events: auto;
 }
 
-/* Smooth accordion */
-/* Pre-collapse all group menus — collapsed class di HTML memastikan tidak ada flash */
-#serviceRecoveryMenuContent, #adminMenuContent, #trainingMenuContent, #stcrMenuContent, #drygoodsMenuContent {
+/* ============================================================
+   ACCORDION SIDEBAR — simplified, no body.js-ready dependency.
+   .collapsed = closed. Tanpa .collapsed = terbuka.
+   Transition diaktifkan setelah body.js-ready (cegah flash awal).
+   ============================================================ */
+#serviceRecoveryMenuContent,
+#adminMenuContent,
+#trainingMenuContent,
+#stcrMenuContent,
+#drygoodsMenuContent {
   overflow: hidden;
-  max-height: 0;
-  opacity: 0;
+  max-height: 1200px;   /* DEFAULT: terbuka */
+  opacity: 1;
 }
-/* js-ready hanya mengaktifkan transition, TIDAK membuka menu */
-/* Menu terbuka dikontrol oleh :not(.collapsed) di bawah */
+/* Collapsed state — ini yang MENUTUP accordion */
+#serviceRecoveryMenuContent.collapsed,
+#adminMenuContent.collapsed,
+#trainingMenuContent.collapsed,
+#stcrMenuContent.collapsed,
+#drygoodsMenuContent.collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+}
+/* Transition diaktifkan HANYA setelah js-ready agar tidak animasi saat render awal */
 body.js-ready #serviceRecoveryMenuContent,
 body.js-ready #adminMenuContent,
 body.js-ready #trainingMenuContent,
 body.js-ready #stcrMenuContent,
 body.js-ready #drygoodsMenuContent {
   transition: max-height 0.3s ease, opacity 0.25s ease;
-}
-/* Saat terbuka (tidak collapsed) */
-body.js-ready #serviceRecoveryMenuContent:not(.collapsed),
-body.js-ready #adminMenuContent:not(.collapsed),
-body.js-ready #trainingMenuContent:not(.collapsed),
-body.js-ready #stcrMenuContent:not(.collapsed),
-body.js-ready #drygoodsMenuContent:not(.collapsed) {
-  max-height: 1200px;
-  opacity: 1;
-}
-/* Saat collapsed */
-body.js-ready #serviceRecoveryMenuContent.collapsed,
-body.js-ready #adminMenuContent.collapsed,
-body.js-ready #trainingMenuContent.collapsed,
-body.js-ready #stcrMenuContent.collapsed,
-body.js-ready #drygoodsMenuContent.collapsed {
-  max-height: 0;
-  opacity: 0;
-}
-/* Saat sidebar mini (collapsed), paksa semua accordion tertutup agar tidak tumpang tindih */
-#sidebar.collapsed #serviceRecoveryMenuContent,
-#sidebar.collapsed #adminMenuContent,
-#sidebar.collapsed #trainingMenuContent,
-#sidebar.collapsed #stcrMenuContent,
-#sidebar.collapsed #drygoodsMenuContent {
-  max-height: 0 !important;
-  opacity: 0 !important;
-  overflow: hidden !important;
 }
 /* Tooltip for mini sidebar */
 #sidebar.collapsed .sidebar-btn {
@@ -163,6 +150,8 @@ body.js-ready #drygoodsMenuContent.collapsed {
   z-index: 100;
   pointer-events: none;
 }
+/* Pastikan mainContent.collapsed mengikuti lebar sidebar mini */
+#mainContent.collapsed { margin-left: 4rem !important; }
 
 
 /* === CLEAN PROFESSIONAL ENHANCEMENTS === */
@@ -1142,7 +1131,7 @@ table:not(.stcr-page table) tbody td {
     <div class="mb-1 border-t border-neutral-800 pt-4">
       <button id="toggleServiceRecoveryMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="serviceRecoveryMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Service Recovery</p>
-        <svg id="iconServiceRecoveryMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <svg id="iconServiceRecoveryMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" style="transform:rotate(-90deg)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="serviceRecoveryMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="input" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Input" type="button">
@@ -1165,7 +1154,7 @@ table:not(.stcr-page table) tbody td {
     <div class="mt-4 pt-4 border-t border-neutral-800">
       <button id="toggleStcrMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="stcrMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Stretchercase &amp; POB Request</p>
-        <svg id="iconStcrMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <svg id="iconStcrMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" style="transform:rotate(-90deg)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="stcrMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="stcr-dashboard" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Stretchercase & POB Dashboard" type="button">
@@ -1182,7 +1171,7 @@ table:not(.stcr-page table) tbody td {
     <div class="mt-4 pt-4 border-t border-neutral-800">
       <button id="toggleTrainingMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="trainingMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Service Training</p>
-        <svg id="iconTrainingMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <svg id="iconTrainingMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" style="transform:rotate(-90deg)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="trainingMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="materi" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Materi Training" type="button">
@@ -1204,7 +1193,7 @@ table:not(.stcr-page table) tbody td {
     <div class="mt-4 pt-4 border-t border-neutral-800">
       <button id="toggleAdminMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="adminMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-neutral-500 font-semibold">Admin</p>
-        <svg id="iconAdminMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <svg id="iconAdminMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" style="transform:rotate(-90deg)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="adminMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="admin" id="tabAdminBtn" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Admin" type="button">
@@ -1223,7 +1212,7 @@ table:not(.stcr-page table) tbody td {
     <div class="mt-4 pt-4 border-t border-neutral-800">
       <button id="toggleDrygoodsMenu" type="button" class="w-full flex items-center justify-between px-3 mb-2 group hover:opacity-80 transition" aria-expanded="false" aria-controls="drygoodsMenuContent">
         <p class="sidebar-text text-[11px] uppercase tracking-wider text-amber-600 font-semibold">Drygoods</p>
-        <svg id="iconDrygoodsMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        <svg id="iconDrygoodsMenu" class="sidebar-text w-3 h-3 text-neutral-500 group-hover:text-white transition-transform duration-200" style="transform:rotate(-90deg)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div id="drygoodsMenuContent" class="space-y-1 collapsed" aria-hidden="true">
         <button data-tab="drygoods-bankitem" class="sidebar-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-neutral-900 hover:text-white transition" title="Bank Item Drygoods" type="button">
@@ -9299,34 +9288,52 @@ document.addEventListener('DOMContentLoaded', function(){
     if(collapsed){
       sidebar.classList.add('collapsed');
       mainContent.classList.add('collapsed');
-      mainContent.classList.remove('ml-64', 'ml-16');
-      // Tutup semua accordion saat sidebar di-minimise agar tidak tumpang tindih
+      mainContent.classList.remove('ml-64');
+      // Tutup semua accordion saat sidebar mini — konten hidden tapi masih makan ruang
       ['serviceRecoveryMenuContent','stcrMenuContent','trainingMenuContent','adminMenuContent','drygoodsMenuContent'].forEach(id=>{
         const el = document.getElementById(id);
-        if(el){ el.classList.add('collapsed'); el.setAttribute('aria-hidden','true'); }
+        if(el && !el.classList.contains('collapsed')){
+          el.classList.add('collapsed');
+          el.setAttribute('aria-hidden','true');
+          el._wasOpen = true; // tandai agar bisa di-restore saat expand
+        }
       });
       ['iconServiceRecoveryMenu','iconStcrMenu','iconTrainingMenu','iconAdminMenu','iconDrygoodsMenu'].forEach(id=>{
         const ic = document.getElementById(id);
         if(ic) ic.style.transform = 'rotate(-90deg)';
       });
+      ['toggleServiceRecoveryMenu','toggleStcrMenu','toggleTrainingMenu','toggleAdminMenu','toggleDrygoodsMenu'].forEach(id=>{
+        const bt = document.getElementById(id);
+        if(bt) bt.setAttribute('aria-expanded','false');
+      });
     } else {
       sidebar.classList.remove('collapsed');
-      mainContent.classList.remove('collapsed', 'ml-16');
+      mainContent.classList.remove('collapsed');
       mainContent.classList.add('ml-64');
-      // Restore accordion state dari localStorage setelah sidebar dibuka kembali
-      const _u = (function(){ try{ return JSON.parse(localStorage.getItem('sjnam_session_v1')||'null'); }catch(e){ return null; } })();
-      const _sfx = _u ? '_' + _u.username : '';
-      [
-        ['serviceRecoveryMenuContent','iconServiceRecoveryMenu','toggleServiceRecoveryMenu','sidenav_svcrecovery_open'+_sfx],
-        ['adminMenuContent','iconAdminMenu','toggleAdminMenu','sidenav_admin_open'+_sfx],
-        ['stcrMenuContent','iconStcrMenu','toggleStcrMenu','sidenav_stcr_open'+_sfx],
-        ['trainingMenuContent','iconTrainingMenu','toggleTrainingMenu','sjnam_training_menu_open'+_sfx],
-        ['drygoodsMenuContent','iconDrygoodsMenu','toggleDrygoodsMenu','sjnam_drygoods_menu_open'+_sfx],
-      ].forEach(([cId, iId, bId, key])=>{
-        const savedOpen = localStorage.getItem(key);
-        if(savedOpen === '1'){
-          const c = document.getElementById(cId); const ic = document.getElementById(iId); const bt = document.getElementById(bId);
-          if(c){ c.classList.remove('collapsed'); c.setAttribute('aria-hidden','false'); }
+      // Restore accordion yang sebelumnya terbuka sebelum di-minimize
+      ['serviceRecoveryMenuContent','stcrMenuContent','trainingMenuContent','adminMenuContent','drygoodsMenuContent'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el && el._wasOpen){
+          el.classList.remove('collapsed');
+          el.setAttribute('aria-hidden','false');
+          el._wasOpen = false;
+          // Restore icon & button aria
+          const iconMap = {
+            'serviceRecoveryMenuContent':'iconServiceRecoveryMenu',
+            'stcrMenuContent':'iconStcrMenu',
+            'trainingMenuContent':'iconTrainingMenu',
+            'adminMenuContent':'iconAdminMenu',
+            'drygoodsMenuContent':'iconDrygoodsMenu'
+          };
+          const btnMap = {
+            'serviceRecoveryMenuContent':'toggleServiceRecoveryMenu',
+            'stcrMenuContent':'toggleStcrMenu',
+            'trainingMenuContent':'toggleTrainingMenu',
+            'adminMenuContent':'toggleAdminMenu',
+            'drygoodsMenuContent':'toggleDrygoodsMenu'
+          };
+          const ic = document.getElementById(iconMap[id]);
+          const bt = document.getElementById(btnMap[id]);
           if(ic) ic.style.transform = 'rotate(0deg)';
           if(bt) bt.setAttribute('aria-expanded','true');
         }
@@ -14448,44 +14455,10 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     showToast('Export Excel karyawan berhasil');
   });
 
-  // ── SIDEBAR TOGGLE ───────────────────────────────────────────────
-  (function(){
-    // Per-user key so each user's preference is stored independently
-    let _dgUserSuffix = '';
-    try {
-      const _s = JSON.parse(localStorage.getItem('sjnam_session_v1') || 'null');
-      if(_s && _s.username) _dgUserSuffix = '_' + _s.username;
-    } catch(e){}
-    const DG_MENU_KEY = 'sjnam_drygoods_menu_open' + _dgUserSuffix;
-
-    function setDgMenuState(open, save){
-      const c    = document.getElementById('drygoodsMenuContent');
-      const icon = document.getElementById('iconDrygoodsMenu');
-      const btn  = document.getElementById('toggleDrygoodsMenu');
-      if(!c) return;
-      if(open){
-        c.classList.remove('collapsed');
-        c.setAttribute('aria-hidden', 'false');
-      } else {
-        c.classList.add('collapsed');
-        c.setAttribute('aria-hidden', 'true');
-      }
-      if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
-      if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if(save !== false) try{ localStorage.setItem(DG_MENU_KEY, open ? '1' : '0'); }catch(e){}
-    }
-
-    // Restore saved state on load (default: open)
-    const saved = localStorage.getItem(DG_MENU_KEY);
-    setDgMenuState(saved !== '0', false);
-
-    document.getElementById('toggleDrygoodsMenu')?.addEventListener('click', ()=>{
-      const c = document.getElementById('drygoodsMenuContent');
-      if(!c) return;
-      const isCurrentlyOpen = !c.classList.contains('collapsed');
-      setDgMenuState(!isCurrentlyOpen);
-    });
-  })();
+  // ── SIDEBAR TOGGLE ─────────────────────────────────────────────
+  // Dikelola sepenuhnya oleh DOMContentLoaded block di atas (setMenuState + DRYGOODS_MENU_KEY).
+  // IIFE lama dihapus untuk mencegah: (1) listener duplikat, (2) restore state yang override
+  // restoreMenuStates() di checkAuth, (3) icon animation ganda saat klik.
 
   // ── TAB SWITCHING HOOK ───────────────────────────────────────────
   const _origSwitch = window.switchTab;
