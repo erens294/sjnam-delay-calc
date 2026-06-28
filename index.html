@@ -8550,6 +8550,7 @@ async function cloudPull(silent = false){
       localStorage.setItem('sjnam_drygoods_v1', JSON.stringify(rec.drygoodsData));
       if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.loadData === 'function'){
         window.DRYGOODS.loadData();
+        if(typeof _applyDrgLock==='function')_applyDrgLock();
         window.DRYGOODS.renderAll();
       }
     }
@@ -8731,6 +8732,7 @@ function startRealtimeSubscription(){
             localStorage.setItem('sjnam_drygoods_v1', JSON.stringify(rec.drygoodsData));
             if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.loadData === 'function'){
               window.DRYGOODS.loadData();
+              if(typeof _applyDrgLock==='function')_applyDrgLock();
               window.DRYGOODS.renderAll();
             }
           }
@@ -9308,7 +9310,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
   let _displayName = user.name;
   try {
     const _kar = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
-    const _karMe = _kar.find(k => k.username === user.username);
+    const _karMe = _kar.find(function(k){return(k.username||'').toLowerCase()===(user.username||'').toLowerCase();});
     if(_karMe && _karMe.nama) _displayName = _karMe.nama;
   } catch(e){}
   if(_displayName !== user.name){
@@ -9345,7 +9347,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
     if(user.role === 'User-DRG'){
       try {
         const _kar = JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]');
-        const _karMe = _kar.find(k=>k.username===user.username);
+        const _karMe = _kar.find(function(k){return(k.username||'').toLowerCase()===(user.username||'').toLowerCase();});
         if(_karMe && _karMe.station) roleDisplay = user.role + ' · ' + _karMe.station;
       } catch(e){}
     }
@@ -9706,7 +9708,8 @@ function applyPermissions(){
               t.title=(st==='ALL'?'Akses terbatas':'Akses terbatas ke station '+userStation);}
           });
           var mT=document.querySelector('[data-dg-station="'+userStation+'"');
-          if(mT) mT.click();
+          if(mT){ mT.click(); }
+          else{ activeDgStation=userStation; if(typeof buildStationTabs==='function')buildStationTabs(); if(typeof renderDgTrx==='function')renderDgTrx(); };
         }, 800);      } catch(e){ console.warn('[DRG Station Lock]', e); }
     })();
   } else {
@@ -16327,7 +16330,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   });
   document.getElementById('btnDgResetFilter')?.addEventListener('click', ()=>{
     ['dgSearchTrx','dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    activeDgStation='ALL'; clearDgSelection(); buildStationTabs(); dgPage=1; renderDgTrx();
+    (function(){ var _drg=window.currentUser&&window.currentUser.role==='User-DRG'&&window._userDrgStation&&window._userDrgStation!=='ALL'; activeDgStation=_drg?window._userDrgStation:'ALL'; })(); clearDgSelection(); buildStationTabs(); dgPage=1; renderDgTrx();
   });
 
   // IFS filters
@@ -16670,8 +16673,11 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       else{t.style.opacity='0.3';t.style.pointerEvents='none';
         t.title=(ts==='ALL'?'Akses terbatas':'Akses terbatas ke station '+st);}
     });
-    if(!st||st==='ALL'){if(typeof activeDgStation!=='undefined')activeDgStation='ALL';}
-    else if(st&&typeof activeDgStation!=='undefined'&&activeDgStation==='ALL')activeDgStation=st;
+    // FIX: always set activeDgStation to correct value, not only when it was 'ALL'
+    if(typeof activeDgStation!=='undefined'){
+      if(!st||st==='ALL') activeDgStation='ALL';
+      else activeDgStation=st;
+    }
   }
   const _origSwitch = window.switchTab;
   window.switchTab = function(tab){
@@ -16694,13 +16700,13 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   window.DRYGOODS = {
     loadData: loadDrygoodsData,
     saveData: saveDrygoodsData,
-    renderAll: function(){ buildStationTabs(); renderDgTrx(); renderDgDashboard(); renderDgEmployees(); renderDgBankItem(); },
+    renderAll: function(){ if(typeof _applyDrgLock==='function')_applyDrgLock(); buildStationTabs(); renderDgTrx(); renderDgDashboard(); renderDgEmployees(); renderDgBankItem(); },
     getData: ()=> dgData,
     openTrxFromBankItem: openTrxFromBankItem
   };
 
   // ── INIT ─────────────────────────────────────────────────────────
-  buildStationTabs();
+  if(typeof _applyDrgLock==='function')_applyDrgLock(); buildStationTabs();
   // Initial render only if tab is active
   const currentTab = localStorage.getItem('sjnam_current_tab')||'';
   if(currentTab.startsWith('drygoods')){ renderDgTrx(); renderDgDashboard(); renderDgEmployees(); }
