@@ -5716,14 +5716,7 @@ document.addEventListener('visibilitychange', function(){
     updateClock(); updateStationClocks();
     if(window.currentUser){
       var _cs=null;try{_cs=JSON.parse(localStorage.getItem('sjnam_session_v1')||'null');}catch(ex){}
-      if(!_cs){
-        window.currentUser=null;
-        var _ov2=document.getElementById('loginOverlay');if(_ov2)_ov2.style.display='';
-        document.getElementById('userPanel')?.classList.add('hidden');
-        document.getElementById('sidebar')?.classList.remove('perm-ready');
-        document.getElementById('mainContent')?.classList.remove('perm-ready');
-        document.body.style.overflow='hidden'; return;
-      }
+      if(!_cs){window.currentUser=null;var _ov2=document.getElementById('loginOverlay');if(_ov2)_ov2.style.display='';document.getElementById('userPanel')?.classList.add('hidden');document.getElementById('sidebar')?.classList.remove('perm-ready');document.getElementById('mainContent')?.classList.remove('perm-ready');document.body.style.overflow='hidden';return;}
     }
     if(navigator.onLine&&typeof _flushOfflineQueue==='function')setTimeout(_flushOfflineQueue,800);
     if(navigator.onLine&&typeof cloudPull==='function'&&typeof cloudConfig!=='undefined'&&cloudConfig?.supabaseUrl)setTimeout(function(){cloudPull(true);},1500);
@@ -8519,6 +8512,30 @@ async function cloudPull(silent = false){
       localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(_mergedKar));
       if(typeof window.setKaryawanData === 'function') window.setKaryawanData(_mergedKar);
       if(typeof window.renderKaryawanUserOptions === 'function') window.renderKaryawanUserOptions();
+      // BUG2 FIX: Jika user yang login adalah User-DRG, perbarui stationnya
+      // setelah karyawan ter-sync dari cloud/realtime agar pembatasan data selalu akurat.
+      (function _refreshDrgStationFromCloud(){
+        try {
+          var _cu = window.currentUser;
+          if(!_cu || _cu.role !== 'User-DRG') return;
+          var _myUser = (_cu.username||'').toLowerCase();
+          var _found = _mergedKar.find(function(k){ return (k.username||'').toLowerCase()===_myUser; });
+          var _newSt = (_found && _found.station) ? _found.station : null;
+          if(window._userDrgStation === _newSt) return; // tidak ada perubahan
+          window._userDrgStation = _newSt;
+          if(_cu) _cu.station = _newSt;
+          // Re-apply lock
+          document.querySelectorAll('[data-dg-station]').forEach(function(t){
+            var ts=t.dataset.dgStation; if(!ts) return;
+            if(!_newSt||_newSt==='ALL'){t.style.opacity='';t.style.pointerEvents='';t.title='';}
+            else if(ts===_newSt){t.style.opacity='';t.style.pointerEvents='';t.title='';}
+            else{t.style.opacity='0.35';t.style.pointerEvents='none';t.title=(ts==='ALL'?'Akses terbatas':'Akses terbatas ke station '+_newSt);}
+          });
+          if(typeof window.DRYGOODS==='object'&&typeof window.DRYGOODS.renderAll==='function'){
+            setTimeout(function(){window.DRYGOODS.renderAll();},50);
+          }
+        } catch(ex){ console.warn('[DRG Cloud Station Refresh]', ex); }
+      })();
     }
     // Restore data STCR
     if(Array.isArray(rec.stcrData) && rec.stcrData.length > 0){
@@ -9411,16 +9428,14 @@ document.getElementById('loginPass')?.addEventListener('focus', startBFCountdown
 document.getElementById('btnLogout')?.addEventListener('click', function(){
   if(confirm('Keluar dari sistem?')){
     if(typeof cloudPush==='function')cloudPush(true);
-    localStorage.removeItem(SESSION_KEY);
-    currentUser=null;window.currentUser=null;
+    localStorage.removeItem(SESSION_KEY);currentUser=null;window.currentUser=null;
     if(window._idleCountdownInterval){clearInterval(window._idleCountdownInterval);window._idleCountdownInterval=null;}
     var _ov=document.getElementById('loginOverlay');if(_ov)_ov.style.display='';
     document.getElementById('userPanel')?.classList.add('hidden');
     document.getElementById('userPanelSidebar')?.classList.add('hidden');
     document.getElementById('sidebar')?.classList.remove('perm-ready');
     document.getElementById('mainContent')?.classList.remove('perm-ready');
-    document.body.classList.remove('js-ready');
-    document.body.style.overflow='hidden';
+    document.body.classList.remove('js-ready');document.body.style.overflow='hidden';
     var _lu=document.getElementById('loginUser');if(_lu)_lu.value='';
     var _lp=document.getElementById('loginPass');if(_lp)_lp.value='';
     setTimeout(function(){document.getElementById('loginUser')?.focus();},100);
@@ -9475,8 +9490,7 @@ document.getElementById('btnLogout')?.addEventListener('click', function(){
       if(!currentUser) return;
       console.log('[AUTO-LOGOUT] Idle 30 menit');
       if(typeof cloudPush==='function')cloudPush(true);
-      localStorage.removeItem(SESSION_KEY);
-      currentUser=null;window.currentUser=null;
+      localStorage.removeItem(SESSION_KEY);currentUser=null;window.currentUser=null;
       if(window._idleCountdownInterval){clearInterval(window._idleCountdownInterval);window._idleCountdownInterval=null;}
       var _ov3=document.getElementById('loginOverlay');if(_ov3)_ov3.style.display='';
       document.getElementById('userPanel')?.classList.add('hidden');
@@ -9666,29 +9680,25 @@ function applyPermissions(){
     (function _lockDrgStation(){
       try {
         const karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
-        // BUG2 FIX: case-insensitive match agar 'Elyn' cocok dengan 'elyn'
-        const _myUser = (currentUser.username||'').toLowerCase();
-        const karEntry = karyawan.find(function(k){ return (k.username||'').toLowerCase() === _myUser; });
-        // BUG2 FIX: station kosong ('') sama dengan tidak diset -> gunakan null
+        // BUG4 FIX: case-insensitive match agar 'Niken' cocok dengan 'niken'
+        var _cUser = (currentUser.username||'').toLowerCase();
+        const karEntry = karyawan.find(function(k){ return (k.username||'').toLowerCase()===_cUser; });
+        // station kosong ('') sama dengan belum diset -> null
         const userStation = (karEntry && karEntry.station) ? karEntry.station : null;
-        // BUG2 FIX: null artinya 'belum dikonfigurasi' -> set ke null (bukan undefined)
-        // getFilteredTrx akan perlakukan null = tidak ada pembatasan (sudah difix di BUG1)
         window._userDrgStation = userStation;
         // Update station info on user panel
         if(userStation && window.currentUser){
           window.currentUser.station = userStation;
         }
-        // BUG3 FIX: pisah logic null/ALL vs spesifik + 800ms
+        // BUG4b FIX: pisah logic null/ALL vs spesifik; 800ms agar buildStationTabs selesai
         setTimeout(function(){
           if(!userStation || userStation==='ALL'){
-            // null atau ALL: unlock semua tab + click tab ALL
             document.querySelectorAll('[data-dg-station]').forEach(function(t){
               t.style.opacity=''; t.style.pointerEvents=''; t.title='';
             });
             var aT=document.querySelector('[data-dg-station="ALL"]');
             if(aT) aT.click(); return;
           }
-          // Station spesifik
           document.querySelectorAll('[data-dg-station]').forEach(function(t){
             var st=t.dataset.dgStation; if(!st) return;
             if(st===userStation){t.style.opacity='';t.style.pointerEvents='';t.title='';}
@@ -10080,6 +10090,7 @@ window.getRoleBadgeClass = getRoleBadgeClass;
     }
     if(formEl){
       const cur = formEl.value;
+      // BUG8 FIX: Tambah opsi ALL agar Admin bisa assign station=ALL
       formEl.innerHTML='<option value="">Pilih station...</option>'
         +'<option value="ALL">🌐 ALL — Semua Station (akses semua)</option>'
         +opts;
@@ -10364,6 +10375,38 @@ window.getRoleBadgeClass = getRoleBadgeClass;
       renderKaryawan();
       if(typeof renderUserTable === 'function') renderUserTable();
       showToast(idx > -1 ? 'Data karyawan diperbarui' : 'Karyawan ditambahkan', 'success');
+      // BUG1 FIX: Jika karyawan yang diedit adalah user yang sedang login (User-DRG),
+      // perbarui window._userDrgStation LANGSUNG tanpa menunggu login ulang.
+      // Tanpa ini, perubahan station oleh Admin tidak berlaku sampai user re-login.
+      (function _refreshDrgStationIfSelf(){
+        try {
+          var _cu = window.currentUser;
+          if(!_cu || _cu.role !== 'User-DRG') return;
+          var _myUser = (_cu.username||'').toLowerCase();
+          var _entryUser = (entry.username||'').toLowerCase();
+          if(_myUser !== _entryUser) return; // bukan karyawan sendiri
+          // Update station di window
+          var _newSt = entry.station || null;
+          window._userDrgStation = _newSt;
+          if(_cu) _cu.station = _newSt;
+          // Re-apply lock di semua tab dg-station yang ada di DOM
+          document.querySelectorAll('[data-dg-station]').forEach(function(t){
+            var ts = t.dataset.dgStation; if(!ts) return;
+            if(!_newSt || _newSt === 'ALL'){
+              t.style.opacity=''; t.style.pointerEvents=''; t.title='';
+            } else if(ts === _newSt){
+              t.style.opacity=''; t.style.pointerEvents=''; t.title='';
+            } else {
+              t.style.opacity='0.35'; t.style.pointerEvents='none';
+              t.title = (ts==='ALL' ? 'Akses terbatas' : 'Akses terbatas ke station '+_newSt);
+            }
+          });
+          // Re-render drygoods jika sedang di tab tersebut
+          if(typeof window.DRYGOODS === 'object' && typeof window.DRYGOODS.renderAll === 'function'){
+            setTimeout(function(){ window.DRYGOODS.renderAll(); }, 50);
+          }
+        } catch(ex){ console.warn('[DRG Self-Update]', ex); }
+      })();
     };
 
     // Handle password hash if changed
@@ -15575,7 +15618,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const _cu = window.currentUser;
     if(_cu && _cu.role === 'User-DRG'){
       const _drgSt = window._userDrgStation;
-      // BUG4 FIX: null = karyawan blm dikonfigurasi -> perlakukan spt ALL (unlock semua)
+      // BUG5 FIX: null=belum konfigurasi (perlakukan spt ALL), 'ALL'=akses semua
       if(!_drgSt || _drgSt === 'ALL'){
         container.querySelectorAll('[data-dg-station]').forEach(function(t){
           t.style.opacity=''; t.style.pointerEvents=''; t.title='';
@@ -15655,11 +15698,11 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     // FIX-DRG: enforce station restriction at DATA level for User-DRG
     // This prevents bypass via DevTools console even if UI tabs are hidden
     // Special case: station='ALL' means user can access all stations (no restriction)
-    // BUG1 FIX: Jika _userDrgStation null (karyawan belum ditemukan/station kosong),
-    // perlakukan SAMA seperti 'ALL' -> tidak ada filter data.
-    // Sebelumnya: null || '__NONE__' = '__NONE__' -> menyaring SEMUA baris keluar!
-    const _drgSt = (window.currentUser && window.currentUser.role === 'User-DRG' && window._userDrgStation)
-      ? (window._userDrgStation === 'ALL' ? null : window._userDrgStation)
+    // BUG3 FIX: null = karyawan belum dikonfigurasi stationnya.
+    // Jangan gunakan '__NONE__' sentinel yang memblok SEMUA data.
+    // null -> tampilkan semua data (sama dengan 'ALL') + warning di UI.
+    const _drgSt = (window.currentUser && window.currentUser.role === 'User-DRG' && window._userDrgStation && window._userDrgStation !== 'ALL')
+      ? window._userDrgStation
       : null;
     return dgData.transactions.filter(t=>{
       // User-DRG: hard-block access to other stations at data level
@@ -16251,7 +16294,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     if(cu && cu.role === 'User-DRG'){
       const targetSt = e.target.closest('[data-dg-station]')?.dataset.dgStation;
       if(targetSt){
-        // BUG5 FIX: null = belum dikonfigurasi = tidak ada restrict (konsisten dgn BUG1)
+        // BUG6 FIX: null = belum konfigurasi = tidak ada restrict
         const allowedSt = window._userDrgStation;
         if(allowedSt && allowedSt !== 'ALL' && targetSt !== allowedSt && targetSt !== cu.station){
           showToast('Akses terbatas: Anda hanya dapat melihat station ' + (allowedSt || 'yang ditugaskan'), 'error');
@@ -16617,22 +16660,18 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   // ── SIDEBAR TOGGLE — dikontrol sepenuhnya oleh DOMContentLoaded block ────────
 
   // ── TAB SWITCHING HOOK ───────────────────────────────────────────
-  // BUG6 FIX: helper yg dipanggil setiap tab drygoods-data dibuka
   function _applyDrgLock(){
     var cu=window.currentUser; if(!cu||cu.role!=='User-DRG') return;
-    var st=window._userDrgStation; // null=belum konfigurasi, 'ALL'=akses semua, kode=spesifik
-    if(!st||st==='ALL'){
-      // null atau ALL: unlock semua tab
-      document.querySelectorAll('[data-dg-station]').forEach(function(t){t.style.opacity='';t.style.pointerEvents='';t.title='';});
-      if(typeof activeDgStation!=='undefined') activeDgStation='ALL';
-    } else {
-      document.querySelectorAll('[data-dg-station]').forEach(function(t){
-        var ts=t.dataset.dgStation; if(!ts) return;
-        if(ts===st){t.style.opacity='';t.style.pointerEvents='';t.title='';}
-        else{t.style.opacity='0.3';t.style.pointerEvents='none';t.title=(ts==='ALL'?'Akses terbatas':'Akses terbatas ke station '+st);}
-      });
-      if(typeof activeDgStation!=='undefined'&&activeDgStation==='ALL') activeDgStation=st;
-    }
+    var st=window._userDrgStation; // null=belum konfigurasi, 'ALL'=semua, kode=spesifik
+    document.querySelectorAll('[data-dg-station]').forEach(function(t){
+      var ts=t.dataset.dgStation; if(!ts) return;
+      if(!st||st==='ALL'){t.style.opacity='';t.style.pointerEvents='';t.title='';}
+      else if(ts===st){t.style.opacity='';t.style.pointerEvents='';t.title='';}
+      else{t.style.opacity='0.3';t.style.pointerEvents='none';
+        t.title=(ts==='ALL'?'Akses terbatas':'Akses terbatas ke station '+st);}
+    });
+    if(!st||st==='ALL'){if(typeof activeDgStation!=='undefined')activeDgStation='ALL';}
+    else if(st&&typeof activeDgStation!=='undefined'&&activeDgStation==='ALL')activeDgStation=st;
   }
   const _origSwitch = window.switchTab;
   window.switchTab = function(tab){
