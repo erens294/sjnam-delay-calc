@@ -1449,7 +1449,7 @@ table:not(.stcr-page table) tbody td {
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
       <div>
         <h2 class="text-lg font-bold">🧑‍💼 Data Karyawan</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Master data karyawan. Hubungkan karyawan ke akun login lewat kolom User — cukup pilih usernya di sini, tidak perlu buat user baru secara manual lagi.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Master data karyawan. Hubungkan karyawan ke akun login lewat kolom User — cukup pilih usernya di sini, tidak perlu buat user baru secara manual lagi. Kolom <strong>Password</strong> memungkinkan Admin me-reset password akun terhubung langsung dari sini.</p>
         <p id="karyawanCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Total Karyawan: 0</p>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -1478,12 +1478,13 @@ table:not(.stcr-page table) tbody td {
             <th class="p-3 font-semibold">Email</th>
             <th class="p-3 font-semibold">Station</th>
             <th class="p-3 font-semibold">User (Login)</th>
+            <th class="p-3 font-semibold">Password</th>
             <th class="p-3 font-semibold">Role</th>
             <th class="p-3 font-semibold text-right">Aksi</th>
           </tr>
         </thead>
         <tbody id="karyawanTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
-          <tr><td colspan="10" class="text-center py-8 text-slate-400 text-sm">Memuat...</td></tr>
+          <tr><td colspan="11" class="text-center py-8 text-slate-400 text-sm">Memuat...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1497,29 +1498,23 @@ table:not(.stcr-page table) tbody td {
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
         <h2 class="text-lg font-bold">Manajemen User</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Kelola akun login. Role Master melekat ke sistem (password khusus). Nama &amp; data pribadi karyawan dikelola di tab <strong>Data Karyawan</strong>.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola akun login. Role Master melekat ke sistem (password khusus). Gunakan <strong>Tambah Role</strong> untuk mengubah role user yang ada. Nama &amp; data pribadi dikelola di tab <strong>Data Karyawan</strong>.</p>
         <p id="userPesertaCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Total Akun: 0 | Akun Peserta: 0 / 150</p>
       </div>
       <div class="flex flex-wrap gap-2 items-center">
-        <button id="btnAddUser" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">＋ Tambah User</button>
         <div class="relative inline-block" id="btnAddRoleWrap">
           <button id="btnAddRole" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1">
-            ＋ Tambah Role <span class="text-xs opacity-70">▾</span>
+            🔄 Ubah Role <span class="text-xs opacity-70">▾</span>
           </button>
-          <div id="addRoleDropdown" class="hidden absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl z-50 min-w-[220px] overflow-hidden">
-            <div class="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">Pilih Role</div>
-            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Master">
-              <span class="badge bg-yellow-100 text-yellow-800 text-xs">Master</span>
-              <span class="text-xs text-slate-400">Akses penuh — melekat ke sistem</span>
-            </button>
-            <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Admin">
-              <span class="badge bg-purple-100 text-purple-700 text-xs">Admin</span>
-            </button>
+          <div id="addRoleDropdown" class="hidden absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl z-50 min-w-[240px] overflow-hidden">
+            <div class="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">Tambahkan Role ke User</div>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Co-Admin">
               <span class="badge bg-blue-100 text-blue-700 text-xs">Co-Admin</span>
+              <span class="text-xs text-slate-400">Administrator bantu</span>
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-All">
               <span class="badge bg-emerald-100 text-emerald-700 text-xs">User-All</span>
+              <span class="text-xs text-slate-400">Akses semua fitur user</span>
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-SR">
               <span class="badge bg-sky-100 text-sky-700 text-xs">User-SR</span>
@@ -1527,7 +1522,7 @@ table:not(.stcr-page table) tbody td {
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-STCR">
               <span class="badge bg-purple-100 text-purple-600 text-xs">User-STCR</span>
-              <span class="text-xs text-slate-400">Stretchercase</span>
+              <span class="text-xs text-slate-400">Stretchercase &amp; POB</span>
             </button>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="User-ST">
               <span class="badge bg-teal-100 text-teal-700 text-xs">User-ST</span>
@@ -1537,9 +1532,9 @@ table:not(.stcr-page table) tbody td {
               <span class="badge bg-orange-100 text-orange-700 text-xs">User-DRG</span>
               <span class="text-xs text-slate-400">Drygoods (per station)</span>
             </button>
-            <div class="border-t border-slate-100 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-400">Peserta (maks 150 akun):</div>
+            <div class="border-t border-slate-100 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-400">Peserta (maks 150 slot):</div>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Peserta">
-              <span class="badge bg-indigo-100 text-indigo-700 text-xs">Peserta</span>
+              <span class="badge bg-indigo-100 text-indigo-700 text-xs">Peserta 1–150</span>
               <span class="text-xs text-slate-400">Training peserta (slot otomatis)</span>
             </button>
           </div>
@@ -9533,6 +9528,10 @@ function applyPermissions(){
   } else if(isAdmin || isCoAdmin) {
     // Admin & Co-Admin saja: semua tab
     if(tabAdminBtn) tabAdminBtn.style.display = '';
+    if(tabHome) tabHome.style.display = '';
+    if(tabInput) tabInput.style.display = '';
+    if(tabData) tabData.style.display = '';
+    if(tabDashboard) tabDashboard.style.display = '';
     if(tabStations) tabStations.style.display = '';
     if(tabDfs) tabDfs.style.display = '';
     if(tabRequest) tabRequest.style.display = '';
@@ -9544,6 +9543,8 @@ function applyPermissions(){
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
     if(stcrMenuGroup) stcrMenuGroup.style.display = '';
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
+    const _svcGrp = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
+    if(_svcGrp) _svcGrp.style.display = '';
     // Restore semua tombol yang mungkin tersembunyi
     const elImport2 = document.getElementById('fileImportJson')?.closest('label');
     if(elImport2) elImport2.style.display = '';
@@ -10054,7 +10055,7 @@ window.getRoleBadgeClass = getRoleBadgeClass;
     document.getElementById('karyawanCountInfo').textContent = `Total Karyawan: ${karyawan.length}`;
 
     if(!list.length){
-      tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-slate-400 text-sm">Belum ada data karyawan.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-slate-400 text-sm">Belum ada data karyawan.</td></tr>';
       return;
     }
 
@@ -10084,6 +10085,13 @@ window.getRoleBadgeClass = getRoleBadgeClass;
         <td class="p-3 text-xs">${esc(k.email || '-')}</td>
         <td class="p-3 text-xs">${esc(k.station || '-')}</td>
         <td class="p-3">${userLoginCell}</td>
+        <td class="p-3 text-xs">
+          ${linkedUser
+            ? (canEdit
+                ? `<button data-kar-pw="${k.id}" class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-900 text-slate-600 dark:text-slate-300 rounded font-mono" title="Reset password akun ini">🔑 Reset</button>`
+                : '<span class="text-xs text-slate-300 italic">—</span>')
+            : '<span class="text-xs text-slate-300">—</span>'}
+        </td>
         <td class="p-3">${roleCell}</td>
         <td class="p-3 text-right whitespace-nowrap">
           ${canEdit ? `<button data-kar-edit="${k.id}" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>` : ''}
@@ -10202,10 +10210,11 @@ window.getRoleBadgeClass = getRoleBadgeClass;
     showToast(idx > -1 ? 'Data karyawan diperbarui' : 'Karyawan ditambahkan', 'success');
   });
 
-  // ── Table click delegation: edit / hapus ──
+  // ── Table click delegation: edit / hapus / reset password ──
   document.getElementById('karyawanTableBody')?.addEventListener('click', async e => {
     const editId = e.target.closest('[data-kar-edit]')?.dataset.karEdit;
     const delId = e.target.closest('[data-kar-del]')?.dataset.karDel;
+    const pwId  = e.target.closest('[data-kar-pw]')?.dataset.karPw;
     if(editId){
       if(!window.currentUserCanAdd){ showToast('Tidak ada izin untuk mengedit karyawan', 'error'); return; }
       const item = karyawan.find(k => k.id === editId);
@@ -10221,6 +10230,27 @@ window.getRoleBadgeClass = getRoleBadgeClass;
       if(typeof auditLog === 'function') auditLog('delete', 'karyawan', delId, item?.nama || '');
       renderKaryawan();
       showToast('Karyawan dihapus', 'success');
+    }
+    if(pwId){
+      if(!window.currentUserCanAdd){ showToast('Tidak ada izin untuk reset password', 'error'); return; }
+      const karItem = karyawan.find(k => k.id === pwId);
+      if(!karItem || !karItem.username){ showToast('Karyawan belum terhubung ke akun login', 'error'); return; }
+      const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+      const targetUser = allUsers.find(u => u.username === karItem.username);
+      if(!targetUser){ showToast('Akun login tidak ditemukan', 'error'); return; }
+      if(targetUser.role === 'Master' && currentUser.role !== 'Master'){
+        showToast('Password Master hanya dapat direset oleh Master', 'error'); return;
+      }
+      const newPw = prompt(`Reset password untuk "${karItem.nama}" (${karItem.username}):\nKosongkan = tidak jadi`, '');
+      if(newPw === null || newPw.trim() === '') return;
+      sha256(newPw.trim()).then(hashed => {
+        const freshUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+        const fu = freshUsers.find(u => u.username === karItem.username);
+        if(!fu){ showToast('Akun tidak ditemukan', 'error'); return; }
+        fu.password = hashed;
+        saveUsers(freshUsers);
+        showToast(`Password "${karItem.nama}" berhasil direset`, 'success');
+      });
     }
   });
 
@@ -10293,90 +10323,117 @@ document.addEventListener('click', function(e){
 });
 
 function _doAddUser(preselectedRole){
-  // Guard: hanya Admin, Master, dan Co-Admin
-  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master' && currentUser.role !== 'Co-Admin')){
-    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
+  // Guard: hanya Admin, Master
+  if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master')){
+    showToast('Hanya Admin/Master yang dapat mengubah role user', 'error');
     return;
   }
-  if(!window.currentUserCanAdd){
-    showToast('Hanya Admin/Master/Co-Admin yang dapat menambah user', 'error');
-    return;
-  }
-  const isCallerAdmin = currentUser.role === 'Admin' || currentUser.role === 'Master';
-  const allRoles = (typeof window.ALL_ROLES !== 'undefined' && window.ALL_ROLES.length) ? window.ALL_ROLES
-    : ['Master','Admin','Co-Admin','User','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
-  const rolesForCaller = isCallerAdmin ? allRoles : allRoles.filter(r=>r!=='Admin'&&r!=='Master');
 
-  // Jika tidak ada preset, tampilkan prompt untuk pilih role
+  // Allowed roles via Tambah Role dropdown
+  const allowedRoles = ['Co-Admin','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
   let role = preselectedRole;
-  if(!role){
-    const roleInput = prompt('Role (' + rolesForCaller.join(' / ') + '):', 'Peserta');
-    if(!roleInput) return;
-    role = rolesForCaller.find(r => r.toLowerCase() === roleInput.trim().toLowerCase());
-    if(!role){
-      showToast('Role tidak valid. Pilih: ' + rolesForCaller.join(', '), 'error');
-      return;
-    }
-  }
-
-  if(!rolesForCaller.includes(role)){
-    showToast('Role tidak diizinkan untuk caller ini', 'error');
-    return;
-  }
-  if(!isCallerAdmin && role === 'Admin'){
-    showToast('Co-Admin tidak dapat membuat akun Admin', 'error');
-    return;
-  }
-  if(!isCallerAdmin && role === 'Master'){
-    showToast('Hanya Master/Admin yang dapat membuat akun Master', 'error');
+  if(!role || !allowedRoles.includes(role)){
+    showToast('Role tidak valid', 'error');
     return;
   }
 
-  const username = prompt('Username baru (gunakan NIP agar karyawan bisa login dengan NIP):');
-  if(!username) return;
-  const name = prompt('Nama lengkap:');
-  if(!name) return;
-
-  const defaultPw = role === 'Master' ? 'Nu55y294gpx' : '123456';
-  const password = prompt('Password awal:', defaultPw);
   const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  if(users.find(u => u.username.toLowerCase() === username.trim().toLowerCase())){
-    showToast('Username sudah ada', 'error');
-    return;
-  }
+
   if(role === 'Peserta'){
     const pesertaCount = users.filter(u=>u.role==='Peserta').length;
     if(pesertaCount >= 150){
-      showToast('Maksimal 150 akun Peserta tercapai', 'error');
+      showToast('Maksimal 150 slot Peserta sudah tercapai', 'error');
       return;
     }
   }
-  // FIX-RACE: Re-read fresh users inside async callback to avoid stale closure race condition
-  sha256((password != null ? password : '') || '123456').then(hashedPass => {
-    const freshUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    if(freshUsers.find(u => u.username.toLowerCase() === username.trim().toLowerCase())){
-      showToast('Username sudah ada (ditambahkan oleh pengguna lain)', 'error');
+
+  // Build a simple modal to pick which user to assign this role to
+  const assignableUsers = users.filter(u =>
+    u.role !== 'Master' && u.username !== currentUser.username
+  );
+
+  if(!assignableUsers.length){
+    showToast('Tidak ada user yang dapat diubah rolenya', 'error');
+    return;
+  }
+
+  // Create inline modal for user selection
+  const existingModal = document.getElementById('_assignRoleModal');
+  if(existingModal) existingModal.remove();
+
+  const roleBadgeColor = {
+    'Co-Admin':'bg-blue-100 text-blue-700',
+    'User-All':'bg-emerald-100 text-emerald-700',
+    'User-SR':'bg-sky-100 text-sky-700',
+    'User-STCR':'bg-purple-100 text-purple-700',
+    'User-ST':'bg-teal-100 text-teal-700',
+    'User-DRG':'bg-orange-100 text-orange-700',
+    'Peserta':'bg-indigo-100 text-indigo-700',
+  };
+  const bClass = roleBadgeColor[role] || 'bg-slate-100 text-slate-700';
+
+  const modal = document.createElement('div');
+  modal.id = '_assignRoleModal';
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal-box max-w-md">
+      <h3 class="text-lg font-bold mb-1">Tetapkan Role <span class="badge ${bClass}">${esc(role)}</span></h3>
+      <p class="text-xs text-slate-500 mb-4">Pilih user yang akan ditetapkan sebagai <strong>${esc(role)}</strong>. Role user tersebut akan diubah.</p>
+      <input id="_assignRoleSearch" type="text" placeholder="🔍 Cari username / nama..." class="input text-sm mb-3">
+      <div id="_assignRoleList" class="max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700 mb-4"></div>
+      <div class="flex justify-end gap-2">
+        <button id="_assignRoleCancel" class="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300">Batal</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  function renderAssignList(filter){
+    const list = document.getElementById('_assignRoleList');
+    if(!list) return;
+    const filtered = assignableUsers.filter(u =>
+      !filter || u.username.toLowerCase().includes(filter) || (u.name||'').toLowerCase().includes(filter)
+    );
+    if(!filtered.length){
+      list.innerHTML = '<div class="px-4 py-3 text-sm text-slate-400">Tidak ada user ditemukan.</div>';
       return;
     }
-    freshUsers.push({
-      id: Date.now(),
-      username: username.trim().toLowerCase(),
-      password: hashedPass,
-      role: role,
-      name: name,
-      active: true,
-      created: new Date().toISOString().split('T')[0]
+    list.innerHTML = filtered.map(u => `
+      <button class="_assign-role-user-btn w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-800 transition flex items-center justify-between gap-2" data-uid="${u.id}">
+        <span>
+          <span class="font-medium text-sm">${esc(u.name||u.username)}</span>
+          <span class="text-xs text-slate-400 ml-1">(${esc(u.username)})</span>
+        </span>
+        <span class="badge ${roleBadgeColor[u.role]||'bg-slate-100 text-slate-600'} text-xs shrink-0">${esc(u.role)}</span>
+      </button>
+    `).join('');
+    list.querySelectorAll('._assign-role-user-btn').forEach(btn => {
+      btn.addEventListener('click', async function(){
+        const uid = parseInt(this.dataset.uid);
+        const target = users.find(u=>u.id===uid);
+        if(!target){ showToast('User tidak ditemukan','error'); return; }
+        const prevRole = target.role;
+        target.role = role;
+        if(role==='Peserta'){
+          const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+          if(pesertaCount > 150){ showToast('Maks 150 slot Peserta','error'); return; }
+        }
+        saveUsers(users);
+        renderUserTable();
+        modal.remove();
+        showToast(`Role ${esc(target.name||target.username)} diubah: ${prevRole} → ${role}`, 'success');
+      });
     });
-    saveUsers(freshUsers);
-    renderUserTable();
-    showToast('User berhasil ditambahkan dengan role ' + role, 'success');
-  });
-}
+  }
 
-document.getElementById('btnAddUser')?.addEventListener('click', function(){
-  // Panggil _doAddUser tanpa preset role (user memilih sendiri via prompt)
-  _doAddUser(null);
-});
+  renderAssignList('');
+  document.getElementById('_assignRoleSearch').addEventListener('input', function(){
+    renderAssignList(this.value.toLowerCase().trim());
+  });
+  document.getElementById('_assignRoleCancel').addEventListener('click', ()=>modal.remove());
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
 
 // ── EDIT USER MODAL ──
 function openEditUserModal(id){
@@ -10536,7 +10593,7 @@ window.switchTab = function(tab){
   // depan) bisa memanggil switchTab() langsung (misalnya lewat console atau elemen
   // yang lolos dari penyembunyian applyPermissions) tanpa pengecekan apa pun di sini.
   // Sekarang semua role NON-ADMIN dicek secara generic via roleNameToKey().
-  if(_cu && _cu.role !== 'Admin'){
+  if(_cu && _cu.role !== 'Admin' && _cu.role !== 'Master'){
     const perms = (typeof window.getRolePerms === 'function') ? window.getRolePerms() : null;
     const roleKey = (typeof window.roleNameToKey === 'function') ? window.roleNameToKey(_cu.role) : (_cu.role === 'Co-Admin' ? 'coAdmin' : _cu.role === 'User' ? 'user' : _cu.role === 'Peserta' ? 'peserta' : null);
     if(perms){
@@ -10640,7 +10697,7 @@ function restoreSession(){
       document.getElementById('userNameDisplay').textContent = currentUser.name;
       const _roleDispEl = document.getElementById('userRoleDisplay');
       if(_roleDispEl){
-        const _showRoleCh = (currentUser.role === 'Admin' || currentUser.role === 'Co-Admin');
+        const _showRoleCh = (currentUser.role === 'Admin' || currentUser.role === 'Co-Admin' || currentUser.role === 'Master');
         _roleDispEl.textContent = _showRoleCh ? currentUser.role : '';
         _roleDispEl.style.display = _showRoleCh ? '' : 'none';
       }
@@ -10668,7 +10725,7 @@ function restoreSession(){
           if(icon) icon.style.transform = open ? 'rotate(0deg)' : 'rotate(-90deg)';
           if(btn)  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
-        const isAdminOrCo = currentUser.role === 'Admin' || currentUser.role === 'Co-Admin';
+        const isAdminOrCo = currentUser.role === 'Admin' || currentUser.role === 'Co-Admin' || currentUser.role === 'Master';
         // BUGFIX: default open untuk group menu hanya Admin/Co-Admin.
         // Non-Admin mulai collapsed agar tidak flash saat applyPermissions hide group.
         _sm('serviceRecoveryMenuContent','iconServiceRecoveryMenu','toggleServiceRecoveryMenu','sidenav_svcrecovery_open'+sfx, isAdminOrCo);
