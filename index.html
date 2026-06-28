@@ -9639,20 +9639,27 @@ function applyPermissions(){
         // Restrict station tabs: disable all except user's station
         setTimeout(function(){
           const tabs = document.querySelectorAll('[data-dg-station]');
+          // BUGFIX: Jika userStation === 'ALL', jangan lock tab apapun — user boleh lihat semua
+          if(userStation === 'ALL'){
+            tabs.forEach(function(tab){
+              tab.style.opacity = '';
+              tab.style.pointerEvents = '';
+              tab.title = '';
+            });
+            // Auto-click 'ALL' tab untuk user station=ALL agar data langsung tampil
+            const allTab = document.querySelector('[data-dg-station="ALL"]');
+            if(allTab) allTab.click();
+            return;
+          }
+          // User station spesifik: lock semua kecuali station mereka
           tabs.forEach(function(tab){
             const st = tab.dataset.dgStation;
             if(!st) return;
             if(st === 'ALL'){
-              // 'All' tab: accessible only if user's station is 'ALL'
-              if(userStation !== 'ALL'){
-                tab.style.opacity = '0.35';
-                tab.style.pointerEvents = 'none';
-                tab.title = 'Akses terbatas';
-              } else {
-                tab.style.opacity = '';
-                tab.style.pointerEvents = '';
-                tab.title = '';
-              }
+              // 'All' tab: tidak accessible untuk user station spesifik
+              tab.style.opacity = '0.35';
+              tab.style.pointerEvents = 'none';
+              tab.title = 'Akses terbatas';
             } else if(st !== userStation){
               tab.style.opacity = '0.35';
               tab.style.pointerEvents = 'none';
@@ -15546,29 +15553,39 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const _cu = window.currentUser;
     if(_cu && _cu.role === 'User-DRG'){
       const _drgSt = window._userDrgStation;
-      container.querySelectorAll('[data-dg-station]').forEach(function(tab){
-        const st = tab.dataset.dgStation;
-        if(st && st !== 'ALL' && st !== _drgSt){
-          tab.style.opacity = '0.3';
-          tab.style.pointerEvents = 'none';
-          tab.title = 'Akses terbatas — hanya station ' + (_drgSt || 'Anda');
-        } else {
+      // BUGFIX: Jika userStation === 'ALL', user boleh akses SEMUA tab — jangan lock apapun
+      if(_drgSt === 'ALL'){
+        // User dengan station=ALL: unlock semua tab termasuk tab 'All' dan semua station
+        container.querySelectorAll('[data-dg-station]').forEach(function(tab){
           tab.style.opacity = '';
           tab.style.pointerEvents = '';
           tab.title = '';
+        });
+      } else {
+        // User dengan station spesifik: hanya boleh akses tab station mereka sendiri
+        container.querySelectorAll('[data-dg-station]').forEach(function(tab){
+          const st = tab.dataset.dgStation;
+          if(!st) return;
+          if(st === 'ALL' || st === _drgSt){
+            // Tab 'ALL' dan tab station sendiri: BUGFIX — jangan disable tab ALL
+            // karena tab ALL diperlukan untuk view awal sebelum user memilih station
+            // Hanya disable tab station LAIN
+            tab.style.opacity = '';
+            tab.style.pointerEvents = '';
+            tab.title = '';
+          } else {
+            tab.style.opacity = '0.3';
+            tab.style.pointerEvents = 'none';
+            tab.title = 'Akses terbatas — hanya station ' + (_drgSt || 'Anda');
+          }
+        });
+        // Hide "All" tab for DRG users with specific station (not 'ALL')
+        const allTab = container.querySelector('[data-dg-station="ALL"]');
+        if(allTab){
+          allTab.style.opacity = '0.3';
+          allTab.style.pointerEvents = 'none';
+          allTab.title = 'Akses terbatas';
         }
-      });
-      // Hide "All" tab for DRG users — EXCEPT those whose station is 'ALL' (they need it)
-      const allTab = container.querySelector('[data-dg-station="ALL"]');
-      if(allTab && _drgSt !== 'ALL'){
-        allTab.style.opacity = '0.3';
-        allTab.style.pointerEvents = 'none';
-        allTab.title = 'Akses terbatas';
-      } else if(allTab) {
-        // station='ALL' user: keep All tab fully accessible
-        allTab.style.opacity = '';
-        allTab.style.pointerEvents = '';
-        allTab.title = '';
       }
     }
     // Wire station filter select (tampilkan kode + nama dari Bank Data Station)
@@ -16225,14 +16242,15 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   // Station tabs click
   document.getElementById('dgStationTabs')?.addEventListener('click', e=>{
     // User-DRG: hanya boleh akses station mereka sendiri
-    // Kecuali jika station='ALL' → boleh akses semua station
+    // Kecuali jika station='ALL' → boleh akses semua station tanpa batasan
     const cu = window.currentUser;
     if(cu && cu.role === 'User-DRG'){
       const targetSt = e.target.closest('[data-dg-station]')?.dataset.dgStation;
       if(targetSt){
-        const allowedSt = window._userDrgStation || 'ALL';
-        // station='ALL' means no restriction
-        if(allowedSt !== 'ALL' && targetSt !== allowedSt && targetSt !== cu.station){
+        const allowedSt = window._userDrgStation;
+        // BUGFIX: null/undefined berarti tidak ada station → block semua kecuali station sendiri
+        // 'ALL' berarti user bisa akses semua → jangan block apapun
+        if(allowedSt && allowedSt !== 'ALL' && targetSt !== allowedSt && targetSt !== cu.station){
           showToast('Akses terbatas: Anda hanya dapat melihat station ' + (allowedSt || 'yang ditugaskan'), 'error');
           return; // block switching to other station
         }
