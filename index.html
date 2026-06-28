@@ -5077,7 +5077,7 @@ CREATE POLICY "allow_all_audit" ON sjnam_audit_log FOR ALL USING (true) WITH CHE
 
     <!-- Station Sub-tabs -->
     <div class="flex gap-1 flex-wrap border-b border-slate-200 dark:border-slate-700 mb-4 overflow-x-auto" id="dgStationTabs">
-      <button data-dg-station="ALL" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 whitespace-nowrap">🌐 Semua</button>
+      <button data-dg-station="ALL" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 whitespace-nowrap">🌐 All</button>
       <button data-dg-station="CGK" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ CGK</button>
       <button data-dg-station="UPG" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ UPG</button>
       <button data-dg-station="SUB" class="dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap">✈ SUB</button>
@@ -9628,10 +9628,26 @@ function applyPermissions(){
           const tabs = document.querySelectorAll('[data-dg-station]');
           tabs.forEach(function(tab){
             const st = tab.dataset.dgStation;
-            if(st && st !== 'ALL' && st !== userStation){
+            if(!st) return;
+            if(st === 'ALL'){
+              // 'All' tab: accessible only if user's station is 'ALL'
+              if(userStation !== 'ALL'){
+                tab.style.opacity = '0.35';
+                tab.style.pointerEvents = 'none';
+                tab.title = 'Akses terbatas';
+              } else {
+                tab.style.opacity = '';
+                tab.style.pointerEvents = '';
+                tab.title = '';
+              }
+            } else if(st !== userStation){
               tab.style.opacity = '0.35';
               tab.style.pointerEvents = 'none';
               tab.title = 'Akses terbatas ke station ' + (userStation || 'Anda');
+            } else {
+              tab.style.opacity = '';
+              tab.style.pointerEvents = '';
+              tab.title = '';
             }
           });
           // Also auto-select user's station if available
@@ -15405,7 +15421,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const allBtn = document.createElement('button');
     allBtn.setAttribute('data-dg-station','ALL');
     allBtn.className = 'dg-station-tab px-3 py-2 text-sm font-semibold border-b-2 whitespace-nowrap '+(activeDgStation==='ALL'?'border-blue-600 text-blue-600':'border-transparent text-slate-500 hover:text-slate-700');
-    allBtn.textContent = '🌐 Semua';
+    allBtn.textContent = '🌐 All';
     container.appendChild(allBtn);
     dgData.stations.forEach(st=>{
       const btn = document.createElement('button');
@@ -15437,12 +15453,17 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
           tab.title = '';
         }
       });
-      // Hide "Semua" tab for DRG users too (they should only see their station)
+      // Hide "All" tab for DRG users — EXCEPT those whose station is 'ALL' (they need it)
       const allTab = container.querySelector('[data-dg-station="ALL"]');
-      if(allTab){
+      if(allTab && _drgSt !== 'ALL'){
         allTab.style.opacity = '0.3';
         allTab.style.pointerEvents = 'none';
         allTab.title = 'Akses terbatas';
+      } else if(allTab) {
+        // station='ALL' user: keep All tab fully accessible
+        allTab.style.opacity = '';
+        allTab.style.pointerEvents = '';
+        allTab.title = '';
       }
     }
     // Wire station filter select
@@ -15483,11 +15504,13 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const to     = document.getElementById('dgFilterDateTo')?.value||'';
     // FIX-DRG: enforce station restriction at DATA level for User-DRG
     // This prevents bypass via DevTools console even if UI tabs are hidden
+    // Special case: station='ALL' means user can access all stations (no restriction)
     const _drgSt = (window.currentUser && window.currentUser.role === 'User-DRG')
-      ? (window._userDrgStation || '__NONE__')
+      ? (window._userDrgStation === 'ALL' ? null : (window._userDrgStation || '__NONE__'))
       : null;
     return dgData.transactions.filter(t=>{
       // User-DRG: hard-block access to other stations at data level
+      // (_drgSt=null means either non-DRG or DRG with station=ALL → no restriction)
       if(_drgSt !== null && t.station !== _drgSt) return false;
       if(activeDgStation !== 'ALL' && t.station !== activeDgStation) return false;
       if(type && t.type !== type) return false;
@@ -16047,12 +16070,14 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   // Station tabs click
   document.getElementById('dgStationTabs')?.addEventListener('click', e=>{
     // User-DRG: hanya boleh akses station mereka sendiri
+    // Kecuali jika station='ALL' → boleh akses semua station
     const cu = window.currentUser;
     if(cu && cu.role === 'User-DRG'){
       const targetSt = e.target.closest('[data-dg-station]')?.dataset.dgStation;
       if(targetSt){
         const allowedSt = window._userDrgStation || 'ALL';
-        if(targetSt !== allowedSt && targetSt !== cu.station){
+        // station='ALL' means no restriction
+        if(allowedSt !== 'ALL' && targetSt !== allowedSt && targetSt !== cu.station){
           showToast('Akses terbatas: Anda hanya dapat melihat station ' + (allowedSt || 'yang ditugaskan'), 'error');
           return; // block switching to other station
         }
