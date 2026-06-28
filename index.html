@@ -5720,6 +5720,15 @@ document.addEventListener('visibilitychange', function(){
     }
     if(navigator.onLine&&typeof _flushOfflineQueue==='function')setTimeout(_flushOfflineQueue,800);
     if(navigator.onLine&&typeof cloudPull==='function'&&typeof cloudConfig!=='undefined'&&cloudConfig?.supabaseUrl)setTimeout(function(){cloudPull(true);},1500);
+    // PATCH4 FIX3: Re-apply DRG lock saat tab kembali aktif
+    // Memastikan perubahan station Admin langsung tampak tanpa re-login
+    if(window.currentUser && window.currentUser.role === 'User-DRG'){
+      setTimeout(function(){
+        if(typeof _applyDrgLock==='function') _applyDrgLock();
+        if(typeof buildStationTabs==='function') buildStationTabs();
+        if(typeof renderDgTrx==='function') renderDgTrx();
+      }, 400);
+    }
   }
 });
 window.addEventListener('pageshow', function(e){
@@ -11040,6 +11049,27 @@ document.addEventListener('DOMContentLoaded', function(){
   if(window.currentUser && typeof window.applyPermissions === 'function'){
     window.applyPermissions();
   }
+  // PATCH5 FIX-B: Hapus user dengan role tidak dikenal (USERX, USERXX, dll)
+  (function _purgeLegacyUsers(){
+    try {
+      var _vr = ['Master','Admin','Co-Admin','User','Peserta'];
+      if(window.CUSTOM_ROLES) window.CUSTOM_ROLES.forEach(function(r){ _vr.push(r.roleName); });
+      var _all = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]');
+      var _keep = _all.filter(function(u){
+        if(u.role === 'Master') return true;
+        if(window.currentUser && u.username === (window.currentUser.username||'')) return true;
+        return _vr.indexOf(u.role) !== -1;
+      });
+      if(_keep.length < _all.length){
+        var _gone = _all.filter(function(u){ return !_keep.some(function(k){ return k.id===u.id; }); });
+        console.info('[FIX-B] Auto-removed ' + (_all.length-_keep.length) + ' legacy user(s): ' +
+          _gone.map(function(u){ return u.username + '(' + u.role + ')'; }).join(', '));
+        localStorage.setItem('sjnam_users_v1', JSON.stringify(_keep));
+        if(typeof triggerAutoSync === 'function') triggerAutoSync('users');
+        if(typeof renderUserTable === 'function') renderUserTable();
+      }
+    } catch(ex){ console.warn('[FIX-B]', ex); }
+  })();
 
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('mainContent');
@@ -15704,9 +15734,28 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     // BUG3 FIX: null = karyawan belum dikonfigurasi stationnya.
     // Jangan gunakan '__NONE__' sentinel yang memblok SEMUA data.
     // null -> tampilkan semua data (sama dengan 'ALL') + warning di UI.
-    const _drgSt = (window.currentUser && window.currentUser.role === 'User-DRG' && window._userDrgStation && window._userDrgStation !== 'ALL')
-      ? window._userDrgStation
-      : null;
+    // PATCH1 ROOT-FIX: Baca station DRG langsung dari karyawan localStorage
+    // setiap render. Menjamin perubahan Admin langsung berlaku tanpa re-login.
+    var _freshDrgSt = null;
+    if (window.currentUser && window.currentUser.role === 'User-DRG') {
+      try {
+        var _kfr = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+        var _myu = (window.currentUser.username || '').toLowerCase();
+        var _kmr = _kfr.find(function(k){ return (k.username||'').toLowerCase() === _myu; });
+        var _fst = (_kmr && _kmr.station) ? _kmr.station : null;
+        // Sync cache jika berubah
+        if (window._userDrgStation !== _fst) {
+          window._userDrgStation = _fst;
+          if (window.currentUser) window.currentUser.station = _fst;
+        }
+        _freshDrgSt = (_fst && _fst !== 'ALL') ? _fst : null;
+      } catch(ex) {
+        // fallback ke cache jika localStorage gagal dibaca
+        var _fc = window._userDrgStation;
+        _freshDrgSt = (_fc && _fc !== 'ALL') ? _fc : null;
+      }
+    }
+    const _drgSt = _freshDrgSt;
     return dgData.transactions.filter(t=>{
       // User-DRG: hard-block access to other stations at data level
       // (_drgSt=null means either non-DRG or DRG with station=ALL → no restriction)
@@ -16315,6 +16364,18 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
   // Active station select change
   document.getElementById('dgActiveStation')?.addEventListener('change', e=>{
+    // PATCH3 FIX-S13: Jaga agar User-DRG dengan station spesifik
+    // tidak bisa memilih station lain via dropdown.
+    var _cu13 = window.currentUser;
+    if (_cu13 && _cu13.role === 'User-DRG') {
+      var _st13 = window._userDrgStation;
+      if (_st13 && _st13 !== 'ALL' && e.target.value !== _st13) {
+        e.target.value = _st13; // revert
+        if (typeof showToast === 'function')
+          showToast('Akses terbatas ke station ' + _st13, 'error');
+        return;
+      }
+    }
     activeDgStation = e.target.value;
     clearDgSelection();
     buildStationTabs(); dgPage=1; renderDgTrx();
@@ -16665,7 +16726,16 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   // ── TAB SWITCHING HOOK ───────────────────────────────────────────
   function _applyDrgLock(){
     var cu=window.currentUser; if(!cu||cu.role!=='User-DRG') return;
-    var st=window._userDrgStation; // null=belum konfigurasi, 'ALL'=semua, kode=spesifik
+    // PATCH2 FIX2: baca fresh dari karyawan agar konsisten dengan PATCH1
+    var st=window._userDrgStation;
+    try {
+      var _kf2=JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]');
+      var _mu2=(cu.username||'').toLowerCase();
+      var _km2=_kf2.find(function(k){return(k.username||'').toLowerCase()===_mu2;});
+      st=(_km2&&_km2.station)?_km2.station:null;
+      window._userDrgStation=st;
+      if(cu)cu.station=st;
+    } catch(ex){ /* fallback ke cache */ }
     document.querySelectorAll('[data-dg-station]').forEach(function(t){
       var ts=t.dataset.dgStation; if(!ts) return;
       if(!st||st==='ALL'){t.style.opacity='';t.style.pointerEvents='';t.title='';}
