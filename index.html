@@ -1449,7 +1449,7 @@ table:not(.stcr-page table) tbody td {
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
       <div>
         <h2 class="text-lg font-bold">🧑‍💼 Data Karyawan</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Master data karyawan. Hubungkan karyawan ke akun login lewat kolom User — cukup pilih usernya di sini, tidak perlu buat user baru secara manual lagi. Kolom <strong>Password</strong> memungkinkan Admin me-reset password akun terhubung langsung dari sini.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Master data karyawan. Gunakan <strong>Add Role</strong> di Manajemen User untuk membuat akun login baru — username otomatis dari NIP. Kolom <strong>Password</strong> memungkinkan Admin me-reset password akun terhubung langsung dari sini.</p>
         <p id="karyawanCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Total Karyawan: 0</p>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -1498,16 +1498,16 @@ table:not(.stcr-page table) tbody td {
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <div>
         <h2 class="text-lg font-bold">Manajemen User</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Kelola akun login. Role Master melekat ke sistem (password khusus). Gunakan <strong>Tambah Role</strong> untuk mengubah role user yang ada. Nama &amp; data pribadi dikelola di tab <strong>Data Karyawan</strong>.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola akun login. Role Master melekat ke sistem (password khusus). Gunakan <strong>Add Role</strong> untuk membuat akun baru dari data karyawan — username otomatis dari NIP. Username &amp; password dikelola di tab <strong>Data Karyawan</strong>.</p>
         <p id="userPesertaCountInfo" class="text-xs text-indigo-600 dark:text-indigo-300 font-semibold mt-1">Total Akun: 0 | Akun Peserta: 0 / 150</p>
       </div>
       <div class="flex flex-wrap gap-2 items-center">
         <div class="relative inline-block" id="btnAddRoleWrap">
           <button id="btnAddRole" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1">
-            🔄 Ubah Role <span class="text-xs opacity-70">▾</span>
+            ＋ Add Role <span class="text-xs opacity-70">▾</span>
           </button>
           <div id="addRoleDropdown" class="hidden absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl z-50 min-w-[240px] overflow-hidden">
-            <div class="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">Tambahkan Role ke User</div>
+            <div class="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">Pilih Role yang Akan Ditambahkan</div>
             <button class="add-role-opt w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2" data-role="Co-Admin">
               <span class="badge bg-blue-100 text-blue-700 text-xs">Co-Admin</span>
               <span class="text-xs text-slate-400">Administrator bantu</span>
@@ -1735,7 +1735,7 @@ table:not(.stcr-page table) tbody td {
         <select id="karyawanUser" class="input">
           <option value="">— Belum dihubungkan ke akun manapun —</option>
         </select>
-        <p class="text-xs text-slate-400 mt-1">Gunakan NIP karyawan sebagai username di <strong>Manajemen User</strong> agar karyawan bisa login dengan NIP mereka.</p>
+        <p class="text-xs text-slate-400 mt-1">Akun login dibuat otomatis via tombol <strong>Add Role</strong> di Manajemen User. Username = NIP karyawan. Setelah akun dibuat, akun akan otomatis terhubung di sini.</p>
       </div>
     </div>
     <div class="flex gap-3 justify-end mt-5">
@@ -10323,113 +10323,184 @@ document.addEventListener('click', function(e){
 });
 
 function _doAddUser(preselectedRole){
-  // Guard: hanya Admin, Master
+  // Guard: hanya Admin & Master
   if(!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Master')){
-    showToast('Hanya Admin/Master yang dapat mengubah role user', 'error');
+    showToast('Hanya Admin/Master yang dapat menambah role', 'error');
     return;
   }
 
-  // Allowed roles via Tambah Role dropdown
   const allowedRoles = ['Co-Admin','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
-  let role = preselectedRole;
+  const role = preselectedRole;
   if(!role || !allowedRoles.includes(role)){
     showToast('Role tidak valid', 'error');
     return;
   }
 
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const users  = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  const karyawanList = (function(){ try{ return JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]'); }catch(e){ return []; } })();
 
   if(role === 'Peserta'){
-    const pesertaCount = users.filter(u=>u.role==='Peserta').length;
+    const pesertaCount = users.filter(u => u.role === 'Peserta').length;
     if(pesertaCount >= 150){
       showToast('Maksimal 150 slot Peserta sudah tercapai', 'error');
       return;
     }
   }
 
-  // Build a simple modal to pick which user to assign this role to
-  const assignableUsers = users.filter(u =>
-    u.role !== 'Master' && u.username !== currentUser.username
-  );
+  // Karyawan yang sudah punya akun (username terhubung & akun masih ada di users)
+  const linkedUsernames = new Set(users.map(u => u.username));
+  // Karyawan yang username-nya sudah tertulis di data karyawan tapi belum ada akunnya = kandidat
+  // Atau karyawan yang belum punya akun sama sekali
+  const kandidat = karyawanList.filter(k => {
+    // Sudah ada username di field karyawanUser? Berarti sudah terhubung — skip
+    if(k.username && linkedUsernames.has(k.username)) return false;
+    return true; // belum punya akun atau username-nya tidak ada di users
+  });
 
-  if(!assignableUsers.length){
-    showToast('Tidak ada user yang dapat diubah rolenya', 'error');
-    return;
-  }
-
-  // Create inline modal for user selection
-  const existingModal = document.getElementById('_assignRoleModal');
+  const existingModal = document.getElementById('_addRoleModal');
   if(existingModal) existingModal.remove();
 
   const roleBadgeColor = {
-    'Co-Admin':'bg-blue-100 text-blue-700',
-    'User-All':'bg-emerald-100 text-emerald-700',
-    'User-SR':'bg-sky-100 text-sky-700',
-    'User-STCR':'bg-purple-100 text-purple-700',
-    'User-ST':'bg-teal-100 text-teal-700',
-    'User-DRG':'bg-orange-100 text-orange-700',
-    'Peserta':'bg-indigo-100 text-indigo-700',
+    'Co-Admin' : 'bg-blue-100 text-blue-700',
+    'User-All' : 'bg-emerald-100 text-emerald-700',
+    'User-SR'  : 'bg-sky-100 text-sky-700',
+    'User-STCR': 'bg-purple-100 text-purple-700',
+    'User-ST'  : 'bg-teal-100 text-teal-700',
+    'User-DRG' : 'bg-orange-100 text-orange-700',
+    'Peserta'  : 'bg-indigo-100 text-indigo-700',
   };
   const bClass = roleBadgeColor[role] || 'bg-slate-100 text-slate-700';
 
   const modal = document.createElement('div');
-  modal.id = '_assignRoleModal';
+  modal.id = '_addRoleModal';
   modal.className = 'modal-overlay';
   modal.style.display = 'flex';
   modal.innerHTML = `
     <div class="modal-box max-w-md">
-      <h3 class="text-lg font-bold mb-1">Tetapkan Role <span class="badge ${bClass}">${esc(role)}</span></h3>
-      <p class="text-xs text-slate-500 mb-4">Pilih user yang akan ditetapkan sebagai <strong>${esc(role)}</strong>. Role user tersebut akan diubah.</p>
-      <input id="_assignRoleSearch" type="text" placeholder="🔍 Cari username..." class="input text-sm mb-3">
-      <div id="_assignRoleList" class="max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700 mb-4"></div>
+      <h3 class="text-lg font-bold mb-1">Add Role <span class="badge ${bClass}">${esc(role)}</span></h3>
+      <p class="text-xs text-slate-500 mb-3">Pilih karyawan untuk dibuatkan akun dengan role <strong>${esc(role)}</strong>.<br>Username = NIP karyawan · Password = <code class="bg-slate-100 px-1 rounded text-slate-600">123456</code> (ubah di kolom Password Data Karyawan).</p>
+      <input id="_addRoleSearch" type="text" placeholder="🔍 Cari nama / NIP..." class="input text-sm mb-3">
+      <div id="_addRoleList" class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700 mb-4"></div>
+      <p id="_addRoleEmpty" class="hidden text-xs text-amber-600 dark:text-amber-400 font-semibold mb-3">⚠️ Semua karyawan sudah memiliki akun, atau belum ada data karyawan. Tambahkan karyawan di tab Data Karyawan terlebih dahulu.</p>
       <div class="flex justify-end gap-2">
-        <button id="_assignRoleCancel" class="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300">Batal</button>
+        <button id="_addRoleCancel" class="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300">Batal</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
-  function renderAssignList(filter){
-    const list = document.getElementById('_assignRoleList');
-    if(!list) return;
-    const filtered = assignableUsers.filter(u =>
-      !filter || u.username.toLowerCase().includes(filter)
-    );
-    if(!filtered.length){
-      list.innerHTML = '<div class="px-4 py-3 text-sm text-slate-400">Tidak ada user ditemukan.</div>';
+  function renderList(filter){
+    const listEl = document.getElementById('_addRoleList');
+    const emptyEl = document.getElementById('_addRoleEmpty');
+    if(!listEl) return;
+
+    if(!kandidat.length){
+      listEl.classList.add('hidden');
+      if(emptyEl) emptyEl.classList.remove('hidden');
       return;
     }
-    list.innerHTML = filtered.map(u => `
-      <button class="_assign-role-user-btn w-full text-left px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-slate-800 transition flex items-center justify-between gap-2" data-uid="${u.id}">
-        <span class="font-mono font-medium text-sm">${esc(u.username)}</span>
-        <span class="badge ${roleBadgeColor[u.role]||'bg-slate-100 text-slate-600'} text-xs shrink-0">${esc(u.role)}</span>
+
+    const q = (filter || '').toLowerCase();
+    const filtered = kandidat.filter(k =>
+      !q ||
+      (k.nama||'').toLowerCase().includes(q) ||
+      (k.nip||'').toLowerCase().includes(q)
+    );
+
+    if(!filtered.length){
+      listEl.innerHTML = '<div class="px-4 py-3 text-sm text-slate-400">Tidak ada karyawan ditemukan.</div>';
+      if(emptyEl) emptyEl.classList.add('hidden');
+      return;
+    }
+
+    if(emptyEl) emptyEl.classList.add('hidden');
+    listEl.classList.remove('hidden');
+
+    listEl.innerHTML = filtered.map(k => `
+      <button class="_add-role-kar-btn w-full text-left px-4 py-2.5 hover:bg-emerald-50 dark:hover:bg-slate-800 transition"
+              data-kar-id="${esc(k.id)}" data-nip="${esc(k.nip||'')}" data-nama="${esc(k.nama||'')}">
+        <div class="flex items-center justify-between gap-2">
+          <span>
+            <span class="font-medium text-sm">${esc(k.nama||'—')}</span>
+            <span class="text-xs text-slate-400 ml-1">· NIP: <span class="font-mono">${esc(k.nip||'—')}</span></span>
+            ${k.jabatan ? `<span class="text-xs text-slate-400 ml-1">· ${esc(k.jabatan)}</span>` : ''}
+          </span>
+          ${k.station ? `<span class="badge bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-xs shrink-0">${esc(k.station)}</span>` : ''}
+        </div>
       </button>
     `).join('');
-    list.querySelectorAll('._assign-role-user-btn').forEach(btn => {
+
+    listEl.querySelectorAll('._add-role-kar-btn').forEach(btn => {
       btn.addEventListener('click', async function(){
-        const uid = parseInt(this.dataset.uid);
-        const target = users.find(u=>u.id===uid);
-        if(!target){ showToast('User tidak ditemukan','error'); return; }
-        const prevRole = target.role;
-        target.role = role;
-        if(role==='Peserta'){
-          const pesertaCount = users.filter(u=>u.role==='Peserta').length;
-          if(pesertaCount > 150){ showToast('Maks 150 slot Peserta','error'); return; }
+        const karId  = this.dataset.karId;
+        const nip    = (this.dataset.nip || '').trim();
+        const nama   = (this.dataset.nama || '').trim();
+
+        if(!nip){
+          showToast('Karyawan ini belum memiliki NIP — isi NIP di Data Karyawan terlebih dahulu', 'error');
+          return;
         }
-        saveUsers(users);
-        renderUserTable();
-        modal.remove();
-        showToast(`Role ${esc(target.username)} diubah: ${prevRole} → ${role}`, 'success');
+
+        // Username = NIP (lowercase)
+        const uname = nip.toLowerCase();
+
+        // Cek duplikat username
+        const freshUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+        if(freshUsers.find(u => u.username.toLowerCase() === uname)){
+          showToast(`Akun dengan username "${uname}" sudah ada`, 'error');
+          return;
+        }
+
+        if(role === 'Peserta'){
+          const pc = freshUsers.filter(u => u.role === 'Peserta').length;
+          if(pc >= 150){ showToast('Maks 150 slot Peserta tercapai', 'error'); return; }
+        }
+
+        // Hash password default
+        const defaultPw = '123456';
+        sha256(defaultPw).then(hashedPw => {
+          const finalUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+          if(finalUsers.find(u => u.username.toLowerCase() === uname)){
+            showToast(`Username "${uname}" sudah ada`, 'error'); return;
+          }
+          const newUser = {
+            id: Date.now(),
+            username: uname,
+            password: hashedPw,
+            role: role,
+            name: nama,
+            active: true,
+            created: new Date().toISOString().split('T')[0]
+          };
+          finalUsers.push(newUser);
+          saveUsers(finalUsers);
+
+          // Auto-link ke data karyawan (set field username di karyawan)
+          try {
+            const karList = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+            const karEntry = karList.find(k => k.id === karId);
+            if(karEntry && !karEntry.username){
+              karEntry.username = uname;
+              localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(karList));
+              if(typeof triggerAutoSync === 'function') triggerAutoSync();
+              if(typeof window.renderKaryawanTable === 'function') window.renderKaryawanTable();
+            }
+          } catch(e){ console.warn('Auto-link karyawan gagal', e); }
+
+          renderUserTable();
+          modal.remove();
+          showToast(`Akun "${uname}" (${esc(role)}) berhasil dibuat · password: 123456`, 'success');
+        }).catch(() => { showToast('Gagal hash password, coba lagi', 'error'); });
       });
     });
   }
 
-  renderAssignList('');
-  document.getElementById('_assignRoleSearch').addEventListener('input', function(){
-    renderAssignList(this.value.toLowerCase().trim());
+  renderList('');
+  document.getElementById('_addRoleSearch').addEventListener('input', function(){
+    renderList(this.value.trim());
   });
-  document.getElementById('_assignRoleCancel').addEventListener('click', ()=>modal.remove());
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.getElementById('_addRoleCancel').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
 }
 
 // ── EDIT USER MODAL ──
