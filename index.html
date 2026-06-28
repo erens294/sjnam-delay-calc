@@ -6396,6 +6396,7 @@ $('#mobileCards').addEventListener('click',handleTableClick);
 // EXPORT DATA
 // =================================================================
 $('#btnExportExcel').addEventListener('click',()=>{
+  if(!window.XLSX){ showToast('Library Excel belum dimuat, coba refresh halaman','error'); return; }
   const filtered=getFilteredData();
   if(!filtered.length) return showToast('Tidak ada data','error');
   const rows = filtered.map((d,i)=>{
@@ -7766,6 +7767,7 @@ $('#dfsFilterAirline').addEventListener('change', ()=>{ dfsCurrentPage=1; render
 
 
 $('#btnDfsExportExcel').addEventListener('click',()=>{
+  if(!window.XLSX){ showToast('Library Excel belum dimuat, coba refresh halaman','error'); return; }
   if(!dfsData.length) return showToast('Tidak ada data DFS','error');
   const rows = dfsData.map((f,i)=>{
     const localRaw = dfsUtcToLocal(f.std_utc, f.origin); // e.g. "08:00 (WIB)"
@@ -12889,7 +12891,7 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     const perms = getPerms();
     // Show read-only notice for non-Admin
     const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
-    const isViewerAdmin = _cu && _cu.role === 'Admin';
+    const isViewerAdmin = _cu && (_cu.role === 'Admin' || _cu.role === 'Master');
     const notice = document.getElementById('permsAdminOnlyNotice');
     const saveBtn = document.getElementById('btnSavePerms');
     const resetBtn = document.getElementById('btnResetPerms');
@@ -12952,8 +12954,8 @@ _updateOfflineQueueBadge(); // cek langsung saat load
   document.addEventListener('click', function(e){
     if(e.target && e.target.id === 'btnSavePerms'){
       const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
-      if(!_cu || _cu.role !== 'Admin'){
-        showToast('Hanya Admin yang dapat mengubah pengaturan akses role', 'error');
+      if(!_cu || (_cu.role !== 'Admin' && _cu.role !== 'Master')){
+        showToast('Hanya Admin/Master yang dapat mengubah pengaturan akses role', 'error');
         return;
       }
       const chks = document.querySelectorAll('.perm-chk');
@@ -12971,8 +12973,8 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     }
     if(e.target && e.target.id === 'btnResetPerms'){
       const _cu2 = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
-      if(!_cu2 || _cu2.role !== 'Admin'){
-        showToast('Hanya Admin yang dapat mereset pengaturan akses role', 'error');
+      if(!_cu2 || (_cu2.role !== 'Admin' && _cu2.role !== 'Master')){
+        showToast('Hanya Admin/Master yang dapat mereset pengaturan akses role', 'error');
         return;
       }
       if(confirm('Reset semua pengaturan akses ke default?')){
