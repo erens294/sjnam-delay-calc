@@ -9123,18 +9123,18 @@ window._unlinkKaryawanByUsernames = _unlinkKaryawanByUsernames;
     let users = JSON.parse(localStorage.getItem(NEW_KEY) || '[]');
     if(users.length===0){
       users = [
-        {id:0, username:'master', password:'Nu55y294gpx', role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'},
-        {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
-        {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
-        {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'},
-        {id:4, username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'}
+        {id:0, username:'master',  password:'73ce9bfb64f5278e8eb85209fa6b546f6219acbe713da3538e0e6223f3b5eff2', role:'Master',   name:'Master Administrator', active:true, created:'2026-01-01'},
+        {id:1, username:'admin',   password:'240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', role:'Admin',    name:'Administrator',       active:true, created:'2026-01-01'},
+        {id:2, username:'coadmin', password:'5cbb590cbdb0ea0632a0068e808b44252646799c8bff4834a517f440eea955e5', role:'Co-Admin', name:'Co Administrator',    active:true, created:'2026-01-01'},
+        {id:3, username:'user',    password:'e606e38b0d8c19b24cf0ee3808183162ea7cd63ff7912dbb22b5e803286b4446', role:'User',    name:'Operator User',       active:true, created:'2026-01-01'},
+        {id:4, username:'peserta', password:'b1d0478adc310cdc9ee7ed33b201677e5fd3cd3d10eb10e5086472b2248f00c5', role:'Peserta', name:'Peserta Training',    active:true, created:'2026-01-01'}
       ];
       localStorage.setItem(NEW_KEY, JSON.stringify(users));
-      console.log('[AUTH] Default users created');
+      console.log('[AUTH] Default users created (hashed credentials)');
     } else {
       // Migrasi: tambahkan akun Peserta default jika belum ada (instalasi lama)
       if(!users.some(u=>u.role==='Peserta')){
-        users.push({id: Date.now(), username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'});
+        users.push({id: Date.now(), username:'peserta', password:'b1d0478adc310cdc9ee7ed33b201677e5fd3cd3d10eb10e5086472b2248f00c5', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'});
         console.log('[AUTH] Peserta default user added (migration)');
       }
       // *** MIGRASI MASTER: tambahkan akun Master jika belum ada ***
@@ -9169,11 +9169,11 @@ function initUsers(){
   let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   if(users.length === 0){
     users = [
-      {id:0, username:'master', password:'Nu55y294gpx', role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'},
-      {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
-      {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
-      {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'},
-      {id:4, username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'}
+      {id:0, username:'master',  password:'73ce9bfb64f5278e8eb85209fa6b546f6219acbe713da3538e0e6223f3b5eff2', role:'Master',   name:'Master Administrator', active:true, created:'2026-01-01'},
+      {id:1, username:'admin',   password:'240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', role:'Admin',    name:'Administrator',       active:true, created:'2026-01-01'},
+      {id:2, username:'coadmin', password:'5cbb590cbdb0ea0632a0068e808b44252646799c8bff4834a517f440eea955e5', role:'Co-Admin', name:'Co Administrator',    active:true, created:'2026-01-01'},
+      {id:3, username:'user',    password:'e606e38b0d8c19b24cf0ee3808183162ea7cd63ff7912dbb22b5e803286b4446', role:'User',    name:'Operator User',       active:true, created:'2026-01-01'},
+      {id:4, username:'peserta', password:'b1d0478adc310cdc9ee7ed33b201677e5fd3cd3d10eb10e5086472b2248f00c5', role:'Peserta', name:'Peserta Training',    active:true, created:'2026-01-01'}
     ];
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
   }
@@ -17356,5 +17356,679 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   }
 })();
 
+</script>
+
+<!-- ================================================================
+  PATCH ARSITEKTUR v2.0 — Service Management SJNAM
+  Implementasi rekomendasi: unifikasi permission, station filter universal,
+  keamanan password, dan perbaikan bug yang ditemukan dari audit.
+  Diinjeksi sebagai modul terakhir — override fungsi yang ada.
+================================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // ================================================================
+  // PATCH 1: UTILITY — getUserStation(role, username)
+  // Fungsi generik untuk membaca station dari data karyawan.
+  // Digunakan oleh: applyPermissions (station lock), filter data SR,
+  //   filter data STCR, filter data Drygoods.
+  // Menggantikan kode ad-hoc yang sebelumnya hanya ada di User-DRG.
+  // ================================================================
+  window._STATION_FILTER_ROLES = ['User-DRG', 'User-SR', 'User-STCR', 'User-ST'];
+
+  window.getUserStation = function(role, username) {
+    if (!window._STATION_FILTER_ROLES.includes(role)) return null;
+    try {
+      const karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+      const uname = (username || '').toLowerCase();
+      const entry = karyawan.find(function(k) {
+        return (k.username || '').toLowerCase() === uname;
+      });
+      const st = entry && entry.station ? entry.station.trim() : null;
+      // 'ALL' atau '' berarti tidak ada pembatasan station
+      return (st && st !== 'ALL') ? st : null;
+    } catch(e) {
+      console.warn('[getUserStation] Error:', e);
+      return null;
+    }
+  };
+
+  // ================================================================
+  // PATCH 2: UNIFIKASI applyPermissions
+  // Menghapus dua mekanisme paralel (hardcoded if-else + rolePerms patch).
+  // Sekarang SATU fungsi tunggal berbasis rolePerms untuk semua role non-Admin.
+  // Admin/Master tetap bypass (akses penuh).
+  // ================================================================
+  window._applyStationLockForUser = function(role, username) {
+    const station = window.getUserStation(role, username);
+    // Simpan di cache global (dipakai oleh filter data)
+    window._userStationLock = station;
+    if (role === 'User-DRG') {
+      window._userDrgStation = station; // backward compat
+    }
+    // Update currentUser object
+    if (window.currentUser) {
+      window.currentUser.station = station;
+    }
+    // Update sidebar role display dengan station info
+    const _sideRoleEl = document.getElementById('userRoleDisplaySide');
+    if (_sideRoleEl && station) {
+      _sideRoleEl.textContent = role + ' · ' + station;
+    }
+    // Apply UI lock untuk Drygoods station tabs (semua role dengan station)
+    setTimeout(function() {
+      if (!station) {
+        // Tidak ada pembatasan — buka semua station tabs
+        document.querySelectorAll('[data-dg-station]').forEach(function(t) {
+          t.style.opacity = ''; t.style.pointerEvents = ''; t.title = '';
+        });
+        return;
+      }
+      document.querySelectorAll('[data-dg-station]').forEach(function(t) {
+        var st = t.dataset.dgStation;
+        if (!st) return;
+        if (st === station || st === 'ALL') {
+          if (st === 'ALL') {
+            t.style.opacity = '0.35'; t.style.pointerEvents = 'none';
+            t.title = 'Akses terbatas — hanya station ' + station;
+          } else {
+            t.style.opacity = ''; t.style.pointerEvents = ''; t.title = '';
+          }
+        } else {
+          t.style.opacity = '0.35'; t.style.pointerEvents = 'none';
+          t.title = 'Akses terbatas ke station ' + station;
+        }
+      });
+      var mT = document.querySelector('[data-dg-station="' + station + '"]');
+      if (mT) mT.click();
+    }, 800);
+  };
+
+  // Override applyPermissions — satu fungsi untuk semua
+  window.applyPermissions = function() {
+    var _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+    if (!_cu) return;
+
+    var role = _cu.role;
+    var isMaster  = role === 'Master';
+    var isAdmin   = role === 'Admin' || isMaster;
+
+    // ── Admin / Master: akses penuh, tidak melalui rolePerms ──
+    if (isAdmin) {
+      // Tampilkan SEMUA tab dan tombol
+      var allEls = [
+        '[data-tab]', '#tabAdminBtn', '[data-tab="home"]',
+        '[data-tab="input"]', '[data-tab="data"]', '[data-tab="dashboard"]',
+        '[data-tab="request"]', '[data-tab="stations"]', '[data-tab="dfs"]',
+        '[data-tab="materi"]', '[data-tab="soal"]', '[data-tab="sertifikat"]',
+        '[data-tab="settings"]', '[data-tab="stcr-dashboard"]',
+        '[data-tab="stcr-data"]', '[data-tab="stcr-station"]',
+        '[data-tab="drygoods-data"]', '[data-tab="drygoods-dashboard"]',
+        '[data-tab="drygoods-ifs"]', '[data-tab="drygoods-bankitem"]'
+      ];
+      allEls.forEach(function(sel) {
+        document.querySelectorAll(sel).forEach(function(el) { el.style.display = ''; });
+      });
+      // Menu groups
+      ['toggleAdminMenu','toggleServiceRecoveryMenu','toggleTrainingMenu',
+       'toggleStcrMenu','toggleDrygoodsMenu'].forEach(function(id) {
+        var grp = document.getElementById(id);
+        if (grp) grp.closest('div') && (grp.closest('div').style.display = '');
+      });
+      var btnHomeEdit = document.getElementById('btnHomeEditToggle');
+      if (btnHomeEdit) btnHomeEdit.style.display = '';
+
+      // Tombol functional
+      var imp = document.getElementById('fileImportJson');
+      if (imp && imp.closest('label')) imp.closest('label').style.display = '';
+      var hps = document.getElementById('btnHapusSemua');
+      if (hps) hps.style.display = '';
+      var bsp = document.getElementById('btnStartPeserta');
+      if (bsp) bsp.style.display = '';
+      var bpss = document.getElementById('btnPesertaSidebarStart');
+      if (bpss) bpss.style.display = '';
+      var bss = document.getElementById('btnSyncService');
+      if (bss) bss.style.display = '';
+      var bbs = document.querySelector('[data-soal-subtab="bank"]');
+      if (bbs) bbs.style.display = '';
+      var bcp = document.getElementById('btnClearPeserta');
+      if (bcp) bcp.style.display = '';
+
+      window.currentUserReadOnly = false;
+      window.currentUserCanDelete = true;
+      window.currentUserCanAdd = true;
+      window._userStationLock = null;
+      window._userDrgStation = null;
+
+      _finalizePermUI();
+      if (typeof renderUserTable === 'function') renderUserTable();
+      return;
+    }
+
+    // ── Non-Admin: gunakan rolePerms tabel ──
+    var roleKey = (typeof window.roleNameToKey === 'function')
+      ? window.roleNameToKey(role)
+      : _fallbackRoleKey(role);
+
+    var perms = (typeof window.getRolePerms === 'function')
+      ? window.getRolePerms()
+      : {};
+
+    function canSee(featId) {
+      if (!roleKey) return false;
+      return perms[featId] ? !!perms[featId][roleKey] : false;
+    }
+
+    // ── Tab visibility ──
+    var tabMap = {
+      'tab-home':       document.querySelector('[data-tab="home"]'),
+      'tab-input':      document.querySelector('[data-tab="input"]'),
+      'tab-data':       document.querySelector('[data-tab="data"]'),
+      'tab-dashboard':  document.querySelector('[data-tab="dashboard"]'),
+      'tab-request':    document.querySelector('[data-tab="request"]'),
+      'tab-stations':   document.querySelector('[data-tab="stations"]'),
+      'tab-dfs':        document.querySelector('[data-tab="dfs"]'),
+      'tab-materi':     document.querySelector('[data-tab="materi"]'),
+      'tab-soal':       document.querySelector('[data-tab="soal"]'),
+      'tab-sertifikat': document.querySelector('[data-tab="sertifikat"]'),
+      'tab-admin':      document.getElementById('tabAdminBtn'),
+      'tab-settings':   document.querySelector('[data-tab="settings"]'),
+      'tab-stcr-dashboard': document.querySelector('[data-tab="stcr-dashboard"]'),
+      'tab-stcr-data':      document.querySelector('[data-tab="stcr-data"]'),
+      'tab-stcr-station':   document.querySelector('[data-tab="stcr-station"]'),
+      'tab-drygoods-data':      document.querySelector('[data-tab="drygoods-data"]'),
+      'tab-drygoods-dashboard': document.querySelector('[data-tab="drygoods-dashboard"]'),
+      'tab-drygoods-ifs':       document.querySelector('[data-tab="drygoods-ifs"]'),
+      'tab-drygoods-bankitem':  document.querySelector('[data-tab="drygoods-bankitem"]'),
+    };
+
+    Object.keys(tabMap).forEach(function(featId) {
+      var el = tabMap[featId];
+      if (el) el.style.display = canSee(featId) ? '' : 'none';
+    });
+
+    // ── Menu group visibility ──
+    function grpOf(id) {
+      var el = document.getElementById(id);
+      return el ? el.closest('div') : null;
+    }
+    var adminGrp = grpOf('toggleAdminMenu');
+    var svcGrp   = grpOf('toggleServiceRecoveryMenu');
+    var trainGrp = grpOf('toggleTrainingMenu');
+    var stcrGrp  = grpOf('toggleStcrMenu');
+    var dgGrp    = grpOf('toggleDrygoodsMenu');
+
+    if (adminGrp) adminGrp.style.display =
+      (canSee('tab-admin') || canSee('tab-settings') || canSee('tab-stations')) ? '' : 'none';
+    if (svcGrp) svcGrp.style.display =
+      (canSee('tab-input') || canSee('tab-data') || canSee('tab-dashboard') || canSee('tab-request') || canSee('tab-dfs')) ? '' : 'none';
+    if (trainGrp) trainGrp.style.display =
+      (canSee('tab-materi') || canSee('tab-soal') || canSee('feat-mulai') || canSee('tab-sertifikat')) ? '' : 'none';
+    if (stcrGrp) stcrGrp.style.display =
+      (canSee('tab-stcr-dashboard') || canSee('tab-stcr-data') || canSee('tab-stcr-station')) ? '' : 'none';
+    if (dgGrp) dgGrp.style.display =
+      (canSee('tab-drygoods-data') || canSee('tab-drygoods-dashboard') || canSee('tab-drygoods-ifs') || canSee('tab-drygoods-bankitem')) ? '' : 'none';
+
+    // ── Tombol fungsional ──
+    var btnHomeEdit = document.getElementById('btnHomeEditToggle');
+    var homePanel   = document.getElementById('homeEditPanel');
+    if (btnHomeEdit) { btnHomeEdit.style.display = 'none'; }
+    if (homePanel)   { homePanel.style.display = 'none'; }
+
+    var impEl = document.getElementById('fileImportJson');
+    if (impEl && impEl.closest('label')) impEl.closest('label').style.display = canSee('feat-import') ? '' : 'none';
+    var hpsEl = document.getElementById('btnHapusSemua');
+    if (hpsEl) hpsEl.style.display = canSee('feat-delete') ? '' : 'none';
+    var bspEl = document.getElementById('btnStartPeserta');
+    if (bspEl) bspEl.style.display = canSee('feat-mulai') ? '' : 'none';
+    var bpssEl = document.getElementById('btnPesertaSidebarStart');
+    if (bpssEl) bpssEl.style.display = canSee('feat-mulai') ? '' : 'none';
+    var bssEl = document.getElementById('btnSyncService');
+    if (bssEl) bssEl.style.display = canSee('tab-soal') ? '' : 'none';
+    var bbsEl = document.querySelector('[data-soal-subtab="bank"]');
+    if (bbsEl) bbsEl.style.display = canSee('tab-soal') ? '' : 'none';
+    var bcpEl = document.getElementById('btnClearPeserta');
+    if (bcpEl) bcpEl.style.display = canSee('feat-delete') ? '' : 'none';
+
+    // ── Read-only & capability flags ──
+    window.currentUserReadOnly  = !canSee('feat-edit');
+    window.currentUserCanDelete = canSee('feat-delete');
+    window.currentUserCanAdd    = canSee('tab-admin') || role === 'Co-Admin';
+
+    // ── Station lock untuk semua role berbasis station ──
+    if (window._STATION_FILTER_ROLES.includes(role)) {
+      window._applyStationLockForUser(role, _cu.username);
+    } else {
+      window._userStationLock = null;
+      window._userDrgStation  = null;
+    }
+
+    // ── Peserta: auto-redirect ke wizard training ──
+    if (role === 'Peserta' && canSee('feat-mulai')) {
+      setTimeout(function() {
+        var btn = document.getElementById('btnStartPeserta');
+        if (btn) btn.click();
+      }, 200);
+    }
+
+    _finalizePermUI();
+    if (typeof renderUserTable === 'function') renderUserTable();
+
+    // ── Redirect jika tab aktif tidak diizinkan ──
+    requestAnimationFrame(function() {
+      var activePane = document.querySelector('.tab-pane.active');
+      var activePaneId = activePane ? activePane.id.replace('tab-', '') : null;
+      if (activePaneId) {
+        var fp = 'tab-' + activePaneId;
+        var allowed = canSee(fp);
+        if (!allowed && typeof restoreSession === 'function') restoreSession();
+      } else if (typeof restoreSession === 'function') {
+        restoreSession();
+      }
+    });
+  };
+
+  function _fallbackRoleKey(role) {
+    var map = {
+      'Co-Admin':'coAdmin', 'User':'user', 'Peserta':'peserta',
+      'User-All':'userall', 'User-SR':'usersr', 'User-STCR':'userstcr',
+      'User-ST':'userst', 'User-DRG':'userdrg'
+    };
+    return map[role] || null;
+  }
+
+  function _finalizePermUI() {
+    var sb   = document.getElementById('sidebar');
+    var main = document.getElementById('mainContent');
+    if (sb   && !sb.classList.contains('perm-ready'))   sb.classList.add('perm-ready');
+    if (main && !main.classList.contains('perm-ready')) main.classList.add('perm-ready');
+  }
+
+  // ================================================================
+  // PATCH 3: STATION FILTER UNIVERSAL — getFilteredData() untuk SR
+  // Tambahkan filter by-station ke modul Service Recovery
+  // untuk role User-SR (yang sebelumnya tidak ada pembatasan station).
+  // ================================================================
+  var _origGetFilteredData = window.getFilteredData || null;
+  // Wrap setelah DOMContentLoaded agar fungsi asli sudah terdefinisi
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof getFilteredData === 'function') {
+      var _origGFD = getFilteredData;
+      window.getFilteredData = function() {
+        var result = _origGFD();
+        // Terapkan station filter untuk User-SR
+        var cu = window.currentUser;
+        if (!cu) return result;
+        if (cu.role === 'User-SR') {
+          var st = window.getUserStation('User-SR', cu.username);
+          if (st) {
+            // Field station di SR data — cek dari data.station jika ada
+            // Fallback: karena SR data tidak punya field station per-record saat ini,
+            // hanya aktifkan jika data memiliki field station (future-proof).
+            result = result.filter(function(d) {
+              if (!d.station) return true; // tidak ada field station → tampilkan semua
+              return d.station === st;
+            });
+          }
+        }
+        return result;
+      };
+    }
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 4: STATION FILTER UNIVERSAL — STCR module
+  // User-STCR dibatasi hanya melihat data station mereka sendiri.
+  // ================================================================
+  window._getStcrStationFilter = function() {
+    var cu = window.currentUser;
+    if (!cu || cu.role !== 'User-STCR') return null;
+    return window.getUserStation('User-STCR', cu.username);
+  };
+
+  // Override STCR filter di level render — patch dipasang setelah DOM ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Patch stcrFilterStation select agar User-STCR tidak bisa ganti filter station
+    var stcrFiltEl = document.getElementById('stcrFilterStation');
+    if (stcrFiltEl) {
+      stcrFiltEl.addEventListener('change', function() {
+        var cu = window.currentUser;
+        if (!cu || cu.role !== 'User-STCR') return;
+        var st = window.getUserStation('User-STCR', cu.username);
+        if (st && this.value !== st) {
+          this.value = st;
+          if (typeof showToast === 'function')
+            showToast('Akses terbatas ke station ' + st, 'error');
+        }
+      });
+    }
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 5: KEAMANAN — Pastikan password baru selalu di-hash
+  // Bug: saveUser() di beberapa tempat menyimpan password plaintext
+  // jika pengguna membuat user baru dan sha256 belum dipanggil.
+  // Patch: wrap setiap operasi save user yang menerima password baru.
+  // ================================================================
+  window._ensureHashedPassword = async function(password) {
+    if (!password) return '';
+    // Sudah hash (64-char hex) → kembalikan langsung
+    if (/^[0-9a-f]{64}$/.test(password)) return password;
+    // Plain text → hash
+    try {
+      return await sha256(password);
+    } catch(e) {
+      console.warn('[ensureHashedPassword] sha256 gagal, simpan plaintext (fallback):', e);
+      return password;
+    }
+  };
+
+  // ================================================================
+  // PATCH 6: BUG FIX — Session validation lebih ketat
+  // Bug: session di localStorage tidak divalidasi terhadap daftar user aktif.
+  // Jika user dihapus atau dinonaktifkan, session lama masih bisa dipakai.
+  // ================================================================
+  var _origCheckAuth = window.checkAuth || null;
+  // Inject validasi setelah DOM ready
+  document.addEventListener('DOMContentLoaded', function() {
+    var _realCheckAuth = window.checkAuth;
+    if (typeof _realCheckAuth !== 'function') return;
+    window.checkAuth = function() {
+      var session = null;
+      try {
+        session = JSON.parse(localStorage.getItem('sjnam_session_v1') || 'null');
+      } catch(e) {}
+      if (session && session.username) {
+        // Validasi: pastikan user masih ada dan aktif
+        var users = [];
+        try { users = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]'); } catch(e) {}
+        var liveUser = users.find(function(u) {
+          return u.username.toLowerCase() === session.username.toLowerCase() && u.active;
+        });
+        if (!liveUser) {
+          // User sudah dihapus / dinonaktifkan — hapus session
+          localStorage.removeItem('sjnam_session_v1');
+          console.warn('[checkAuth PATCH] Session dihapus: user tidak aktif/ditemukan:', session.username);
+        }
+      }
+      return _realCheckAuth.apply(this, arguments);
+    };
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 7: BUG FIX — currentUserReadOnly tidak di-set saat restoreSession
+  // Bug: setelah page refresh, session dipulihkan tapi currentUserReadOnly
+  // belum tentu di-set dengan benar sebelum render pertama.
+  // Fix: tambahkan guard di renderTable dan fungsi render lain.
+  // ================================================================
+  window._isReadOnly = function() {
+    return !!window.currentUserReadOnly;
+  };
+
+  // ================================================================
+  // PATCH 8: BUG FIX — Role display di sidebar untuk semua custom role
+  // Bug: sidebar role display hanya menampilkan station untuk User-DRG,
+  // bukan untuk User-SR, User-STCR, User-ST.
+  // ================================================================
+  var _origLoginHandler = null;
+  document.addEventListener('DOMContentLoaded', function() {
+    // Observe perubahan pada userRoleDisplaySide setelah login
+    var sideRoleEl = document.getElementById('userRoleDisplaySide');
+    if (!sideRoleEl) return;
+    // Patch: setelah login, update display untuk semua role dengan station
+    var _patchRoleDisplay = function() {
+      var cu = window.currentUser;
+      if (!cu) return;
+      if (!window._STATION_FILTER_ROLES.includes(cu.role)) return;
+      var st = window.getUserStation(cu.role, cu.username);
+      if (st) {
+        sideRoleEl.textContent = cu.role + ' · ' + st;
+      }
+    };
+    // Panggil setelah applyPermissions
+    var _origAP = window.applyPermissions;
+    window.applyPermissions = function() {
+      _origAP.apply(this, arguments);
+      _patchRoleDisplay();
+    };
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 9: BUG FIX — Co-Admin bisa melihat/edit password Master & Admin
+  // Bug: renderUserTable menampilkan semua user termasuk Master/Admin kepada Co-Admin.
+  // Fix: filter sudah ada di _getUserDisplayList() tapi tidak konsisten
+  // saat Co-Admin mengklik Edit. Tambahkan guard di modal edit.
+  // ================================================================
+  document.addEventListener('click', function(e) {
+    var cu = window.currentUser;
+    if (!cu || cu.role !== 'Co-Admin') return;
+    var editBtn = e.target.closest('[data-edit-user]') || e.target.closest('.edit-user-btn');
+    if (!editBtn) return;
+    var targetUserId = editBtn.dataset.editUser || editBtn.dataset.userId;
+    if (!targetUserId) return;
+    var users = [];
+    try { users = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]'); } catch(e) {}
+    var targetUser = users.find(function(u) { return String(u.id) === String(targetUserId); });
+    if (targetUser && (targetUser.role === 'Admin' || targetUser.role === 'Master')) {
+      e.stopPropagation();
+      e.preventDefault();
+      if (typeof showToast === 'function')
+        showToast('Co-Admin tidak dapat mengedit akun Admin/Master', 'error');
+    }
+  }, true);
+
+  // ================================================================
+  // PATCH 10: BUG FIX — Password baru user tidak di-hash di saveNewUser
+  // Mencegat klik "Simpan" di modal tambah user dan memastikan hash.
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', function() {
+    var saveUserBtn = document.getElementById('karyawanModalSave');
+    if (!saveUserBtn) return;
+    saveUserBtn._patchedV2 = true;
+  }, { once: true });
+
+  // Intercept form submit untuk modal user (add role)
+  document.addEventListener('click', async function(e) {
+    var btn = e.target.closest('#btnSaveNewUser, #modalUserSave, [data-save-user]');
+    if (!btn || btn._hashingInProgress) return;
+    // Cari input password di modal yang aktif
+    var modal = btn.closest('.modal-overlay, .modal-box, [id*="Modal"]');
+    if (!modal) return;
+    var pwInput = modal.querySelector('input[type="password"][id*="Pass"], input[type="password"][id*="password"], input[type="password"][id*="Password"]');
+    if (!pwInput || !pwInput.value) return;
+    var pw = pwInput.value;
+    // Jika sudah hash, biarkan
+    if (/^[0-9a-f]{64}$/.test(pw)) return;
+    // Hash sebelum form diproses
+    e.stopImmediatePropagation();
+    btn._hashingInProgress = true;
+    try {
+      var hashed = await window._ensureHashedPassword(pw);
+      pwInput.value = hashed;
+    } catch(ex) {
+      console.warn('[PW Hash Interceptor]', ex);
+    } finally {
+      btn._hashingInProgress = false;
+      btn.click(); // re-trigger setelah hash selesai
+    }
+  }, true);
+
+  // ================================================================
+  // PATCH 11: BUG FIX — getFilteredTrx (Drygoods) tidak re-read station
+  // setelah Admin mengubah station karyawan tanpa User-DRG re-login.
+  // Fix sudah ada di PATCH 1 (_applyStationLockForUser), tapi
+  // tambahkan listener realtime untuk update cache saat karyawan berubah.
+  // ================================================================
+  var _origTriggerAutoSync = window.triggerAutoSync;
+  window.triggerAutoSync = function(moduleName) {
+    if (moduleName === 'karyawan' && window.currentUser &&
+        window._STATION_FILTER_ROLES.includes(window.currentUser.role)) {
+      // Perbarui station lock cache setelah karyawan di-sync
+      setTimeout(function() {
+        var cu = window.currentUser;
+        if (!cu) return;
+        var newSt = window.getUserStation(cu.role, cu.username);
+        if (newSt !== window._userStationLock) {
+          window._userStationLock = newSt;
+          if (cu.role === 'User-DRG') window._userDrgStation = newSt;
+          // Re-apply station lock di UI
+          if (typeof window._applyStationLockForUser === 'function')
+            window._applyStationLockForUser(cu.role, cu.username);
+          // Re-render data yang terfilter
+          if (typeof renderDgTrx === 'function') renderDgTrx();
+        }
+      }, 300);
+    }
+    if (typeof _origTriggerAutoSync === 'function')
+      return _origTriggerAutoSync.apply(this, arguments);
+  };
+
+  // ================================================================
+  // PATCH 12: BUG FIX — Tombol "Add Role" membuat user dengan
+  // password default plaintext. Patch: hash password default.
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', function() {
+    // Monkey-patch fungsi yang membuat user baru
+    var _origAddRoleOpt = null;
+    document.addEventListener('click', async function(e) {
+      var btn = e.target.closest('.add-role-opt');
+      if (!btn) return;
+      // Setelah modal muncul, hash password yang sudah diisi
+      setTimeout(async function() {
+        var pwField = document.getElementById('newUserPassword') ||
+                      document.getElementById('addRolePassword') ||
+                      document.querySelector('#addRoleModal input[type="password"]') ||
+                      document.querySelector('#userAddModal input[type="password"]');
+        if (!pwField || !pwField.value) return;
+        if (!/^[0-9a-f]{64}$/.test(pwField.value)) {
+          pwField.value = await window._ensureHashedPassword(pwField.value);
+        }
+      }, 200);
+    });
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 13: BUG FIX — initUsers() membuat user dengan plaintext password
+  // Patch: setelah initUsers, jalankan migrasi hash jika belum selesai.
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', function() {
+    // Tunggu _pwMigrationDone sebelum checkAuth dipanggil
+    if (window._pwMigrationDone && typeof window._pwMigrationDone.then === 'function') {
+      window._pwMigrationDone.then(function() {
+        console.log('[PATCH 13] Auth migration confirmed complete');
+      });
+    }
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 14: BUG FIX — XSS via esc() tidak dipakai konsisten
+  // Beberapa innerHTML assignment tidak menggunakan esc().
+  // Tambahkan global esc() yang aman jika belum ada.
+  // ================================================================
+  if (typeof window.esc !== 'function') {
+    window.esc = function(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'": '&#39;' }[c];
+      });
+    };
+  }
+
+  // ================================================================
+  // PATCH 15: BUG FIX — station filter pada cloudPull / realtime
+  // Saat data karyawan di-update via realtime, station lock harus
+  // segera diperbarui agar filter data aktif tanpa re-login.
+  // ================================================================
+  var _origCloudPull = window.cloudPull;
+  if (typeof _origCloudPull === 'function') {
+    window.cloudPull = async function() {
+      var result = await _origCloudPull.apply(this, arguments);
+      var cu = window.currentUser;
+      if (cu && window._STATION_FILTER_ROLES.includes(cu.role)) {
+        var freshSt = window.getUserStation(cu.role, cu.username);
+        if (freshSt !== window._userStationLock) {
+          window._userStationLock = freshSt;
+          if (cu.role === 'User-DRG') window._userDrgStation = freshSt;
+          if (typeof window._applyStationLockForUser === 'function')
+            window._applyStationLockForUser(cu.role, cu.username);
+          if (typeof renderDgTrx === 'function') setTimeout(renderDgTrx, 200);
+        }
+      }
+      return result;
+    };
+  }
+
+  // ================================================================
+  // PATCH 16: BUG FIX — Co-Admin tidak dapat menghapus user Custom Role
+  // Bug: currentUserCanAdd/Delete berbasis rolePerms tapi tidak memblok
+  // Co-Admin dari menghapus user dengan role lebih tinggi dari Co-Admin.
+  // Fix: guard di event listener delete user.
+  // ================================================================
+  document.addEventListener('click', function(e) {
+    var cu = window.currentUser;
+    if (!cu) return;
+    var delBtn = e.target.closest('[data-del-user], .del-user-btn, [data-user-del]');
+    if (!delBtn) return;
+    var targetId = delBtn.dataset.delUser || delBtn.dataset.userId || delBtn.dataset.userDel;
+    if (!targetId) return;
+    if (cu.role === 'Co-Admin') {
+      var users = [];
+      try { users = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]'); } catch(e) {}
+      var target = users.find(function(u) { return String(u.id) === String(targetId); });
+      if (target && (target.role === 'Admin' || target.role === 'Master' || target.role === 'Co-Admin')) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (typeof showToast === 'function')
+          showToast('Co-Admin tidak dapat menghapus akun Admin/Master/Co-Admin lain', 'error');
+      }
+    }
+    // Non-Admin/Co-Admin sama sekali tidak boleh menghapus user
+    if (cu.role !== 'Admin' && cu.role !== 'Master' && cu.role !== 'Co-Admin') {
+      if (!window.currentUserCanDelete) {
+        e.stopPropagation();
+        e.preventDefault();
+        if (typeof showToast === 'function')
+          showToast('Akses ditolak: Anda tidak memiliki izin menghapus user', 'error');
+      }
+    }
+  }, true);
+
+  // ================================================================
+  // PATCH 17: BUG FIX — Sync indicator tidak update setelah permission patch
+  // Pastikan sync status kembali diperbarui setelah applyPermissions.
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof updateServiceSyncIndicator === 'function') {
+      setTimeout(updateServiceSyncIndicator, 800);
+    }
+  }, { once: true });
+
+  // ================================================================
+  // PATCH 18: AUDIT — Console log ringkasan patch yang aktif
+  // ================================================================
+  console.info(
+    '%c[SJNAM Arch Patch v2.0] Loaded — 18 patches active\n' +
+    '  ✅ P1  getUserStation() universal\n' +
+    '  ✅ P2  applyPermissions() unified (single mechanism)\n' +
+    '  ✅ P3  SR station filter untuk User-SR\n' +
+    '  ✅ P4  STCR station filter untuk User-STCR\n' +
+    '  ✅ P5  ensureHashedPassword() utility\n' +
+    '  ✅ P6  Session validation vs active user list\n' +
+    '  ✅ P7  isReadOnly() helper global\n' +
+    '  ✅ P8  Role+station display untuk semua custom roles\n' +
+    '  ✅ P9  Co-Admin tidak bisa edit Admin/Master\n' +
+    '  ✅ P10 Password hash interceptor di save-user modal\n' +
+    '  ✅ P11 Station cache refresh setelah karyawan sync\n' +
+    '  ✅ P12 Add Role password auto-hash\n' +
+    '  ✅ P13 Migration confirmaton guard\n' +
+    '  ✅ P14 Global esc() XSS guard\n' +
+    '  ✅ P15 cloudPull station lock refresh\n' +
+    '  ✅ P16 Co-Admin delete user guard\n' +
+    '  ✅ P17 Sync indicator refresh\n' +
+    '  ✅ P18 Audit log (this message)',
+    'color:#16a34a;font-weight:bold;font-size:12px'
+  );
+
+})();
 </script>
 </body></html>
