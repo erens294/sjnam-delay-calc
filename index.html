@@ -5423,7 +5423,7 @@ CREATE POLICY "allow_all_audit" ON sjnam_audit_log FOR ALL USING (true) WITH CHE
 </main>
 
 <!-- TOAST -->
-<div id="toastContainer" class="fixed top-4 right-4 z-[500] space-y-2 pointer-events-none"></div>
+<div id="toastContainer" class="fixed top-4 right-4 z-[100000] space-y-2 pointer-events-none"></div>
 
 <!-- MODAL KONFIRMASI -->
 <div id="confirmModal" class="modal-overlay hidden">
@@ -18099,7 +18099,7 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
         '<div class="space-y-3">',
           '<div>',
             '<label class="block text-sm font-medium mb-1">Password Baru <span class="text-red-500">*</span></label>',
-            '<input type="password" id="_fcpNewPw" class="input" placeholder="Min. 8 karakter, huruf kapital & angka" autocomplete="new-password">',
+            '<input type="password" id="_fcpNewPw" class="input" placeholder="Min. 8 karakter: kapital, kecil & angka" autocomplete="new-password">',
             '<div id="_fcpStrength" class="mt-1 text-xs text-slate-400"></div>',
           '</div>',
           '<div>',
