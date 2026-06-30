@@ -6295,7 +6295,7 @@ function renderTable(){
       </td>
       <td class="px-2 py-2 text-center"><input type="number" min="0" value="${d.qtyPax||0}" data-qty-id="${d.id}" class="qty-input text-xs" ${window.currentUserReadOnly?'disabled readonly style="opacity:0.5;cursor:not-allowed"':''}></td>
       <td class="px-2 py-2 text-right text-xs font-medium text-purple-700 dark:text-purple-300">${formatRupiah(costVal)}</td>
-      <td class="px-2 py-2 max-w-[120px] truncate text-xs text-slate-500" title="${d.keterangan||''}">${d.keterangan||'-'}</td>
+      <td class="px-2 py-2 max-w-[120px] truncate text-xs text-slate-500" title="${esc(d.keterangan||'')}">${esc(d.keterangan)||'-'}</td>
       <td class="px-2 py-2 text-center whitespace-nowrap">
         ${window.currentUserReadOnly ? '<span class="text-xs text-slate-400">-</span>' : `<button data-edit="${d.id}" class="text-blue-600 hover:text-blue-800 mr-1.5 text-xs font-semibold">Edit</button><button data-del="${d.id}" class="text-red-600 hover:text-red-800 text-xs font-semibold">Del</button>`}
       </td>
@@ -7870,11 +7870,19 @@ renderDfsTable();
 // ⚡ CLOUD SYNC — SUPABASE REALTIME
 // =================================================================
 const CLOUD_KEY = 'sjn_cloud_config_v1';
-// === AUTO-CONNECT SUPABASE (hidden) ===
-const _u = atob('aHR0cHM6Ly91enhmcmhvZHZoZWNjbHF1ZGF4Yi5zdXBhYmFzZS5jbw==');
-const _k = atob('ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2SW5WNmVHWnlhRzlrZG1obFkyTnNjWFZrWVhoaUlpd2ljbTlzWlNJNkltRnViMjRpTENKcFlYUWlPakUzT0RBNU1EQTNPVGNzSW1WNGNDSTZNakE1TmpRM05qYzVOMzAuV2JSeGJsY1loWkFES3FrN3BiVG5FSXNKQ2x3cEVjSmNfR3ZYdTlGRUJUNA==');
-const DEFAULT_SUPABASE_URL = _u;
-const DEFAULT_SUPABASE_KEY = _k;
+// SECURITY FIX: kredensial Supabase (URL + anon key) yang sebelumnya di-bundle
+// di sini (di-"sembunyikan" lewat atob/base64, yang BUKAN enkripsi — siapapun
+// bisa decode lewat View Source dalam hitungan detik) sudah dihapus.
+// Membundel kredensial cloud di file client-side statis berarti siapa saja
+// yang punya file ini juga punya akses penuh ke project Supabase tsb
+// (sejauh mana itu dieksploitasi tergantung Row Level Security project ini).
+// Sekarang aplikasi TIDAK punya default URL/key — wajib diisi via menu
+// Cloud Sync (lihat #cloudApiKey / #cloudBinId) dan tersimpan hanya di
+// localStorage device tsb. Jika project Supabase lama pernah memakai key
+// yang dulu di-hardcode di sini, key itu harus dianggap bocor — rotate
+// (regenerate) anon key tersebut dari Supabase Dashboard.
+const DEFAULT_SUPABASE_URL = '';
+const DEFAULT_SUPABASE_KEY = '';
 
 cloudConfig = { supabaseUrl: DEFAULT_SUPABASE_URL, supabaseKey: DEFAULT_SUPABASE_KEY };
 try {
@@ -9160,7 +9168,8 @@ window._unlinkKaryawanByUsernames = _unlinkKaryawanByUsernames;
       }
       // *** MIGRASI MASTER: tambahkan akun Master jika belum ada ***
       // Master adalah role sistem yang HARUS selalu ada.
-      // Password plain 'Nu55y294gpx' — login bypass plain text sudah ditangani di handler login.
+      // Password default 'Nu55y294gpx' di-hash sebelum disimpan (lihat di bawah).
+      // Tidak ada lagi bypass plain-text khusus Master di handler login.
       if(!users.some(u=>u.role==='Master')){
         // Hash password Master sebelum simpan (SHA-256)
         // sha256 sudah didefinisikan sebelum IIFE ini, jadi bisa langsung dipakai.
@@ -9175,7 +9184,7 @@ window._unlinkKaryawanByUsernames = _unlinkKaryawanByUsernames;
         if(typeof sha256 === 'function'){
           sha256('Nu55y294gpx').then(function(h){ _addMaster(h); }).catch(function(){ _addMaster('Nu55y294gpx'); });
         } else {
-          _addMaster('Nu55y294gpx'); // SHA-256 belum dimuat — plain, bypass login tetap berlaku
+          _addMaster('Nu55y294gpx'); // SHA-256 belum dimuat — fallback plain text (sama seperti akun lain)
         }
       } else {
         // Master sudah ada — langsung simpan (tidak perlu sha256 karena tidak ada perubahan password)
@@ -9222,9 +9231,8 @@ window._pwMigrationDone = (async function migratePasswordsToSHA256(){
   let changed = 0;
   for(const u of users){
     if(u.password && !/^[0-9a-f]{64}$/.test(u.password)){
-      // Masih plain text — hash sekarang
-      // CATATAN: Master dengan plain password 'Nu55y294gpx' tetap di-hash
-      // karena login bypass plain sudah ditangani di login handler (PATCH Master)
+      // Hash semua password plain-text, termasuk Master. Tidak ada lagi
+      // bypass plain-text untuk Master — lihat SECURITY FIX di login handler.
       u.password = await sha256(u.password);
       changed++;
     }
@@ -9304,14 +9312,17 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
 
   const users = JSON.parse(localStorage.getItem("sjnam_users_v1") || "[]");
   const userCandidate = users.find(u => u.username.toLowerCase() === username && u.active);
-  // Master role: accept both hashed and plain-text password 'Nu55y294gpx'
+  // SECURITY FIX: hardcoded Master password bypass ('Nu55y294gpx' literal check)
+  // dihapus. Itu adalah backdoor permanen yang tidak bisa dinonaktifkan dan
+  // terlihat siapa saja yang membuka page source. Password Master sekarang
+  // diverifikasi sama seperti akun lain — lewat hash SHA-256 tersimpan
+  // (migrasi password sudah meng-hash 'Nu55y294gpx' saat instalasi pertama,
+  // lihat migratePasswordsToSHA256 di atas). Untuk reset password Master,
+  // gunakan menu ganti password setelah login, atau hapus entry user Master
+  // di localStorage agar dibuat ulang dengan password default ter-hash.
   let passwordOk = false;
   if(userCandidate){
-    if(userCandidate.role === 'Master' && password === 'Nu55y294gpx'){
-      passwordOk = true; // Master plain-text password bypass (sistem melekat)
-    } else {
-      passwordOk = await verifyPassword(password, userCandidate.password);
-    }
+    passwordOk = await verifyPassword(password, userCandidate.password);
   }
   const user = passwordOk ? userCandidate : null;
 
