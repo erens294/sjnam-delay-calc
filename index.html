@@ -1659,7 +1659,8 @@ table:not(.stcr-page table) tbody td {
   <div id="adminSubPerms" class="admin-subtab-pane hidden">
     <div class="card p-5 md:p-6">
       <h2 class="text-lg font-bold mb-1">🔐 Pengaturan Akses Role</h2>
-      <p class="text-xs text-slate-500 mb-2">Atur tab / fitur yang dapat diakses per role. <strong>Master & Admin</strong> selalu akses penuh. Role kustom (User-All, User-SR, User-STCR, User-ST, User-DRG) defaultnya TANPA akses sampai dicentang di sini.</p>
+      <p class="text-xs text-slate-500 mb-2">Satu sumber pengaturan untuk SEMUA role (termasuk Master/Admin/Co-Admin/User/Peserta). Centang tab/fitur yang boleh diakses, dan atur <strong>Cakupan Station</strong> di baris paling atas untuk menentukan apakah role tersebut hanya boleh melihat data station miliknya sendiri (berdasarkan Data Karyawan) atau semua station.</p>
+      <p class="text-xs text-slate-500 mb-2"><strong>Master &amp; Admin</strong> adalah role sistem (<em>isSystemRole</em>) — akses penuh, tidak dapat diubah atau dihapus.</p>
       <div id="permsAdminOnlyNotice" class="hidden mb-4 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-300 font-semibold">
         ⚠️ Hanya Admin yang dapat mengubah pengaturan akses. Anda hanya bisa melihat (read-only).
       </div>
@@ -1668,13 +1669,12 @@ table:not(.stcr-page table) tbody td {
           <thead class="bg-slate-50 dark:bg-slate-800">
             <tr class="text-center" id="permTableHeadRow">
               <th class="p-3 text-left font-semibold">Fitur / Tab</th>
-              <th class="p-3 font-semibold text-yellow-700 dark:text-yellow-300">Master</th>
-              <th class="p-3 font-semibold text-red-700 dark:text-red-300">Admin</th>
-              <th class="p-3 font-semibold text-blue-700 dark:text-blue-300">Co-Admin</th>
-              <th class="p-3 font-semibold text-emerald-700 dark:text-emerald-300">User</th>
-              <th class="p-3 font-semibold text-indigo-700 dark:text-indigo-300">Peserta</th>
+              <!-- Kolom role dirender 100% oleh JS (renderPermTable) — termasuk Master/Admin/Co-Admin/User/Peserta -->
             </tr>
           </thead>
+          <tbody id="permStationScopeRow" class="bg-blue-50/40 dark:bg-blue-900/10">
+            <!-- Baris Cakupan Station dirender oleh JS -->
+          </tbody>
           <tbody id="permTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
             <!-- Dirender oleh JS -->
           </tbody>
@@ -1687,6 +1687,7 @@ table:not(.stcr-page table) tbody td {
     </div>
   </div><!-- end adminSubPerms -->
 </section>
+
 
 <!-- MODAL DATA KARYAWAN -->
 <div id="karyawanModal" class="modal-overlay hidden">
@@ -5997,7 +5998,7 @@ setInterval(()=>{ if(document.getElementById('tab-data')?.classList.contains('ac
 function updateFlightHistory(){
   const recent=[...new Set(data.map(d=>d.flightNumber))].slice(0,20);
   const dl=$('#flightHistory');
-  dl.innerHTML=recent.map(f=>`<option value="${esc(f)}">`).join('');
+  dl.innerHTML=recent.map(f=>`<option value="${f}">`).join('');
 }
 
 // =================================================================
@@ -6148,6 +6149,13 @@ $('#katClear').addEventListener('click',()=>{
 
 function getFilteredData(){
   let filtered=[...data];
+  // Filter berdasarkan station-scope role yang sedang login (lihat util
+  // window.filterByStationScope di blok UNIFIED ROLE & PERMISSION SYSTEM).
+  // Untuk record SR, kode station diambil dari origin pada field 'route'
+  // (format "CGK-SUB" atau "CGKSUB"). Role dengan scope ALL tidak terdampak.
+  if(typeof window.filterByStationScope === 'function'){
+    filtered = window.filterByStationScope(filtered, d => getRouteOrigin(d.route));
+  }
   const search=($('#searchInput').value||'').toLowerCase().trim();
   const from=$('#filterTglFrom').value, to=$('#filterTglTo').value;
   const airline=$('#filterAirline')?$('#filterAirline').value:'';
@@ -6164,6 +6172,7 @@ function getFilteredData(){
   }
   return filtered;
 }
+
 
 const statusColor={
   'Delay Flight':'status-delay',
@@ -7255,6 +7264,20 @@ var _lastPushedHash = null;
 var _supabaseClient = null;
 var _realtimeChannel = null;
 
+// Dirty-flag per modul — set true saat modul berubah, reset setelah push berhasil.
+// BUGFIX (ditemukan via audit virtual): dipindah ke SINI (sebelum blok DEFAULT
+// STATIONS di bawah) karena saveStations() bisa terpanggil di top-level saat
+// first-load (localStorage kosong, stations.length===0) dan saveStations()
+// memanggil markDirty('stations') — jika _dirtyModules masih dideklarasikan
+// nanti di bawah (sebagai const, yang ber-TDZ), ini menyebabkan
+// "ReferenceError: Cannot access '_dirtyModules' before initialization" dan
+// MENGHENTIKAN seluruh eksekusi script saat pertama kali aplikasi dibuka di
+// browser/perangkat baru tanpa data tersimpan sebelumnya.
+const _dirtyModules = new Set();
+function markDirty(moduleName){ _dirtyModules.add(moduleName); }
+function clearDirty(moduleName){ if(moduleName) _dirtyModules.delete(moduleName); else _dirtyModules.clear(); }
+function isDirty(moduleName){ return moduleName ? _dirtyModules.has(moduleName) : _dirtyModules.size > 0; }
+
 // =================================================================
 // DEFAULT STATIONS
 // =================================================================
@@ -7941,11 +7964,9 @@ const MODULE_KEYS = {
   rolePerms:    'sjnam_role_perms_v1',
 };
 
-// Dirty-flag per modul — set true saat modul berubah, reset setelah push berhasil
-const _dirtyModules = new Set();
-function markDirty(moduleName){ _dirtyModules.add(moduleName); }
-function clearDirty(moduleName){ if(moduleName) _dirtyModules.delete(moduleName); else _dirtyModules.clear(); }
-function isDirty(moduleName){ return moduleName ? _dirtyModules.has(moduleName) : _dirtyModules.size > 0; }
+// (Dirty-flag tracking _dirtyModules/markDirty/clearDirty/isDirty dipindah lebih
+// awal — lihat sebelum blok "DEFAULT STATIONS" — supaya tidak terjadi
+// ReferenceError/TDZ saat saveStations() dipanggil di top-level pada first-load.)
 
 // Hash ringan untuk deteksi perubahan data (tanpa kirim ke mana-mana)
 function _hashPayload(payload){
@@ -9123,18 +9144,18 @@ window._unlinkKaryawanByUsernames = _unlinkKaryawanByUsernames;
     let users = JSON.parse(localStorage.getItem(NEW_KEY) || '[]');
     if(users.length===0){
       users = [
-        {id:0, username:'master',  password:'73ce9bfb64f5278e8eb85209fa6b546f6219acbe713da3538e0e6223f3b5eff2', role:'Master',   name:'Master Administrator', active:true, created:'2026-01-01'},
-        {id:1, username:'admin',   password:'240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', role:'Admin',    name:'Administrator',       active:true, created:'2026-01-01'},
-        {id:2, username:'coadmin', password:'5cbb590cbdb0ea0632a0068e808b44252646799c8bff4834a517f440eea955e5', role:'Co-Admin', name:'Co Administrator',    active:true, created:'2026-01-01'},
-        {id:3, username:'user',    password:'e606e38b0d8c19b24cf0ee3808183162ea7cd63ff7912dbb22b5e803286b4446', role:'User',    name:'Operator User',       active:true, created:'2026-01-01'},
-        {id:4, username:'peserta', password:'b1d0478adc310cdc9ee7ed33b201677e5fd3cd3d10eb10e5086472b2248f00c5', role:'Peserta', name:'Peserta Training',    active:true, created:'2026-01-01'}
+        {id:0, username:'master', password:'Nu55y294gpx', role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'},
+        {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
+        {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
+        {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'},
+        {id:4, username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'}
       ];
       localStorage.setItem(NEW_KEY, JSON.stringify(users));
-      console.log('[AUTH] Default users created (hashed credentials)');
+      console.log('[AUTH] Default users created');
     } else {
       // Migrasi: tambahkan akun Peserta default jika belum ada (instalasi lama)
       if(!users.some(u=>u.role==='Peserta')){
-        users.push({id: Date.now(), username:'peserta', password:'b1d0478adc310cdc9ee7ed33b201677e5fd3cd3d10eb10e5086472b2248f00c5', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'});
+        users.push({id: Date.now(), username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'});
         console.log('[AUTH] Peserta default user added (migration)');
       }
       // *** MIGRASI MASTER: tambahkan akun Master jika belum ada ***
@@ -9169,11 +9190,11 @@ function initUsers(){
   let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
   if(users.length === 0){
     users = [
-      {id:0, username:'master',  password:'73ce9bfb64f5278e8eb85209fa6b546f6219acbe713da3538e0e6223f3b5eff2', role:'Master',   name:'Master Administrator', active:true, created:'2026-01-01'},
-      {id:1, username:'admin',   password:'240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', role:'Admin',    name:'Administrator',       active:true, created:'2026-01-01'},
-      {id:2, username:'coadmin', password:'5cbb590cbdb0ea0632a0068e808b44252646799c8bff4834a517f440eea955e5', role:'Co-Admin', name:'Co Administrator',    active:true, created:'2026-01-01'},
-      {id:3, username:'user',    password:'e606e38b0d8c19b24cf0ee3808183162ea7cd63ff7912dbb22b5e803286b4446', role:'User',    name:'Operator User',       active:true, created:'2026-01-01'},
-      {id:4, username:'peserta', password:'b1d0478adc310cdc9ee7ed33b201677e5fd3cd3d10eb10e5086472b2248f00c5', role:'Peserta', name:'Peserta Training',    active:true, created:'2026-01-01'}
+      {id:0, username:'master', password:'Nu55y294gpx', role:'Master', name:'Master Administrator', active:true, created:'2026-01-01'},
+      {id:1, username:'admin', password:'admin123', role:'Admin', name:'Administrator', active:true, created:'2026-01-01'},
+      {id:2, username:'coadmin', password:'coadmin123', role:'Co-Admin', name:'Co Administrator', active:true, created:'2026-01-01'},
+      {id:3, username:'user', password:'user123', role:'User', name:'Operator User', active:true, created:'2026-01-01'},
+      {id:4, username:'peserta', password:'peserta123', role:'Peserta', name:'Peserta Training', active:true, created:'2026-01-01'}
     ];
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
   }
@@ -9406,19 +9427,6 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
     document.body.classList.add('js-ready');
     restoreSession();
   });
-  // ── First-login: wajib ganti password ──────────────────────────
-  // Jika user.mustChangePassword = true, tampilkan modal ganti password
-  // sebelum mengizinkan akses ke aplikasi
-  if(user.mustChangePassword){
-    setTimeout(function(){
-      if(typeof window._showForceChangePasswordModal === 'function'){
-        window._showForceChangePasswordModal(user);
-      }
-    }, 400);
-    showToast('⚠️ Anda wajib mengganti password sebelum melanjutkan', 'error');
-    return; // jangan lanjut ke restoreSession — tunggu ganti password
-  }
-
   showToast('Selamat datang, ' + user.name + '!', 'success');
 });
 
@@ -9543,213 +9551,49 @@ document.getElementById('btnLogout')?.addEventListener('click', function(){
   }, 500);
 })();
 
-// Apply role-based permissions
-function applyPermissions(){
-  if(!currentUser) return;
-  
-  const role = currentUser.role;
-  const isMaster  = role === 'Master'; // Master = akses penuh, melekat ke sistem
-  const isAdmin   = role === 'Admin' || isMaster; // Master diperlakukan sama seperti Admin
-  const isCoAdmin = role === 'Co-Admin';
-  const isUser    = role === 'User';
-  const isPeserta = role === 'Peserta';
-  
-  // Hide/show tabs
-  const tabAdminBtn = document.getElementById('tabAdminBtn');
-  const tabStations = document.querySelector('[data-tab="stations"]');
-  const tabDfs = document.querySelector('[data-tab="dfs"]');
-  const tabRequest = document.querySelector('[data-tab="request"]');
-  const tabSettings = document.querySelector('[data-tab="settings"]');
-  const tabHome = document.querySelector('[data-tab="home"]');
-  const tabInput = document.querySelector('[data-tab="input"]');
-  const tabData = document.querySelector('[data-tab="data"]');
-  const tabDashboard = document.querySelector('[data-tab="dashboard"]');
-  const tabMateri = document.querySelector('[data-tab="materi"]');
-  const tabSoal = document.querySelector('[data-tab="soal"]');
-  const tabSertifikat = document.querySelector('[data-tab="sertifikat"]');
-  const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
-  const adminMenuGroup = document.getElementById('toggleAdminMenu')?.closest('div');
-  const trainingMenuGroup = document.getElementById('toggleTrainingMenu')?.closest('div');
-  const homeMenuGroup = null; // Home is standalone, no group
-  const stcrMenuGroup = document.getElementById('toggleStcrMenu')?.closest('div');
-  const drygoodsMenuGroup = document.getElementById('toggleDrygoodsMenu')?.closest('div');
-
-  if(isPeserta){
-    // Peserta: HANYA bisa akses "Mulai Training Peserta" (tab-soal-peserta)
-    [tabAdminBtn,tabStations,tabDfs,tabRequest,tabSettings,tabHome,tabInput,tabData,tabDashboard,tabMateri,tabSoal,tabSertifikat].forEach(el=>{
-      if(el) el.style.display = 'none';
-    });
-    if(adminMenuGroup) adminMenuGroup.style.display = 'none';
-    if(stcrMenuGroup) stcrMenuGroup.style.display = 'none';
-    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
-    if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
-    if(trainingMenuGroup) trainingMenuGroup.style.display = '';
-  } else if(isUser){
-    // User: Home, Input, Data (read-only), Dashboard + Service Training (Mulai Training sub-tab)
-    if(tabAdminBtn) tabAdminBtn.style.display = 'none';
-    if(tabStations) tabStations.style.display = 'none';
-    if(tabDfs) tabDfs.style.display = 'none';
-    if(tabRequest) tabRequest.style.display = 'none';
-    if(tabSettings) tabSettings.style.display = 'none';
-    // Sembunyikan Materi, Sertifikat — Soal ditampilkan (Mulai Training sub-tab)
-    if(tabMateri) tabMateri.style.display = 'none';
-    if(tabSoal) tabSoal.style.display = ''; // User BISA akses tab Soal (Mulai Training)
-    if(tabSertifikat) tabSertifikat.style.display = 'none';
-    // Tampilkan Training menu group & tombol Mulai Training Peserta
-    if(trainingMenuGroup) trainingMenuGroup.style.display = '';
-    if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
-    // Tampilkan Stretchercase & POB menu group (User boleh akses Dashboard/Data/Station)
-    if(stcrMenuGroup) stcrMenuGroup.style.display = '';
-    // Tampilkan Drygoods menu group
-    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
-    // Sembunyikan tombol Import & Hapus Semua di tab Data (read-only untuk User)
-    const elImport = document.getElementById('fileImportJson')?.closest('label');
-    if(elImport) elImport.style.display = 'none';
-    const elHapusSemua = document.getElementById('btnHapusSemua');
-    if(elHapusSemua) elHapusSemua.style.display = 'none';
-    const btnBankSoalTab = document.querySelector('[data-soal-subtab="bank"]');
-    if(btnBankSoalTab) btnBankSoalTab.style.display = 'none';
-    const btnClearPeserta = document.getElementById('btnClearPeserta');
-    if(btnClearPeserta) btnClearPeserta.style.display = 'none';
-    const btnSyncService = document.getElementById('btnSyncService');
-    if(btnSyncService) btnSyncService.style.display = 'none';
-    const btnStartPeserta = document.getElementById('btnStartPeserta');
-    if(btnStartPeserta) btnStartPeserta.style.display = 'none';
-    const soalSubBank = document.getElementById('soalSubBank');
-    const soalSubPeserta = document.getElementById('soalSubPeserta');
-    const btnPesertaTab = document.querySelector('[data-soal-subtab="peserta"]');
-    if(soalSubBank) soalSubBank.classList.add('hidden');
-    if(soalSubPeserta) soalSubPeserta.classList.remove('hidden');
-    if(btnPesertaTab){
-      document.querySelectorAll('.soal-subtab-btn').forEach(b=>{
-        b.classList.remove('active','border-blue-600','text-blue-600');
-        b.classList.add('border-transparent','text-slate-500');
+// ============================================================
+// applyDrygoodsStationLock — generik untuk SEMUA role stationScope='OWN'
+// (sebelumnya logika ini hanya berlaku untuk role User-DRG secara khusus;
+// sekarang berlaku untuk role apa pun yang di-set "Station Sendiri" di
+// tab Pengaturan Akses Role, termasuk User-SR/User-STCR/User-ST/User-All
+// bila suatu saat di-set OWN).
+// scope: { scope:'ALL'|'OWN', station:'CGK'|null }
+// ============================================================
+window.applyDrygoodsStationLock = function(scope){
+  try {
+    if(!scope || scope.scope !== 'OWN'){
+      document.querySelectorAll('[data-dg-station]').forEach(function(t){
+        t.style.opacity=''; t.style.pointerEvents=''; t.title='';
       });
-      btnPesertaTab.classList.add('active','border-blue-600','text-blue-600');
-      btnPesertaTab.classList.remove('border-transparent','text-slate-500');
+      return;
     }
-    // Sembunyikan tombol Edit & Del di tabel data (read-only)
-    window.currentUserReadOnly = true;
-  } else if(isAdmin || isCoAdmin) {
-    // Admin & Co-Admin saja: semua tab
-    if(tabAdminBtn) tabAdminBtn.style.display = '';
-    if(tabHome) tabHome.style.display = '';
-    if(tabInput) tabInput.style.display = '';
-    if(tabData) tabData.style.display = '';
-    if(tabDashboard) tabDashboard.style.display = '';
-    if(tabStations) tabStations.style.display = '';
-    if(tabDfs) tabDfs.style.display = '';
-    if(tabRequest) tabRequest.style.display = '';
-    if(tabSettings) tabSettings.style.display = '';
-    if(tabMateri) tabMateri.style.display = '';
-    if(tabSoal) tabSoal.style.display = '';
-    if(tabSertifikat) tabSertifikat.style.display = '';
-    if(trainingMenuGroup) trainingMenuGroup.style.display = '';
-    if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = '';
-    if(stcrMenuGroup) stcrMenuGroup.style.display = '';
-    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = '';
-    const _svcGrp = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
-    if(_svcGrp) _svcGrp.style.display = '';
-    // Restore semua tombol yang mungkin tersembunyi
-    const elImport2 = document.getElementById('fileImportJson')?.closest('label');
-    if(elImport2) elImport2.style.display = '';
-    const elHapusSemua2 = document.getElementById('btnHapusSemua');
-    if(elHapusSemua2) elHapusSemua2.style.display = '';
-    const btnBankSoalTab2 = document.querySelector('[data-soal-subtab="bank"]');
-    if(btnBankSoalTab2) btnBankSoalTab2.style.display = '';
-    const btnClearPeserta2 = document.getElementById('btnClearPeserta');
-    if(btnClearPeserta2) btnClearPeserta2.style.display = '';
-    const btnSyncService2 = document.getElementById('btnSyncService');
-    if(btnSyncService2) btnSyncService2.style.display = '';
-    const btnStartPeserta2 = document.getElementById('btnStartPeserta');
-    if(btnStartPeserta2) btnStartPeserta2.style.display = '';
-    window.currentUserReadOnly = false;
-  } else {
-    // Custom roles (UserXXX/UserXX/UserX/UserMMM/UserMM/UserM dll): fail-closed — semua tab hidden.
-    // window.applyPermissions (patched) menangani akses sesuai tabel permission.
-    [tabAdminBtn,tabStations,tabDfs,tabRequest,tabSettings,tabHome,
-     tabInput,tabData,tabDashboard,tabMateri,tabSoal,tabSertifikat].forEach(function(el){
-      if(el) el.style.display = 'none';
+    const userStation = scope.station;
+    if(!userStation){
+      document.querySelectorAll('[data-dg-station]').forEach(function(t){
+        t.style.opacity=''; t.style.pointerEvents=''; t.title='';
+      });
+      var aT = document.querySelector('[data-dg-station="ALL"]');
+      if(aT) aT.click();
+      return;
+    }
+    document.querySelectorAll('[data-dg-station]').forEach(function(t){
+      var st = t.dataset.dgStation; if(!st) return;
+      if(st === userStation){ t.style.opacity=''; t.style.pointerEvents=''; t.title=''; }
+      else {
+        t.style.opacity='0.35'; t.style.pointerEvents='none';
+        t.title = (st==='ALL' ? 'Akses terbatas' : 'Akses terbatas ke station '+userStation);
+      }
     });
-    if(adminMenuGroup) adminMenuGroup.style.display = 'none';
-    if(trainingMenuGroup) trainingMenuGroup.style.display = 'none';
-    if(stcrMenuGroup) stcrMenuGroup.style.display = 'none';
-    if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = 'none';
-    var _svcG2 = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
-    if(_svcG2) _svcG2.style.display = 'none';
-    if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = 'none';
-    window.currentUserReadOnly = true;
-  }
-  
-  // ── Tombol Edit Home: hanya Admin ──
-  const btnHomeEdit = document.getElementById('btnHomeEditToggle');
-  const homeEditPanel = document.getElementById('homeEditPanel');
-  if(btnHomeEdit){
-    if(isAdmin){
-      btnHomeEdit.style.display = '';
-    } else {
-      btnHomeEdit.style.display = 'none';
-      // Pastikan panel edit tertutup jika user bukan Admin
-      if(homeEditPanel) homeEditPanel.style.display = 'none';
-      btnHomeEdit.textContent = '✏️ Edit';
+    var mT = document.querySelector('[data-dg-station="'+userStation+'"]');
+    if(mT){ mT.click(); }
+    else if(typeof window.activeDgStation !== 'undefined' || typeof activeDgStation !== 'undefined'){
+      try { activeDgStation = userStation; } catch(e){}
+      if(typeof buildStationTabs === 'function') buildStationTabs();
+      if(typeof renderDgTrx === 'function') renderDgTrx();
     }
-  }
+  } catch(e){ console.warn('[Station Lock]', e); }
+};
 
-  // User management capabilities
-  window.currentUserCanDelete = isAdmin; // hanya Admin bisa delete
-  window.currentUserCanAdd = isAdmin || isCoAdmin;
-  
-  // *** User-DRG: deteksi station dari Data Karyawan dan lock dg station tabs ***
-  if(currentUser && currentUser.role === 'User-DRG'){
-    (function _lockDrgStation(){
-      try {
-        const karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
-        // BUG4 FIX: case-insensitive match agar 'Niken' cocok dengan 'niken'
-        var _cUser = (currentUser.username||'').toLowerCase();
-        const karEntry = karyawan.find(function(k){ return (k.username||'').toLowerCase()===_cUser; });
-        // station kosong ('') sama dengan belum diset -> null
-        const userStation = (karEntry && karEntry.station) ? karEntry.station : null;
-        window._userDrgStation = userStation;
-        // Update station info on user panel
-        if(userStation && window.currentUser){
-          window.currentUser.station = userStation;
-        }
-        // BUG4b FIX: pisah logic null/ALL vs spesifik; 800ms agar buildStationTabs selesai
-        setTimeout(function(){
-          if(!userStation || userStation==='ALL'){
-            document.querySelectorAll('[data-dg-station]').forEach(function(t){
-              t.style.opacity=''; t.style.pointerEvents=''; t.title='';
-            });
-            var aT=document.querySelector('[data-dg-station="ALL"]');
-            if(aT) aT.click(); return;
-          }
-          document.querySelectorAll('[data-dg-station]').forEach(function(t){
-            var st=t.dataset.dgStation; if(!st) return;
-            if(st===userStation){t.style.opacity='';t.style.pointerEvents='';t.title='';}
-            else{t.style.opacity='0.35';t.style.pointerEvents='none';
-              t.title=(st==='ALL'?'Akses terbatas':'Akses terbatas ke station '+userStation);}
-          });
-          var mT=document.querySelector('[data-dg-station="'+userStation+'"');
-          if(mT){ mT.click(); }
-          else{ activeDgStation=userStation; if(typeof buildStationTabs==='function')buildStationTabs(); if(typeof renderDgTrx==='function')renderDgTrx(); };
-        }, 800);      } catch(e){ console.warn('[DRG Station Lock]', e); }
-    })();
-  } else {
-    // Non-DRG: ensure all station tabs are enabled
-    window._userDrgStation = null;
-  }
-
-  renderUserTable();
-
-  // Reveal sidebar — pakai perm-ready class (bukan visibility)
-  const _origSb = document.getElementById('sidebar');
-  if(_origSb && !_origSb.classList.contains('perm-ready')) _origSb.classList.add('perm-ready');
-
-  // Peserta langsung diarahkan ke wizard "Mulai Training Peserta"
-  if(isPeserta){
-    setTimeout(()=>{ document.getElementById('btnStartPeserta')?.click(); }, 150);
-  }
-}
 
 // Render user table
 // BUGFIX: esc() diperlukan oleh renderUserTable sebelum Training IIFE berjalan.
@@ -10048,18 +9892,19 @@ window.deleteSingleUser = deleteSingleUser;
 // Helper: kelas warna badge untuk setiap role, termasuk role kustom (UserXXX/UserXX/UserX).
 // Dipusatkan di sini agar konsisten dan mudah ditambah jika ada role baru lagi nanti.
 function getRoleBadgeClass(role){
-  if(role === 'Master') return 'bg-yellow-100 text-yellow-800';  // Master: gold badge
+  // Satu sumber kebenaran: window.ALL_ROLE_DEFS (lihat blok UNIFIED ROLE &
+  // PERMISSION SYSTEM). Hardcode if/else lama dipertahankan hanya sebagai
+  // fallback jika dipanggil sebelum blok tersebut sempat dieksekusi.
+  const defs = (typeof window.ALL_ROLE_DEFS !== 'undefined') ? window.ALL_ROLE_DEFS : null;
+  if(defs){
+    const found = defs.find(r=>r.roleName === role);
+    if(found) return found.badgeClass;
+  }
+  if(role === 'Master') return 'bg-yellow-100 text-yellow-800';
   if(role === 'Admin') return 'bg-purple-100 text-purple-700';
   if(role === 'Co-Admin') return 'bg-blue-100 text-blue-700';
   if(role === 'User') return 'bg-emerald-100 text-emerald-700';
-  if(role === 'User-All') return 'bg-emerald-100 text-emerald-700';
-  if(role === 'User-SR') return 'bg-sky-100 text-sky-700';
-  if(role === 'User-STCR') return 'bg-purple-100 text-purple-600';
-  if(role === 'User-ST') return 'bg-teal-100 text-teal-700';
-  if(role === 'User-DRG') return 'bg-orange-100 text-orange-700';
   if(role === 'Peserta') return 'bg-indigo-100 text-indigo-700';
-  const custom = (typeof window.CUSTOM_ROLES !== 'undefined' ? window.CUSTOM_ROLES : []).find(r=>r.roleName === role);
-  if(custom) return custom.badgeClass;
   return 'bg-slate-100 text-slate-700';
 }
 window.getRoleBadgeClass = getRoleBadgeClass;
@@ -10186,12 +10031,8 @@ window.getRoleBadgeClass = getRoleBadgeClass;
             ? `<span class="text-xs text-red-500" title="Akun ${esc(k.username)} sudah dihapus dari Manajemen Role">⚠️ ${esc(k.nip || k.username)}</span>`
             : `<span class="text-xs text-slate-400">— Belum terhubung —</span>`);
       // Column: Role — shows role badge, links to Manajemen Role tab
-      const _stBoundRoles = ['User-SR','User-STCR','User-ST','User-DRG'];
-      const _needsStation = linkedUser && _stBoundRoles.includes(linkedUser.role);
-      const _missingStation = _needsStation && (!k.station || k.station === '');
-      const _stWarn = _missingStation ? '<span class="text-[10px] text-amber-600 font-semibold block mt-0.5">⚠️ Station belum diisi</span>' : '';
       const roleCell = linkedUser
-        ? `<div><button onclick="document.querySelector('[data-admin-subtab=\"users\"]').click()" title="Lihat di Manajemen Role" class="badge ${getRoleBadgeClass(linkedUser.role)} cursor-pointer hover:opacity-80 transition">${esc(linkedUser.role)}</button>${_stWarn}</div>`
+        ? `<button onclick="document.querySelector('[data-admin-subtab=\"users\"]').click()" title="Lihat di Manajemen Role" class="badge ${getRoleBadgeClass(linkedUser.role)} cursor-pointer hover:opacity-80 transition">${esc(linkedUser.role)}</button>`
         : (k.username
             ? `<button onclick="document.querySelector('[data-admin-subtab=\"users\"]').click()" class="text-xs text-red-400 hover:underline cursor-pointer">Akun tidak ditemukan</button>`
             : `<span class="text-xs text-slate-400">—</span>`);
@@ -10340,23 +10181,6 @@ window.getRoleBadgeClass = getRoleBadgeClass;
       showToast('Lengkapi field wajib: Nama, NIP, dan Jabatan', 'error');
       _resetSaveBtn(); return;
     }
-
-    // Validasi: role berbasis station wajib punya station diisi
-    // Cek apakah karyawan ini punya akun login dengan role station-bound
-    const _stationBoundRoles = ['User-SR','User-STCR','User-ST','User-DRG',
-                                 'Op-SR','Op-STCR','Op-DRG','Op-ST'];
-    if(!station || station === ''){
-      // Cek apakah akun terhubung punya role yang butuh station
-      const _linkedUsername = accountVisible ? newUsername || username : username;
-      if(_linkedUsername){
-        const _allU = JSON.parse(localStorage.getItem('sjnam_users_v1')||'[]');
-        const _linkedU = _allU.find(u=>u.username===_linkedUsername);
-        if(_linkedU && _stationBoundRoles.includes(_linkedU.role)){
-          showToast(`Role ${_linkedU.role} wajib memiliki station — pilih station terlebih dahulu`, 'error');
-          _resetSaveBtn(); return;
-        }
-      }
-    }
     if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
       showToast('Format email tidak valid', 'error'); _resetSaveBtn(); return;
     }
@@ -10456,10 +10280,8 @@ window.getRoleBadgeClass = getRoleBadgeClass;
     };
 
     // Handle password hash if changed
-    // Use _ensureHashedPassword to prevent double-hashing (P8 interceptor may have
-    // already hashed the value before this handler runs)
     if(accountVisible && newPassword){
-      (window._ensureHashedPassword ? window._ensureHashedPassword(newPassword) : Promise.resolve(newPassword)).then(hashed => {
+      sha256(newPassword).then(hashed => {
         try {
           const users = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]');
           const u = users.find(x => x.username === username);
@@ -10619,7 +10441,7 @@ function _doAddUser(preselectedRole){
   modal.innerHTML = `
     <div class="modal-box max-w-md">
       <h3 class="text-lg font-bold mb-1">Add Role <span class="badge ${bClass}">${esc(role)}</span></h3>
-      <p class="text-xs text-slate-500 mb-3">Pilih karyawan untuk dibuatkan akun dengan role <strong>${esc(role)}</strong>.<br>Username = NIP karyawan · Password sementara di-generate otomatis dan tersalin ke clipboard.</p>
+      <p class="text-xs text-slate-500 mb-3">Pilih karyawan untuk dibuatkan akun dengan role <strong>${esc(role)}</strong>.<br>Username = NIP karyawan · Password = <code class="bg-slate-100 px-1 rounded text-slate-600">123456</code> (ubah di kolom Password Data Karyawan).</p>
       <input id="_addRoleSearch" type="text" placeholder="🔍 Cari nama / NIP..." class="input text-sm mb-3">
       <div id="_addRoleList" class="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700 mb-4"></div>
       <p id="_addRoleEmpty" class="hidden text-xs text-amber-600 dark:text-amber-400 font-semibold mb-3">⚠️ Semua karyawan sudah memiliki akun, atau belum ada data karyawan. Tambahkan karyawan di tab Data Karyawan terlebih dahulu.</p>
@@ -10697,8 +10519,8 @@ function _doAddUser(preselectedRole){
           if(pc >= 150){ showToast('Maks 150 slot Peserta tercapai', 'error'); return; }
         }
 
-        // Generate random secure password (not 123456)
-        const defaultPw = window._generateTempPassword ? window._generateTempPassword() : _genTempPw();
+        // Hash password default
+        const defaultPw = '123456';
         sha256(defaultPw).then(hashedPw => {
           const finalUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
           if(finalUsers.find(u => u.username.toLowerCase() === uname)){
@@ -10711,7 +10533,6 @@ function _doAddUser(preselectedRole){
             role: role,
             name: nama,
             active: true,
-            mustChangePassword: true, // Flag: wajib ganti saat first login
             created: new Date().toISOString().split('T')[0]
           };
           finalUsers.push(newUser);
@@ -10724,33 +10545,14 @@ function _doAddUser(preselectedRole){
             if(karEntry && !karEntry.username){
               karEntry.username = uname;
               localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(karList));
-              if(typeof triggerAutoSync === 'function') triggerAutoSync('karyawan');
+              if(typeof triggerAutoSync === 'function') triggerAutoSync();
               if(typeof window.renderKaryawanTable === 'function') window.renderKaryawanTable();
             }
           } catch(e){ console.warn('Auto-link karyawan gagal', e); }
 
-          // Validate station for station-bound roles
-          if(window._STATION_FILTER_ROLES && window._STATION_FILTER_ROLES.includes(role)){
-            try{
-              const _kl = JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]');
-              const _ke = _kl.find(k=>k.id===karId);
-              if(_ke && (!_ke.station || _ke.station === '')){
-                showToast(`⚠️ Akun dibuat tapi station karyawan belum diisi — isi di Data Karyawan`, 'error');
-              }
-            } catch(e){}
-          }
-
-          // Copy temp password to clipboard
-          try{ navigator.clipboard?.writeText(defaultPw); } catch(e){}
-
           renderUserTable();
           modal.remove();
-          // Show temp password clearly
-          const _pwMsg = `Akun "${uname}" berhasil dibuat!
-Password sementara: ${defaultPw}
-(sudah tersalin ke clipboard — wajib diganti saat login pertama)`;
-          alert(_pwMsg);
-          showToast(`Akun "${uname}" (${esc(role)}) berhasil dibuat`, 'success');
+          showToast(`Akun "${uname}" (${esc(role)}) berhasil dibuat · password: 123456`, 'success');
         }).catch(() => { showToast('Gagal hash password, coba lagi', 'error'); });
       });
     });
@@ -11085,22 +10887,12 @@ console.log('[AUTH] Sistem Administrasi aktif - Supabase auto-sync ON');
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  // BUGFIX (kritis): `function applyPermissions(){...}` (didefinisikan di atas, ~baris
-  // 8597) adalah deklarasi fungsi global biasa — JS otomatis menjadikannya
-  // `window.applyPermissions` SAAT BARIS ITU DIEKSEKUSI, bukan `undefined`. Modul patch
-  // yang benar (window.applyPermissions = function(){...} dengan pengecekan tabel
-  // custom permission per-role) didefinisikan lebih JAUH DI BAWAH dalam dokumen ini.
-  // Karena checkAuth() (yang memanggil applyPermissions saat login/restore-session)
-  // berjalan SEBELUM parser mencapai modul patch, ia selalu memanggil versi LAMA —
-  // yang punya fast-path "Co-Admin = semua tab" TANPA mengecek tabel permission custom
-  // sama sekali. Akibatnya pembatasan akses yang diset Admin lewat "Atur Akses Role"
-  // untuk Co-Admin/User/role kustom tidak pernah benar-benar berlaku saat login/refresh.
-  //
-  // DOMContentLoaded hanya fire setelah SELURUH dokumen (termasuk modul patch di bawah)
-  // selesai diparsing & dieksekusi — jadi di titik ini window.applyPermissions PASTI
-  // sudah berisi versi final/benar. Panggil ulang di sini agar tab/menu yang seharusnya
-  // disembunyikan oleh custom permission benar-benar tersembunyi, bukan diam-diam
-  // dibiarkan terlihat (display:flex) sampai ada trigger manual lain.
+  // CATATAN (sebelumnya BUGFIX kritis untuk dua-jalur applyPermissions, sudah
+  // tidak relevan sejak applyPermissions disatukan jadi window.applyPermissions
+  // tunggal — lihat blok "FEATURE 1: UNIFIED ROLE & PERMISSION SYSTEM").
+  // Tetap dipertahankan untuk memastikan applyPermissions() dipanggil ulang
+  // setelah SELURUH dokumen selesai diparsing & dieksekusi, supaya semua modul
+  // yang dibutuhkan (renderUserTable, STCR, dsb.) sudah pasti terdefinisi.
   // BUGFIX: currentUser declared in a different <script> block — use window.currentUser
   if(window.currentUser && typeof window.applyPermissions === 'function'){
     window.applyPermissions();
@@ -11108,8 +10900,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // PATCH5 FIX-B: Hapus user dengan role tidak dikenal (USERX, USERXX, dll)
   (function _purgeLegacyUsers(){
     try {
-      var _vr = ['Master','Admin','Co-Admin','User','Peserta'];
-      if(window.CUSTOM_ROLES) window.CUSTOM_ROLES.forEach(function(r){ _vr.push(r.roleName); });
+      var _vr = (window.ALL_ROLES && window.ALL_ROLES.length) ? window.ALL_ROLES.slice() : ['Master','Admin','Co-Admin','User','Peserta'];
       var _all = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]');
       var _keep = _all.filter(function(u){
         if(u.role === 'Master') return true;
@@ -11245,12 +11036,27 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   
   // Sync user info to sidebar
+  // BUGFIX (ditemukan via audit virtual): sebelumnya syncUser() menyalin
+  // roleEl.textContent dari #userRoleDisplay — elemen itu SENGAJA dikosongkan
+  // untuk role non-Admin/Co-Admin/Master (lihat handler login), sehingga
+  // MutationObserver ini selalu menimpa label sidebar dengan string KOSONG
+  // setelah applyPermissions() selesai mengisinya dengan role+station yang
+  // benar. Sekarang syncUser() membaca dari window.currentUser langsung
+  // (satu sumber kebenaran) dan ikut menampilkan station bila scope='OWN'.
   const syncUser = () => {
     const nameEl = document.getElementById('userNameDisplay');
-    const roleEl = document.getElementById('userRoleDisplay');
     if(nameEl && nameEl.textContent){
       document.getElementById('userNameDisplaySide').textContent = nameEl.textContent;
-      document.getElementById('userRoleDisplaySide').textContent = roleEl.textContent;
+      const _cu = window.currentUser;
+      const _sideRole = document.getElementById('userRoleDisplaySide');
+      if(_sideRole && _cu){
+        const _scope = window._userStationScope || (typeof window.getUserStationScope === 'function' ? window.getUserStationScope(_cu) : null);
+        let _label = _cu.role;
+        if(_scope && _scope.scope === 'OWN'){
+          _label += _scope.station ? (' · ' + _scope.station) : ' · (station belum diset)';
+        }
+        _sideRole.textContent = _label;
+      }
       document.getElementById('userPanelSidebar').classList.remove('hidden');
     }
   };
@@ -12989,105 +12795,256 @@ _updateOfflineQueueBadge(); // cek langsung saat load
 
 <script>
 // ===================================================================
-// FEATURE 1: ADMIN PERMISSION RULES
+// FEATURE 1: UNIFIED ROLE & PERMISSION SYSTEM
+// ---------------------------------------------------------------
+// Versi ini menyatukan SEMUA role (Master, Admin, Co-Admin, User,
+// Peserta, dan role kustom User-All/User-SR/User-STCR/User-ST/User-DRG)
+// ke dalam SATU tabel rolePerms dan SATU fungsi applyPermissions().
+// Tidak ada lagi jalur kode terpisah untuk role bawaan vs role kustom.
+//
+// Setiap role juga punya `stationScope`:
+//   'ALL' = boleh lihat data semua station
+//   'OWN' = hanya boleh lihat data station miliknya sendiri
+//           (ditentukan dari karyawan yang terhubung ke akun ini,
+//            lihat window.getKaryawanByUsername / window.getUserStationScope)
 // ===================================================================
 (function(){
   const PERM_KEY = 'sjnam_role_perms_v1';
+  const ROLE_META_KEY = 'sjnam_role_meta_v1'; // stationScope & metadata role tersimpan di sini
 
-  // Feature list: { id, label, default: {coAdmin, user, peserta, userxxx, userxx, userx} }
-  // Role baru (UserXXX/UserXX/UserX) bersifat custom & setara — default TANPA akses
-  // sama sekali; Admin yang mengatur lewat tabel "Atur Akses Role" sesuai kebutuhan.
+  // ------------------------------------------------------------------
+  // DAFTAR FITUR/TAB — sama seperti sebelumnya, hanya struktur perms-nya
+  // yang berubah (key role generik, tidak lagi coAdmin/user/peserta saja).
+  // ------------------------------------------------------------------
   const FEATURES = [
-    { id:'tab-home',       label:'🏠 Tab Home',            def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-input',      label:'✈️ Tab Input',            def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-data',       label:'📊 Tab Data',             def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-dashboard',  label:'📈 Tab Dashboard',        def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-request',    label:'📝 Tab Approval',         def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-stations',   label:'🗺️ Tab Station',          def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank',         def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-materi',     label:'📚 Tab Materi Training',  def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-soal',       label:'📝 Tab Soal Training',    def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat',       def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt',  def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-settings',   label:'⚙️ Tab Settings',         def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard',    def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-stcr-data',      label:'📋 STCR – Data Request', def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-stcr-station',   label:'📍 STCR – Station',      def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok',  def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:true} },
-    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard',  def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:true} },
-    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station',def:{coAdmin:true, user:true,  peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:true} },
-    { id:'tab-drygoods-bankitem',  label:'🗂️ Drygoods – Bank Item',  def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'feat-import',    label:'⬆️ Fitur Import Data',    def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data',     def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'feat-edit',      label:'✏️ Fitur Edit Data',      def:{coAdmin:true, user:false, peserta:false, userall:false, usersr:false, userstcr:false, userst:false, userdrg:false} },
-    { id:'feat-mulai',     label:'🚀 Mulai Training Peserta',def:{coAdmin:true, user:true,  peserta:true,  userxxx:false, userxx:false, userx:false, usermmm:false, usermm:false, userm:false} },
+    { id:'tab-home',       label:'🏠 Tab Home' },
+    { id:'tab-input',      label:'✈️ Tab Input' },
+    { id:'tab-data',       label:'📊 Tab Data' },
+    { id:'tab-dashboard',  label:'📈 Tab Dashboard' },
+    { id:'tab-request',    label:'📝 Tab Approval' },
+    { id:'tab-stations',   label:'🗺️ Tab Station' },
+    { id:'tab-dfs',        label:'🗂️ Tab DFS Bank' },
+    { id:'tab-materi',     label:'📚 Tab Materi Training' },
+    { id:'tab-soal',       label:'📝 Tab Soal Training' },
+    { id:'tab-sertifikat', label:'🎓 Tab Sertifikat' },
+    { id:'tab-admin',      label:'👥 Tab Admin/User Mgmt' },
+    { id:'tab-settings',   label:'⚙️ Tab Settings' },
+    { id:'tab-stcr-dashboard', label:'🏥 STCR – Dashboard' },
+    { id:'tab-stcr-data',      label:'📋 STCR – Data Request' },
+    { id:'tab-stcr-station',   label:'📍 STCR – Station' },
+    { id:'tab-drygoods-data',      label:'📦 Drygoods – Data Stok' },
+    { id:'tab-drygoods-dashboard', label:'📊 Drygoods – Dashboard' },
+    { id:'tab-drygoods-ifs',       label:'🏢 Drygoods – IFS Station' },
+    { id:'tab-drygoods-bankitem',  label:'🗂️ Drygoods – Bank Item' },
+    { id:'feat-import',    label:'⬆️ Fitur Import Data' },
+    { id:'feat-delete',    label:'🗑️ Fitur Hapus Data' },
+    { id:'feat-edit',      label:'✏️ Fitur Edit Data' },
+    { id:'feat-mulai',     label:'🚀 Mulai Training Peserta' },
   ];
+  window.PERM_FEATURES = FEATURES;
 
-  // Daftar role kustom non-bawaan (selain Admin/Co-Admin/User/Peserta).
-  // Tambahkan di sini jika suatu saat ingin menambah role baru lagi.
-  // *** MASTER password hash adalah SHA-256 dari 'Nu55y294gpx' ***
-  // Master role: akses ke semua, diikat ke sistem dengan password khusus
-  const MASTER_PASSWORD_PLAIN = 'Nu55y294gpx'; // disimpan plain hanya untuk validasi local fallback
-  const CUSTOM_ROLES = [
-    { key:'userall',  label:'User-All',  roleName:'User-All',  accent:'accent-emerald-600', badgeClass:'bg-emerald-100 text-emerald-700', headerTextClass:'text-emerald-700 dark:text-emerald-300', headerColor:'#059669' },
-    { key:'usersr',   label:'User-SR',   roleName:'User-SR',   accent:'accent-blue-600',    badgeClass:'bg-blue-100 text-blue-700',       headerTextClass:'text-blue-700 dark:text-blue-300',       headerColor:'#2563eb' },
-    { key:'userstcr', label:'User-STCR', roleName:'User-STCR', accent:'accent-purple-600',  badgeClass:'bg-purple-100 text-purple-700',   headerTextClass:'text-purple-700 dark:text-purple-300',   headerColor:'#7c3aed' },
-    { key:'userst',   label:'User-ST',   roleName:'User-ST',   accent:'accent-teal-600',    badgeClass:'bg-teal-100 text-teal-700',       headerTextClass:'text-teal-700 dark:text-teal-300',       headerColor:'#0d9488' },
-    { key:'userdrg',  label:'User-DRG',  roleName:'User-DRG',  accent:'accent-orange-600',  badgeClass:'bg-orange-100 text-orange-700',   headerTextClass:'text-orange-700 dark:text-orange-300',   headerColor:'#ea580c' },
+  // ------------------------------------------------------------------
+  // DAFTAR SEMUA ROLE — termasuk role sistem (Master/Admin) yang dulu
+  // hardcoded. isSystemRole=true berarti: selalu full access ke SEMUA
+  // fitur & SELALU stationScope ALL, tidak bisa diubah dari UI.
+  // ------------------------------------------------------------------
+  const ALL_ROLE_DEFS = [
+    { key:'master',  roleName:'Master',   label:'Master',   isSystemRole:true,  accent:'accent-yellow-500', badgeClass:'bg-yellow-100 text-yellow-800',  headerTextClass:'text-yellow-700 dark:text-yellow-300',  headerColor:'#a16207' },
+    { key:'admin',   roleName:'Admin',    label:'Admin',    isSystemRole:true,  accent:'accent-red-500',    badgeClass:'bg-purple-100 text-purple-700',  headerTextClass:'text-red-700 dark:text-red-300',        headerColor:'#b91c1c' },
+    { key:'coAdmin', roleName:'Co-Admin', label:'Co-Admin', isSystemRole:false, accent:'accent-blue-600',   badgeClass:'bg-blue-100 text-blue-700',      headerTextClass:'text-blue-700 dark:text-blue-300',      headerColor:'#2563eb',
+      // BUGFIX (ditemukan via audit virtual): default asli Co-Admin (sebelum
+      // unifikasi) adalah TRUE untuk SEMUA 23 fitur tanpa kecuali — termasuk
+      // tab-admin, tab-settings, dan tab-drygoods-bankitem yang sebelumnya
+      // terlewat di sini, sehingga instalasi BARU (rolePerms belum pernah
+      // disimpan) akan memberi Co-Admin akses lebih sedikit dari semestinya.
+      defaultTabs:{'tab-home':true,'tab-input':true,'tab-data':true,'tab-dashboard':true,'tab-request':true,'tab-stations':true,'tab-dfs':true,'tab-materi':true,'tab-soal':true,'tab-sertifikat':true,'tab-admin':true,'tab-settings':true,'tab-stcr-dashboard':true,'tab-stcr-data':true,'tab-stcr-station':true,'tab-drygoods-data':true,'tab-drygoods-dashboard':true,'tab-drygoods-ifs':true,'tab-drygoods-bankitem':true,'feat-import':true,'feat-delete':true,'feat-edit':true,'feat-mulai':true} },
+    { key:'user',    roleName:'User',     label:'User',     isSystemRole:false, accent:'accent-emerald-600',badgeClass:'bg-emerald-100 text-emerald-700',headerTextClass:'text-emerald-700 dark:text-emerald-300',headerColor:'#059669',
+      defaultTabs:{'tab-home':true,'tab-input':true,'tab-data':true,'tab-dashboard':true,'tab-soal':true,'tab-stcr-dashboard':true,'tab-stcr-data':true,'tab-drygoods-data':true,'tab-drygoods-dashboard':true,'tab-drygoods-ifs':true,'feat-mulai':true},
+      defaultStationScope:'ALL' },
+    { key:'peserta', roleName:'Peserta',  label:'Peserta',  isSystemRole:false, accent:'accent-indigo-600', badgeClass:'bg-indigo-100 text-indigo-700',  headerTextClass:'text-indigo-700 dark:text-indigo-300', headerColor:'#4338ca',
+      defaultTabs:{'feat-mulai':true}, defaultStationScope:'ALL', pesertaOnly:true },
+    { key:'userall',  roleName:'User-All',  label:'User-All',  isSystemRole:false, accent:'accent-emerald-600', badgeClass:'bg-emerald-100 text-emerald-700', headerTextClass:'text-emerald-700 dark:text-emerald-300', headerColor:'#059669', defaultStationScope:'ALL' },
+    { key:'usersr',   roleName:'User-SR',   label:'User-SR',   isSystemRole:false, accent:'accent-blue-600',    badgeClass:'bg-blue-100 text-blue-700',       headerTextClass:'text-blue-700 dark:text-blue-300',       headerColor:'#2563eb', defaultStationScope:'OWN' },
+    { key:'userstcr', roleName:'User-STCR', label:'User-STCR', isSystemRole:false, accent:'accent-purple-600',  badgeClass:'bg-purple-100 text-purple-700',   headerTextClass:'text-purple-700 dark:text-purple-300',   headerColor:'#7c3aed', defaultStationScope:'OWN' },
+    { key:'userst',   roleName:'User-ST',   label:'User-ST',   isSystemRole:false, accent:'accent-teal-600',    badgeClass:'bg-teal-100 text-teal-700',       headerTextClass:'text-teal-700 dark:text-teal-300',       headerColor:'#0d9488', defaultStationScope:'OWN' },
+    { key:'userdrg',  roleName:'User-DRG',  label:'User-DRG',  isSystemRole:false, accent:'accent-orange-600',  badgeClass:'bg-orange-100 text-orange-700',   headerTextClass:'text-orange-700 dark:text-orange-300',   headerColor:'#ea580c', defaultStationScope:'OWN',
+      defaultTabs:{'tab-drygoods-data':true,'tab-drygoods-dashboard':true,'tab-drygoods-ifs':true} },
   ];
-  window.CUSTOM_ROLES = CUSTOM_ROLES;
+  window.ALL_ROLE_DEFS = ALL_ROLE_DEFS;
+  // CUSTOM_ROLES dipertahankan untuk backward-compat (kode lain mungkin masih
+  // membaca window.CUSTOM_ROLES) — sekarang hanya role non-sistem & non built-in lama.
+  window.CUSTOM_ROLES = ALL_ROLE_DEFS.filter(r=>['userall','usersr','userstcr','userst','userdrg'].includes(r.key));
   // Semua role yang valid dalam sistem (dipakai untuk validasi di banyak tempat)
-  window.ALL_ROLES = ['Master','Admin','Co-Admin','User','Peserta', ...CUSTOM_ROLES.map(r=>r.roleName)];
+  window.ALL_ROLES = ALL_ROLE_DEFS.map(r=>r.roleName);
   // Mapping nama role (persis seperti disimpan di user object) -> roleKey di tabel perms
   window.roleNameToKey = function(roleName){
-    if(roleName === 'Master') return 'master'; // Master = akses penuh seperti Admin
-    if(roleName === 'Co-Admin') return 'coAdmin';
-    if(roleName === 'User') return 'user';
-    if(roleName === 'Peserta') return 'peserta';
-    const custom = CUSTOM_ROLES.find(r=>r.roleName === roleName);
-    return custom ? custom.key : null; // null = Admin atau role tak dikenal
+    const def = ALL_ROLE_DEFS.find(r=>r.roleName === roleName);
+    return def ? def.key : null; // null = role tak dikenal -> fail-closed
+  };
+  window.roleKeyToDef = function(roleKey){
+    return ALL_ROLE_DEFS.find(r=>r.key === roleKey) || null;
   };
 
+  function isSystemRoleName(roleName){
+    const def = ALL_ROLE_DEFS.find(r=>r.roleName === roleName);
+    return !!(def && def.isSystemRole);
+  }
+  window.isSystemRoleName = isSystemRoleName;
+
+  // ------------------------------------------------------------------
+  // PERSISTENCE: tabel perms per fitur (tabAccess), sama format dengan
+  // sebelumnya — perms[featId][roleKey] = true/false.
+  // ------------------------------------------------------------------
   function loadPerms(){
     try { return JSON.parse(localStorage.getItem(PERM_KEY)) || null; } catch(e){ return null; }
   }
   function savePerms(p){
     localStorage.setItem(PERM_KEY, JSON.stringify(p));
-    // Tandai bahwa ada perubahan rolePerms lokal yang BELUM ter-push ke cloud.
-    // Flag ini melindungi dari overwrite oleh cloudPull/realtime sebelum push selesai.
     window._rolePermsLocalDirty = true;
-    // Push LANGSUNG ke cloud (bypass debounce 800ms) karena:
-    // 1. rolePerms adalah pengaturan kritis — jangan bergantung pada debounce timer
-    //    yang bisa dibatalkan oleh cloudPull atau realtime event.
-    // 2. Ukuran payload kecil, aman di-push langsung.
     if(typeof cloudPush === 'function'
        && typeof cloudConfig !== 'undefined'
        && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
       cloudPush(true).then(function(ok){
         if(ok) window._rolePermsLocalDirty = false;
       }).catch(function(){
-        // Jika push gagal, fallback ke debounce trigger
         if(typeof triggerAutoSync === 'function') triggerAutoSync();
       });
     } else {
-      // Cloud belum dikonfigurasi — pakai triggerAutoSync sebagai fallback
       if(typeof triggerAutoSync === 'function') triggerAutoSync();
     }
   }
   function getDefaultPerms(){
     const p = {};
-    FEATURES.forEach(f=>{ p[f.id] = {...f.def}; });
+    FEATURES.forEach(f=>{
+      p[f.id] = {};
+      ALL_ROLE_DEFS.forEach(r=>{
+        if(r.isSystemRole){ p[f.id][r.key] = true; return; } // Master/Admin selalu true
+        p[f.id][r.key] = !!(r.defaultTabs && r.defaultTabs[f.id]);
+      });
+    });
     return p;
   }
-  function getPerms(){var s=loadPerms();if(!s)return getDefaultPerms();var d=getDefaultPerms(),m={};Object.keys(d).forEach(function(id){m[id]=Object.assign({},d[id],s[id]||{});});return m;}
+  function getPerms(){
+    var s = loadPerms();
+    if(!s) return getDefaultPerms();
+    var d = getDefaultPerms(), m = {};
+    Object.keys(d).forEach(function(id){ m[id] = Object.assign({}, d[id], s[id]||{}); });
+    return m;
+  }
   window.getRolePerms = getPerms;
 
-  // RENDER permission table
+  // ------------------------------------------------------------------
+  // STATION SCOPE per role — disimpan terpisah dari tabAccess supaya
+  // tetap ringan & mudah dibaca util filter (lihat bagian bawah file).
+  // roleMeta[roleKey] = { stationScope: 'ALL' | 'OWN' }
+  // ------------------------------------------------------------------
+  function loadRoleMeta(){
+    try { return JSON.parse(localStorage.getItem(ROLE_META_KEY)) || null; } catch(e){ return null; }
+  }
+  function saveRoleMeta(meta){
+    localStorage.setItem(ROLE_META_KEY, JSON.stringify(meta));
+    window._rolePermsLocalDirty = true;
+    if(typeof cloudPush === 'function'
+       && typeof cloudConfig !== 'undefined'
+       && cloudConfig.supabaseUrl && cloudConfig.supabaseKey){
+      cloudPush(true).catch(function(){ if(typeof triggerAutoSync === 'function') triggerAutoSync(); });
+    } else if(typeof triggerAutoSync === 'function'){
+      triggerAutoSync();
+    }
+  }
+  function getDefaultRoleMeta(){
+    const m = {};
+    ALL_ROLE_DEFS.forEach(r=>{ m[r.key] = { stationScope: r.isSystemRole ? 'ALL' : (r.defaultStationScope || 'ALL') }; });
+    return m;
+  }
+  function getRoleMeta(){
+    var s = loadRoleMeta();
+    var d = getDefaultRoleMeta();
+    if(!s) return d;
+    var m = {};
+    Object.keys(d).forEach(function(k){ m[k] = Object.assign({}, d[k], s[k]||{}); });
+    return m;
+  }
+  window.getRoleMeta = getRoleMeta;
+  // Helper cepat: dapatkan stationScope ('ALL'/'OWN') untuk sebuah roleName.
+  window.getStationScopeForRole = function(roleName){
+    if(isSystemRoleName(roleName)) return 'ALL';
+    const roleKey = window.roleNameToKey(roleName);
+    if(!roleKey) return 'OWN'; // role tak dikenal -> paling aman, anggap dibatasi
+    const meta = getRoleMeta();
+    return (meta[roleKey] && meta[roleKey].stationScope) ? meta[roleKey].stationScope : 'ALL';
+  };
+
+  // ------------------------------------------------------------------
+  // UTIL TERPUSAT: relasi user <-> karyawan <-> station.
+  // Dipakai SEMUA modul (SR, STCR, Drygoods) — bukan ditulis ulang
+  // manual di tiap fitur seperti pola User-DRG sebelumnya.
+  // ------------------------------------------------------------------
+
+  // Cari data karyawan yang terhubung ke sebuah username (case-insensitive).
+  window.getKaryawanByUsername = function(username){
+    if(!username) return null;
+    try {
+      const karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
+      const uname = String(username).toLowerCase();
+      return karyawan.find(function(k){ return (k.username||'').toLowerCase() === uname; }) || null;
+    } catch(e){ return null; }
+  };
+
+  // Dapatkan station (kode IATA, huruf besar) milik user yang sedang
+  // login berdasarkan data karyawan yang terhubung. Null = belum diset.
+  window.getUserStation = function(user){
+    if(!user) return null;
+    const kar = window.getKaryawanByUsername(user.username);
+    const st = (kar && kar.station) ? String(kar.station).trim().toUpperCase() : null;
+    return st || null;
+  };
+
+  // Objek scope siap-pakai untuk sebuah user: { scope:'ALL'|'OWN', station: 'CGK'|null }
+  window.getUserStationScope = function(user){
+    if(!user) return { scope:'ALL', station:null };
+    const scope = window.getStationScopeForRole(user.role);
+    if(scope !== 'OWN') return { scope:'ALL', station:null };
+    return { scope:'OWN', station: window.getUserStation(user) };
+  };
+
+  // True jika user (berdasar role+station miliknya) boleh melihat data
+  // dengan kode station tertentu. stationCode boleh null/'' (data tanpa
+  // station spesifik selalu terlihat, supaya tidak menyembunyikan data
+  // lama yang belum punya field station).
+  window.canSeeStation = function(user, stationCode){
+    const sc = window.getUserStationScope(user);
+    if(sc.scope === 'ALL') return true;
+    if(!stationCode) return true; // data tanpa station: tidak difilter
+    if(!sc.station) return false; // role OWN tapi karyawan belum punya station -> fail-closed
+    return String(stationCode).trim().toUpperCase() === sc.station;
+  };
+
+  // Filter generik sebuah array data berdasarkan stationScope user yang
+  // sedang login. getStationFn(record) harus mengembalikan kode IATA
+  // (atau null bila record tidak terkait station tertentu).
+  window.filterByStationScope = function(records, getStationFn){
+    const user = window.currentUser;
+    if(!user || !Array.isArray(records)) return records || [];
+    const sc = window.getUserStationScope(user);
+    if(sc.scope === 'ALL') return records;
+    return records.filter(function(rec){
+      let code = null;
+      try { code = getStationFn ? getStationFn(rec) : null; } catch(e){ code = null; }
+      return window.canSeeStation(user, code);
+    });
+  };
+
+  // ------------------------------------------------------------------
+  // RENDER tabel permission (tabAccess + baris Cakupan Station)
+  // ------------------------------------------------------------------
   function renderPermTable(){
     const tbody = document.getElementById('permTableBody');
-    if(!tbody) return;
+    const headRow = document.getElementById('permTableHeadRow');
+    const scopeRow = document.getElementById('permStationScopeRow');
+    if(!tbody || !headRow) return;
     const perms = getPerms();
-    // Show read-only notice for non-Admin
+    const roleMeta = getRoleMeta();
     const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
     const isViewerAdmin = _cu && (_cu.role === 'Admin' || _cu.role === 'Master');
     const notice = document.getElementById('permsAdminOnlyNotice');
@@ -13096,58 +13053,47 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     if(notice) notice.classList.toggle('hidden', isViewerAdmin);
     if(saveBtn){ saveBtn.disabled = !isViewerAdmin; saveBtn.style.opacity = isViewerAdmin ? '' : '0.4'; saveBtn.style.cursor = isViewerAdmin ? '' : 'not-allowed'; }
     if(resetBtn){ resetBtn.disabled = !isViewerAdmin; resetBtn.style.opacity = isViewerAdmin ? '' : '0.4'; resetBtn.style.cursor = isViewerAdmin ? '' : 'not-allowed'; }
-    tbody.innerHTML = FEATURES.map(f=>{
-      const p = perms[f.id] || f.def;
-      const customCells = CUSTOM_ROLES.map(r=>`
-        <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="${r.key}" ${p[r.key]?'checked':''} class="perm-chk w-4 h-4 ${r.accent}" ${isViewerAdmin?'':'disabled'}>
-        </td>`).join('');
-      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-        <td class="p-3 font-medium">${f.label}</td>
-        <td class="p-3 text-center" title="Master selalu punya akses penuh">
-          <input type="checkbox" checked disabled class="w-4 h-4 accent-yellow-500 opacity-70" title="Master: akses penuh (tidak dapat diubah)">
-        </td>
-        <td class="p-3 text-center" title="Admin selalu punya akses penuh">
-          <input type="checkbox" checked disabled class="w-4 h-4 accent-red-500 opacity-70" title="Admin: akses penuh (tidak dapat diubah)">
-        </td>
-        <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="coAdmin" ${p.coAdmin?'checked':''} class="perm-chk w-4 h-4 accent-blue-600" ${isViewerAdmin?'':'disabled'}>
-        </td>
-        <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="user" ${p.user?'checked':''} class="perm-chk w-4 h-4 accent-emerald-600" ${isViewerAdmin?'':'disabled'}>
-        </td>
-        <td class="p-3 text-center">
-          <input type="checkbox" data-feat="${f.id}" data-role="peserta" ${p.peserta?'checked':''} class="perm-chk w-4 h-4 accent-indigo-600" ${isViewerAdmin?'':'disabled'}>
-        </td>${customCells}
-      </tr>`;
-    }).join('');
-    // Render header kolom role kustom sekali saja (idempotent)
-    const headRow = document.getElementById('permTableHeadRow');
-    if(headRow && !headRow.dataset.customRendered){
-      CUSTOM_ROLES.forEach(r=>{
-        const th = document.createElement('th');
-        th.className = 'p-3 font-semibold';
-        th.style.color = r.headerColor || '';
-        th.innerHTML = `<span class="${r.headerTextClass||''}">${r.label}</span>`;
-        headRow.appendChild(th);
-      });
-      headRow.dataset.customRendered = '1';
-    } else if(headRow && headRow.dataset.customRendered) {
-      // Verify count matches - rebuild if CUSTOM_ROLES count changed
-      const existingCustom = headRow.querySelectorAll('th').length - 6; // 6 static cols
-      if(existingCustom !== CUSTOM_ROLES.length){
-        // Remove extra ths and re-add
-        const allThs = headRow.querySelectorAll('th');
-        for(let i = 6; i < allThs.length; i++) allThs[i].remove();
-        CUSTOM_ROLES.forEach(r=>{
-          const th = document.createElement('th');
-          th.className = 'p-3 font-semibold';
-          th.style.color = r.headerColor || '';
-          th.innerHTML = `<span class="${r.headerTextClass||''}">${r.label}</span>`;
-          headRow.appendChild(th);
-        });
-      }
+
+    // Header — 100% dinamis dari ALL_ROLE_DEFS (urutan: system roles dulu, lalu sisanya)
+    headRow.innerHTML = '<th class="p-3 text-left font-semibold">Fitur / Tab</th>' +
+      ALL_ROLE_DEFS.map(function(r){
+        return '<th class="p-3 font-semibold" style="color:'+(r.headerColor||'')+'">'+r.label+(r.isSystemRole?' <span class="text-[10px] font-normal opacity-70">(sistem)</span>':'')+'</th>';
+      }).join('');
+
+    // Baris Cakupan Station — hanya berlaku untuk role non-sistem
+    if(scopeRow){
+      scopeRow.innerHTML = '<tr class="border-b-2 border-blue-200 dark:border-blue-800">' +
+        '<td class="p-3 font-semibold text-blue-700 dark:text-blue-300">📍 Cakupan Station</td>' +
+        ALL_ROLE_DEFS.map(function(r){
+          if(r.isSystemRole){
+            return '<td class="p-2 text-center text-[11px] text-slate-400">Semua</td>';
+          }
+          const val = (roleMeta[r.key] && roleMeta[r.key].stationScope) || 'ALL';
+          return '<td class="p-2 text-center">'+
+            '<select data-scope-role="'+r.key+'" class="scope-select text-[11px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 px-1.5 py-1" '+(isViewerAdmin?'':'disabled')+'>'+
+              '<option value="ALL" '+(val==='ALL'?'selected':'')+'>Semua Station</option>'+
+              '<option value="OWN" '+(val==='OWN'?'selected':'')+'>Station Sendiri</option>'+
+            '</select></td>';
+        }).join('') +
+      '</tr>';
     }
+
+    // Baris fitur/tab
+    tbody.innerHTML = FEATURES.map(function(f){
+      const p = perms[f.id] || {};
+      return '<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">' +
+        '<td class="p-3 font-medium">'+f.label+'</td>' +
+        ALL_ROLE_DEFS.map(function(r){
+          if(r.isSystemRole){
+            return '<td class="p-3 text-center" title="'+r.label+': akses penuh (tidak dapat diubah)">'+
+              '<input type="checkbox" checked disabled class="w-4 h-4 '+r.accent+' opacity-70"></td>';
+          }
+          return '<td class="p-3 text-center">'+
+            '<input type="checkbox" data-feat="'+f.id+'" data-role="'+r.key+'" '+(p[r.key]?'checked':'')+' class="perm-chk w-4 h-4 '+r.accent+'" '+(isViewerAdmin?'':'disabled')+'>'+
+          '</td>';
+        }).join('') +
+      '</tr>';
+    }).join('');
   }
   window.renderPermTable = renderPermTable;
 
@@ -13159,18 +13105,27 @@ _updateOfflineQueueBadge(); // cek langsung saat load
         showToast('Hanya Admin/Master yang dapat mengubah pengaturan akses role', 'error');
         return;
       }
+      // tabAccess
       const chks = document.querySelectorAll('.perm-chk');
       const perms = getPerms();
-      chks.forEach(chk=>{
+      chks.forEach(function(chk){
         const feat = chk.dataset.feat;
         const role = chk.dataset.role;
         if(!perms[feat]) perms[feat] = {};
         perms[feat][role] = chk.checked;
       });
       savePerms(perms);
+      // stationScope
+      const scopeSelects = document.querySelectorAll('.scope-select');
+      const meta = getRoleMeta();
+      scopeSelects.forEach(function(sel){
+        const role = sel.dataset.scopeRole;
+        if(!meta[role]) meta[role] = {};
+        meta[role].stationScope = sel.value;
+      });
+      saveRoleMeta(meta);
       showToast('Pengaturan akses berhasil disimpan!', 'success');
-      // Re-apply permissions for currently logged in user
-      if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
+      if(typeof window.applyPermissions === 'function') window.applyPermissions();
     }
     if(e.target && e.target.id === 'btnResetPerms'){
       const _cu2 = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
@@ -13180,9 +13135,10 @@ _updateOfflineQueueBadge(); // cek langsung saat load
       }
       if(confirm('Reset semua pengaturan akses ke default?')){
         savePerms(getDefaultPerms());
+        saveRoleMeta(getDefaultRoleMeta());
         renderPermTable();
         showToast('Pengaturan akses direset ke default', 'success');
-        if(typeof window.applyPermissions === 'function') window.applyPermissions(); else if(typeof applyPermissions === 'function') applyPermissions();
+        if(typeof window.applyPermissions === 'function') window.applyPermissions();
       }
     }
   });
@@ -13199,9 +13155,6 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     btn.classList.add('active','border-blue-600','text-blue-600');
     btn.classList.remove('border-transparent','text-slate-500');
     document.querySelectorAll('.admin-subtab-pane').forEach(p=>p.classList.add('hidden'));
-    // BUGFIX: sebelumnya hanya 2 pane (users/perms) ditangani lewat ternary —
-    // target 'karyawan' (sub-tab baru) jatuh ke default 'adminSubPerms' yang salah.
-    // Sekarang dipetakan eksplisit untuk ketiga sub-tab.
     const paneId = target === 'karyawan' ? 'adminSubKaryawan' : target === 'users' ? 'adminSubUsers' : 'adminSubPerms';
     const pane = document.getElementById(paneId);
     if(pane){
@@ -13209,9 +13162,7 @@ _updateOfflineQueueBadge(); // cek langsung saat load
       if(target === 'perms') renderPermTable();
       if(target === 'karyawan' && typeof window.renderKaryawanTable === 'function') window.renderKaryawanTable();
       if(target === 'users' && typeof renderUserTable === 'function'){
-        // Reset filter & selection saat subtab dibuka
         window._userSelectedIds = window._userSelectedIds || new Set();
-        // Re-populate role filter dropdown dengan semua role dari ALL_ROLES
         const rfSel = document.getElementById('userFilterRole');
         if(rfSel && window.ALL_ROLES){
           rfSel.innerHTML = '<option value="">Semua Role</option>' +
@@ -13222,44 +13173,32 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     }
   });
 
-  // PATCH applyPermissions to use role perms config
-  const _origApplyPermissions = window.applyPermissions;
-  window.applyPermissions = function(){
-    // Read from window.currentUser OR local currentUser (for timing safety)
+  // ------------------------------------------------------------------
+  // SATU-SATUNYA applyPermissions(). Tidak ada lagi jalur hardcoded
+  // terpisah untuk Master/Admin/Co-Admin/User/Peserta — semuanya
+  // dibaca dari tabel rolePerms via canSee(), termasuk role sistem
+  // (yang canSee()-nya selalu true karena getDefaultPerms/getPerms
+  // mengisi true untuk isSystemRole).
+  // ------------------------------------------------------------------
+  window.applyPermissions = function applyPermissions(){
     const _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
     if(!_cu) return;
     const role = _cu.role;
-    const isMaster  = role === 'Master'; // Master = akses penuh seperti Admin
-    const isAdmin   = role === 'Admin' || isMaster; // Master sama dengan Admin
+    const isMaster  = role === 'Master';
+    const isAdmin   = role === 'Admin' || isMaster;
     const isCoAdmin = role === 'Co-Admin';
-    const isUser    = role === 'User';
     const isPeserta = role === 'Peserta';
 
-    if(isAdmin){
-      // Admin & Master selalu full akses — jalankan original
-      if(_origApplyPermissions) _origApplyPermissions();
-      // Pastikan tombol Edit Home tampil untuk Admin/Master
-      const _adminHomeEditBtn = document.getElementById('btnHomeEditToggle');
-      if(_adminHomeEditBtn) _adminHomeEditBtn.style.display = '';
-      return;
-    }
-
-    // Pastikan Co-Admin TIDAK bypass — lanjutkan ke permission check di bawah
-
-    // BUGFIX: sebelumnya roleKey hanya bisa coAdmin/user/peserta — role lain (termasuk
-    // role kustom baru seperti UserXXX/UserXX/UserX/UserMMM/UserMM/UserM) akan otomatis jatuh ke 'peserta'.
-    // Sekarang pakai roleNameToKey() yang generic dan mencakup semua role kustom.
-    // Jika role benar-benar tidak dikenal (null), perlakukan sebagai TANPA AKSES SAMA
-    // SEKALI (fail-closed), bukan diam-diam diberi akses peserta.
-    const roleKey = (typeof window.roleNameToKey === 'function') ? window.roleNameToKey(role) : (isCoAdmin ? 'coAdmin' : isUser ? 'user' : isPeserta ? 'peserta' : null);
+    const roleKey = window.roleNameToKey(role);
     const perms = getPerms();
 
     function canSee(featId){
-      if(!roleKey) return false; // role tak dikenal -> fail-closed, tidak ada akses sama sekali
+      if(!roleKey) return false; // role tak dikenal -> fail-closed
       return perms[featId] ? !!perms[featId][roleKey] : false;
     }
+    window._canSeeFeature = canSee; // expose untuk dipakai modul lain bila perlu
 
-    // Map feature id to DOM elements
+    // Map feature id ke elemen DOM
     const tabMap = {
       'tab-home':       document.querySelector('[data-tab="home"]'),
       'tab-input':      document.querySelector('[data-tab="input"]'),
@@ -13281,7 +13220,6 @@ _updateOfflineQueueBadge(); // cek langsung saat load
       'tab-drygoods-ifs':       document.querySelector('[data-tab="drygoods-ifs"]'),
       'tab-drygoods-bankitem':  document.querySelector('[data-tab="drygoods-bankitem"]'),
     };
-
     Object.entries(tabMap).forEach(([featId, el])=>{
       if(el) el.style.display = canSee(featId) ? '' : 'none';
     });
@@ -13289,24 +13227,19 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     // Menu groups
     const adminMenuGroup = document.getElementById('toggleAdminMenu')?.closest('div');
     const trainingMenuGroup = document.getElementById('toggleTrainingMenu')?.closest('div');
-    const homeMenuGroup = null; // Home is standalone, no group
-    const stcrMenuGroup2 = document.getElementById('toggleStcrMenu')?.closest('div');
-    if(adminMenuGroup) adminMenuGroup.style.display = (canSee('tab-admin')||canSee('tab-settings')||canSee('tab-stations')) ? '' : 'none';
-    // Home tab is always visible (standalone). Service recovery group visibility handled separately.
+    const stcrMenuGroup = document.getElementById('toggleStcrMenu')?.closest('div');
+    const drygoodsMenuGroup = document.getElementById('toggleDrygoodsMenu')?.closest('div');
     const svcRecoveryGroup = document.getElementById('toggleServiceRecoveryMenu')?.closest('div');
+    if(adminMenuGroup) adminMenuGroup.style.display = (canSee('tab-admin')||canSee('tab-settings')||canSee('tab-stations')) ? '' : 'none';
     if(svcRecoveryGroup) svcRecoveryGroup.style.display = (canSee('tab-input')||canSee('tab-data')||canSee('tab-dashboard')||canSee('tab-request')||canSee('tab-dfs')) ? '' : 'none';
     if(trainingMenuGroup) trainingMenuGroup.style.display = (canSee('tab-materi')||canSee('tab-soal')||canSee('feat-mulai')||canSee('tab-sertifikat')) ? '' : 'none';
-    if(stcrMenuGroup2) stcrMenuGroup2.style.display = (canSee('tab-stcr-dashboard')||canSee('tab-stcr-data')||canSee('tab-stcr-station')) ? '' : 'none';
-
-    // Drygoods menu group
-    const drygoodsMenuGroup = document.getElementById('toggleDrygoodsMenu')?.closest('div');
+    if(stcrMenuGroup) stcrMenuGroup.style.display = (canSee('tab-stcr-dashboard')||canSee('tab-stcr-data')||canSee('tab-stcr-station')) ? '' : 'none';
     if(drygoodsMenuGroup) drygoodsMenuGroup.style.display = (canSee('tab-drygoods-data')||canSee('tab-drygoods-dashboard')||canSee('tab-drygoods-ifs')||canSee('tab-drygoods-bankitem')) ? '' : 'none';
 
     const btnPesertaSidebarStart = document.getElementById('btnPesertaSidebarStart');
     if(btnPesertaSidebarStart) btnPesertaSidebarStart.style.display = canSee('feat-mulai') ? '' : 'none';
 
-    // Functional features with delay
-    // Apply functional feature visibility synchronously (no setTimeout)
+    // Fitur fungsional
     const elImport = document.getElementById('fileImportJson')?.closest('label');
     if(elImport) elImport.style.display = canSee('feat-import') ? '' : 'none';
     const elHapusSemua = document.getElementById('btnHapusSemua');
@@ -13321,39 +13254,72 @@ _updateOfflineQueueBadge(); // cek langsung saat load
     if(btnStartPeserta) btnStartPeserta.style.display = canSee('feat-mulai') ? '' : 'none';
     window.currentUserReadOnly = !canSee('feat-edit');
 
-    // ── Tombol Edit Home: hanya Admin (non-Admin selalu hidden di sini) ──
-    const _nonAdminHomeEditBtn = document.getElementById('btnHomeEditToggle');
-    const _nonAdminHomePanel = document.getElementById('homeEditPanel');
-    if(_nonAdminHomeEditBtn){
-      _nonAdminHomeEditBtn.style.display = 'none';
-      if(_nonAdminHomePanel) _nonAdminHomePanel.style.display = 'none';
+    // Tombol Edit Home: hanya role dengan akses penuh (Admin/Master)
+    const btnHomeEdit = document.getElementById('btnHomeEditToggle');
+    const homeEditPanel = document.getElementById('homeEditPanel');
+    if(btnHomeEdit){
+      if(isAdmin){
+        btnHomeEdit.style.display = '';
+      } else {
+        btnHomeEdit.style.display = 'none';
+        if(homeEditPanel) homeEditPanel.style.display = 'none';
+        btnHomeEdit.textContent = '✏️ Edit';
+      }
     }
 
     window.currentUserCanDelete = canSee('feat-delete');
     window.currentUserCanAdd = canSee('tab-admin') || isCoAdmin;
     if(typeof renderUserTable === 'function') renderUserTable();
 
-    // Peserta auto redirect
-    if(isPeserta && canSee('feat-mulai')){
-      setTimeout(()=>{ document.getElementById('btnStartPeserta')?.click(); }, 200);
-    }
-    // Reveal sidebar (perm-ready pattern)
-    // BUGFIX: sebelumnya hanya sidebar yang ditambah perm-ready, mainContent terlewat.
-    const _patchedSb = document.getElementById('sidebar');
-    if(_patchedSb && !_patchedSb.classList.contains('perm-ready')) _patchedSb.classList.add('perm-ready');
-    const _patchedMain = document.getElementById('mainContent');
-    if(_patchedMain && !_patchedMain.classList.contains('perm-ready')) _patchedMain.classList.add('perm-ready');
+    // ── Station scope: hitung & simpan info station milik user saat ini ──
+    // Menggantikan logic _lockDrgStation yang dulu KHUSUS User-DRG —
+    // sekarang berlaku generik untuk SEMUA role dengan stationScope OWN.
+    (function _applyStationScope(){
+      const scope = window.getUserStationScope(_cu);
+      window._userStationScope = scope; // { scope:'ALL'|'OWN', station:'CGK'|null }
+      // backward-compat: variabel lama yang masih dibaca beberapa modul Drygoods
+      window._userDrgStation = (role === 'User-DRG') ? scope.station : null;
+      if(scope.station) _cu.station = scope.station;
 
-    // BUGFIX: Setelah permissions diterapkan, tab yang sedang aktif mungkin sudah
-    // disembunyikan (display:none). Pastikan tab yang ditampilkan sesuai dengan akses role.
+      // Update label station di sidebar (untuk SEMUA role OWN, bukan cuma User-DRG)
+      const _sideRoleEl = document.getElementById('userRoleDisplaySide');
+      if(_sideRoleEl){
+        let roleDisplay = role;
+        if(scope.scope === 'OWN' && scope.station) roleDisplay = role + ' · ' + scope.station;
+        else if(scope.scope === 'OWN' && !scope.station) roleDisplay = role + ' · (station belum diset)';
+        _sideRoleEl.textContent = roleDisplay;
+      }
+
+      // Lock station tabs Drygoods — generik untuk semua role OWN, bukan hanya User-DRG
+      setTimeout(function(){
+        if(typeof window.applyDrygoodsStationLock === 'function') window.applyDrygoodsStationLock(scope);
+      }, 300);
+
+      // Re-render modul data yang sudah ter-load agar filter station ikut berlaku
+      if(typeof window.renderTable === 'function') try{ window.renderTable(); }catch(e){}
+      if(typeof window.renderDashboard === 'function') try{ window.renderDashboard(); }catch(e){}
+      if(window.STCR && typeof window.STCR.applyFilters === 'function') try{ window.STCR.applyFilters(); }catch(e){}
+    })();
+
+    renderUserTable();
+
+    // Reveal sidebar — pakai perm-ready class (bukan visibility)
+    const _sb = document.getElementById('sidebar');
+    if(_sb && !_sb.classList.contains('perm-ready')) _sb.classList.add('perm-ready');
+    const _main = document.getElementById('mainContent');
+    if(_main && !_main.classList.contains('perm-ready')) _main.classList.add('perm-ready');
+
+    // Peserta auto redirect ke training wizard
+    if(isPeserta && canSee('feat-mulai')){
+      setTimeout(()=>{ document.getElementById('btnStartPeserta')?.click(); }, 150);
+    }
+
+    // Pastikan tab yang sedang aktif masih sesuai akses role setelah perms diterapkan
     requestAnimationFrame(function(){
       var _ap = document.querySelector('.tab-pane.active');
       var _apId = _ap ? _ap.id.replace('tab-','') : null;
       if(_apId && !isAdmin){
-        var _fp = 'tab-' + _apId;
-        var _pr = (typeof window.getRolePerms==='function') ? window.getRolePerms() : null;
-        var _rk = (typeof window.roleNameToKey==='function') ? window.roleNameToKey(_cu.role) : null;
-        var _ok = _pr && _rk && _pr[_fp] && !!_pr[_fp][_rk];
+        var _ok = canSee('tab-' + _apId);
         if(!_ok && typeof restoreSession === 'function') restoreSession();
       } else if(!_apId && typeof restoreSession === 'function'){
         restoreSession();
@@ -13765,7 +13731,13 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const aoc = $id('stcr-f-aoc').value;
     const req = $id('stcr-f-req').value;
     const station = $id('stcr-f-station').value;
-    return ALL_DATA.filter(d => {
+    let base = ALL_DATA;
+    // Filter station-scope role yang sedang login — generik untuk SEMUA
+    // role (sebelumnya hanya berlaku untuk User-DRG di modul Drygoods).
+    if(typeof window.filterByStationScope === 'function'){
+      base = window.filterByStationScope(base, d => d.Station);
+    }
+    return base.filter(d => {
       if (year && String(d.Year) !== year) return false;
       if (month && d.Month !== month) return false;
       if (aoc && d.AOC !== aoc) return false;
@@ -14002,7 +13974,15 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const sortEl = $id('stcr-s-sort');
     const sortMode = sortEl ? sortEl.value : 'newest';
 
+    // PENTING: idx harus tetap merujuk ke posisi asli di ALL_DATA (dipakai
+    // langsung oleh editEntry/deleteEntry/cancelEntry). Karena itu mapping
+    // {item, idx} dilakukan dari ALL_DATA utuh DULU, baru difilter — termasuk
+    // filter station-scope — supaya idx tidak pernah bergeser dari posisi asli.
     let rows = ALL_DATA.map((d, idx) => ({ item: d, idx }));
+
+    if(typeof window.filterByStationScope === 'function'){
+      rows = window.filterByStationScope(rows, ({item:d}) => d.Station);
+    }
 
     rows = rows.filter(({item:d}) => {
       if(year && String(d.Year)!==year) return false;
@@ -15703,21 +15683,23 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
       nb.textContent = '＋ Station';
       container.appendChild(nb);
     }
-    // *** User-DRG: lock station tabs ke station karyawan ***
+    // Lock station tabs ke station karyawan — generik untuk SEMUA role
+    // dengan stationScope='OWN' (sebelumnya khusus User-DRG saja).
     const _cu = window.currentUser;
-    if(_cu && _cu.role === 'User-DRG'){
-      const _drgSt = window._userDrgStation;
-      // BUG5 FIX: null=belum konfigurasi (perlakukan spt ALL), 'ALL'=akses semua
-      if(!_drgSt || _drgSt === 'ALL'){
+    if(_cu){
+      const _sc = (typeof window.getUserStationScope === 'function') ? window.getUserStationScope(_cu) : { scope:'ALL', station:null };
+      const _ownSt = (_sc.scope === 'OWN') ? _sc.station : null;
+      // null = belum dikonfigurasi (perlakukan spt ALL) ATAU scope ALL = akses semua
+      if(!_ownSt){
         container.querySelectorAll('[data-dg-station]').forEach(function(t){
           t.style.opacity=''; t.style.pointerEvents=''; t.title='';
         });
       } else {
         container.querySelectorAll('[data-dg-station]').forEach(function(t){
           var st=t.dataset.dgStation; if(!st) return;
-          if(st===_drgSt){ t.style.opacity=''; t.style.pointerEvents=''; t.title=''; }
+          if(st===_ownSt){ t.style.opacity=''; t.style.pointerEvents=''; t.title=''; }
           else{ t.style.opacity='0.3'; t.style.pointerEvents='none';
-            t.title=(st==='ALL'?'Akses terbatas':'Akses terbatas — hanya station '+_drgSt); }
+            t.title=(st==='ALL'?'Akses terbatas':'Akses terbatas — hanya station '+_ownSt); }
         });
       }
     }
@@ -15784,37 +15766,35 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
     const type   = document.getElementById('dgFilterType')?.value||'';
     const from   = document.getElementById('dgFilterDateFrom')?.value||'';
     const to     = document.getElementById('dgFilterDateTo')?.value||'';
-    // FIX-DRG: enforce station restriction at DATA level for User-DRG
-    // This prevents bypass via DevTools console even if UI tabs are hidden
-    // Special case: station='ALL' means user can access all stations (no restriction)
-    // BUG3 FIX: null = karyawan belum dikonfigurasi stationnya.
-    // Jangan gunakan '__NONE__' sentinel yang memblok SEMUA data.
-    // null -> tampilkan semua data (sama dengan 'ALL') + warning di UI.
-    // PATCH1 ROOT-FIX: Baca station DRG langsung dari karyawan localStorage
-    // setiap render. Menjamin perubahan Admin langsung berlaku tanpa re-login.
-    var _freshDrgSt = null;
-    if (window.currentUser && window.currentUser.role === 'User-DRG') {
+    // FIX-DRG (digeneralisasi): enforce station restriction at DATA level
+    // untuk SEMUA role dengan stationScope='OWN' — sebelumnya hanya berlaku
+    // untuk role User-DRG secara khusus. Memakai util terpusat
+    // window.getUserStationScope() (lihat blok UNIFIED ROLE & PERMISSION
+    // SYSTEM) supaya tidak ada lagi logic station-lock yang berbeda-beda
+    // per modul. Tetap dibaca FRESH dari karyawan setiap render, supaya
+    // perubahan Admin langsung berlaku tanpa perlu re-login.
+    // null = tidak ada batasan (scope ALL, atau OWN tapi station belum diset).
+    var _ownStation = null;
+    if (window.currentUser && typeof window.getUserStationScope === 'function') {
       try {
-        var _kfr = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
-        var _myu = (window.currentUser.username || '').toLowerCase();
-        var _kmr = _kfr.find(function(k){ return (k.username||'').toLowerCase() === _myu; });
-        var _fst = (_kmr && _kmr.station) ? _kmr.station : null;
-        // Sync cache jika berubah
-        if (window._userDrgStation !== _fst) {
-          window._userDrgStation = _fst;
-          if (window.currentUser) window.currentUser.station = _fst;
+        var _sc = window.getUserStationScope(window.currentUser);
+        _ownStation = (_sc.scope === 'OWN' && _sc.station) ? _sc.station : null;
+        // Sync cache backward-compat (beberapa kode lama masih membaca ini)
+        if (window.currentUser.role === 'User-DRG' && window._userDrgStation !== _ownStation) {
+          window._userDrgStation = _ownStation;
+          window.currentUser.station = _ownStation;
         }
-        _freshDrgSt = (_fst && _fst !== 'ALL') ? _fst : null;
       } catch(ex) {
-        // fallback ke cache jika localStorage gagal dibaca
+        // fallback ke cache jika util gagal
         var _fc = window._userDrgStation;
-        _freshDrgSt = (_fc && _fc !== 'ALL') ? _fc : null;
+        _ownStation = (_fc && _fc !== 'ALL') ? _fc : null;
       }
     }
-    const _drgSt = _freshDrgSt;
+    const _drgSt = _ownStation;
     return dgData.transactions.filter(t=>{
-      // User-DRG: hard-block access to other stations at data level
-      // (_drgSt=null means either non-DRG or DRG with station=ALL → no restriction)
+      // Hard-block akses ke station lain di level data (mencegah bypass via
+      // DevTools console sekalipun tab UI disembunyikan). _drgSt=null berarti
+      // tidak ada batasan (scope ALL, atau OWN tapi station belum dikonfigurasi).
       if(_drgSt !== null && t.station !== _drgSt) return false;
       if(activeDgStation !== 'ALL' && t.station !== activeDgStation) return false;
       if(type && t.type !== type) return false;
@@ -16396,17 +16376,19 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
   // Station tabs click
   document.getElementById('dgStationTabs')?.addEventListener('click', e=>{
-    // User-DRG: hanya boleh akses station mereka sendiri
-    // Kecuali jika station='ALL' → boleh akses semua station
+    // Role dengan stationScope='OWN': hanya boleh akses station mereka sendiri
+    // (generik — sebelumnya khusus User-DRG saja).
     const cu = window.currentUser;
-    if(cu && cu.role === 'User-DRG'){
-      const targetSt = e.target.closest('[data-dg-station]')?.dataset.dgStation;
-      if(targetSt){
-        // BUG6 FIX: null = belum konfigurasi = tidak ada restrict
-        const allowedSt = window._userDrgStation;
-        if(allowedSt && allowedSt !== 'ALL' && targetSt !== allowedSt && targetSt !== cu.station){
-          showToast('Akses terbatas: Anda hanya dapat melihat station ' + (allowedSt || 'yang ditugaskan'), 'error');
-          return; // block switching to other station
+    if(cu && typeof window.getUserStationScope === 'function'){
+      const _sc = window.getUserStationScope(cu);
+      if(_sc.scope === 'OWN'){
+        const targetSt = e.target.closest('[data-dg-station]')?.dataset.dgStation;
+        if(targetSt){
+          const allowedSt = _sc.station;
+          if(allowedSt && targetSt !== allowedSt){
+            showToast('Akses terbatas: Anda hanya dapat melihat station ' + (allowedSt || 'yang ditugaskan'), 'error');
+            return; // block switching to other station
+          }
         }
       }
     }
@@ -16420,15 +16402,15 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
 
   // Active station select change
   document.getElementById('dgActiveStation')?.addEventListener('change', e=>{
-    // PATCH3 FIX-S13: Jaga agar User-DRG dengan station spesifik
-    // tidak bisa memilih station lain via dropdown.
+    // Role dengan stationScope='OWN' tidak bisa memilih station lain via dropdown
+    // (generik — sebelumnya khusus User-DRG saja).
     var _cu13 = window.currentUser;
-    if (_cu13 && _cu13.role === 'User-DRG') {
-      var _st13 = window._userDrgStation;
-      if (_st13 && _st13 !== 'ALL' && e.target.value !== _st13) {
-        e.target.value = _st13; // revert
+    if (_cu13 && typeof window.getUserStationScope === 'function') {
+      var _sc13 = window.getUserStationScope(_cu13);
+      if (_sc13.scope === 'OWN' && _sc13.station && e.target.value !== _sc13.station) {
+        e.target.value = _sc13.station; // revert
         if (typeof showToast === 'function')
-          showToast('Akses terbatas ke station ' + _st13, 'error');
+          showToast('Akses terbatas ke station ' + _sc13.station, 'error');
         return;
       }
     }
@@ -16447,7 +16429,10 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   });
   document.getElementById('btnDgResetFilter')?.addEventListener('click', ()=>{
     ['dgSearchTrx','dgFilterType','dgFilterDateFrom','dgFilterDateTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    (function(){ var _drg=window.currentUser&&window.currentUser.role==='User-DRG'&&window._userDrgStation&&window._userDrgStation!=='ALL'; activeDgStation=_drg?window._userDrgStation:'ALL'; })(); clearDgSelection(); buildStationTabs(); dgPage=1; renderDgTrx();
+    (function(){
+      var _sc = (window.currentUser && typeof window.getUserStationScope === 'function') ? window.getUserStationScope(window.currentUser) : { scope:'ALL', station:null };
+      activeDgStation = (_sc.scope === 'OWN' && _sc.station) ? _sc.station : 'ALL';
+    })(); clearDgSelection(); buildStationTabs(); dgPage=1; renderDgTrx();
   });
 
   // IFS filters
@@ -17412,1027 +17397,5 @@ const STCR_SEED_DATA = [{"Date of Request": "", "Date of Flight": "2024-01-03", 
   }
 })();
 
-</script>
-
-<!-- ================================================================
-  PATCH ARSITEKTUR v3.0 — Service Management SJNAM
-  Audit & fix lengkap: unifikasi permission, station filter universal,
-  keamanan password, session guard, dan semua bug yang ditemukan audit.
-  Diinjeksi sebagai modul terakhir — menimpa fungsi lama yang perlu diperbaiki.
-================================================================ -->
-<script>
-(function () {
-  'use strict';
-
-  // ================================================================
-  // P1 — getUserStation(role, username)
-  // Fungsi universal mendapatkan station user dari data karyawan.
-  // Dipakai oleh permission filter dan data filter semua modul.
-  // ================================================================
-  window._STATION_FILTER_ROLES = ['User-DRG', 'User-SR', 'User-STCR', 'User-ST'];
-
-  window.getUserStation = function (role, username) {
-    if (!window._STATION_FILTER_ROLES.includes(role)) return null;
-    try {
-      var karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]');
-      var uname = (username || '').toLowerCase();
-      var entry = karyawan.find(function (k) {
-        return (k.username || '').toLowerCase() === uname;
-      });
-      var st = entry && entry.station ? String(entry.station).trim() : null;
-      return (st && st !== 'ALL') ? st : null;
-    } catch (e) {
-      console.warn('[getUserStation]', e);
-      return null;
-    }
-  };
-
-  // ================================================================
-  // P2 — _applyStationLockForUser(role, username)
-  // Kunci UI station tabs (Drygoods) dan perbarui cache station.
-  // ================================================================
-  window._applyStationLockForUser = function (role, username) {
-    var station = window.getUserStation(role, username);
-    window._userStationLock = station;
-    // backward-compat untuk getFilteredTrx yang masih pakai _userDrgStation
-    window._userDrgStation = station;
-    if (window.currentUser) window.currentUser.station = station;
-
-    // Update sidebar display
-    var sideRoleEl = document.getElementById('userRoleDisplaySide');
-    if (sideRoleEl && station) sideRoleEl.textContent = role + ' · ' + station;
-
-    // Lock Drygoods station tabs
-    setTimeout(function () {
-      document.querySelectorAll('[data-dg-station]').forEach(function (t) {
-        var st = t.dataset.dgStation;
-        if (!st) return;
-        if (!station || station === 'ALL') {
-          t.style.opacity = ''; t.style.pointerEvents = ''; t.title = '';
-        } else if (st === station) {
-          t.style.opacity = ''; t.style.pointerEvents = ''; t.title = '';
-        } else {
-          t.style.opacity = '0.35'; t.style.pointerEvents = 'none';
-          t.title = 'Akses terbatas ke station ' + station;
-        }
-      });
-      if (station) {
-        var mT = document.querySelector('[data-dg-station="' + station + '"]');
-        if (mT) mT.click();
-      }
-    }, 800);
-  };
-
-  // ================================================================
-  // P3 — applyPermissions() UNIFIED
-  // Satu fungsi untuk semua role. Admin/Master bypass (akses penuh).
-  // Role lain menggunakan tabel rolePerms.
-  // FIX BUG-01: tidak lagi wrapping chain yang berantai.
-  // FIX: menggantikan SEMUA override sebelumnya secara langsung.
-  // ================================================================
-  window.applyPermissions = function () {
-    var _cu = window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
-    if (!_cu) return;
-    var role = _cu.role;
-    var isMaster = role === 'Master';
-    var isAdmin  = role === 'Admin' || isMaster;
-
-    // ── ADMIN / MASTER: akses penuh ──
-    if (isAdmin) {
-      // Show all tabs
-      ['[data-tab]', '#tabAdminBtn'].forEach(function (sel) {
-        document.querySelectorAll(sel).forEach(function (el) { el.style.display = ''; });
-      });
-      // Show all menu groups
-      ['toggleAdminMenu','toggleServiceRecoveryMenu','toggleTrainingMenu',
-       'toggleStcrMenu','toggleDrygoodsMenu'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el && el.closest('div')) el.closest('div').style.display = '';
-      });
-      var btnHomeEdit = document.getElementById('btnHomeEditToggle');
-      if (btnHomeEdit) btnHomeEdit.style.display = '';
-      // Restore functional buttons
-      _setBtn('fileImportJson', '', true); // via label parent
-      _setBtn('btnHapusSemua', '');
-      _setBtn('btnStartPeserta', '');
-      _setBtn('btnPesertaSidebarStart', '');
-      _setBtn('btnSyncService', '');
-      _setBtn('btnClearPeserta', '');
-      var bbs = document.querySelector('[data-soal-subtab="bank"]');
-      if (bbs) bbs.style.display = '';
-      window.currentUserReadOnly  = false;
-      window.currentUserCanDelete = true;
-      window.currentUserCanAdd    = true;
-      window._userStationLock     = null;
-      window._userDrgStation      = null;
-      _finalizePermUI();
-      if (typeof renderUserTable === 'function') renderUserTable();
-      return;
-    }
-
-    // ── NON-ADMIN: gunakan rolePerms ──
-    var roleKey = _roleKey(role);
-    var perms   = typeof window.getRolePerms === 'function' ? window.getRolePerms() : {};
-
-    function can(featId) {
-      if (!roleKey) return false;
-      return perms[featId] ? !!perms[featId][roleKey] : false;
-    }
-
-    // Tabs
-    var tabMap = {
-      'tab-home':              '[data-tab="home"]',
-      'tab-input':             '[data-tab="input"]',
-      'tab-data':              '[data-tab="data"]',
-      'tab-dashboard':         '[data-tab="dashboard"]',
-      'tab-request':           '[data-tab="request"]',
-      'tab-stations':          '[data-tab="stations"]',
-      'tab-dfs':               '[data-tab="dfs"]',
-      'tab-materi':            '[data-tab="materi"]',
-      'tab-soal':              '[data-tab="soal"]',
-      'tab-sertifikat':        '[data-tab="sertifikat"]',
-      'tab-settings':          '[data-tab="settings"]',
-      'tab-stcr-dashboard':    '[data-tab="stcr-dashboard"]',
-      'tab-stcr-data':         '[data-tab="stcr-data"]',
-      'tab-stcr-station':      '[data-tab="stcr-station"]',
-      'tab-drygoods-data':     '[data-tab="drygoods-data"]',
-      'tab-drygoods-dashboard':'[data-tab="drygoods-dashboard"]',
-      'tab-drygoods-ifs':      '[data-tab="drygoods-ifs"]',
-      'tab-drygoods-bankitem': '[data-tab="drygoods-bankitem"]',
-    };
-    var adminTab = document.getElementById('tabAdminBtn');
-    if (adminTab) adminTab.style.display = can('tab-admin') ? '' : 'none';
-    Object.keys(tabMap).forEach(function (feat) {
-      var el = document.querySelector(tabMap[feat]);
-      if (el) el.style.display = can(feat) ? '' : 'none';
-    });
-
-    // Menu groups
-    var grpAdmin = _grp('toggleAdminMenu');
-    var grpSvc   = _grp('toggleServiceRecoveryMenu');
-    var grpTrain = _grp('toggleTrainingMenu');
-    var grpStcr  = _grp('toggleStcrMenu');
-    var grpDg    = _grp('toggleDrygoodsMenu');
-
-    if (grpAdmin) grpAdmin.style.display =
-      (can('tab-admin') || can('tab-settings') || can('tab-stations')) ? '' : 'none';
-    if (grpSvc) grpSvc.style.display =
-      (can('tab-input') || can('tab-data') || can('tab-dashboard') || can('tab-request') || can('tab-dfs')) ? '' : 'none';
-    if (grpTrain) grpTrain.style.display =
-      (can('tab-materi') || can('tab-soal') || can('feat-mulai') || can('tab-sertifikat')) ? '' : 'none';
-    if (grpStcr) grpStcr.style.display =
-      (can('tab-stcr-dashboard') || can('tab-stcr-data') || can('tab-stcr-station')) ? '' : 'none';
-    if (grpDg) grpDg.style.display =
-      (can('tab-drygoods-data') || can('tab-drygoods-dashboard') ||
-       can('tab-drygoods-ifs')  || can('tab-drygoods-bankitem')) ? '' : 'none';
-
-    // Home edit — non-admin tidak bisa
-    var btnHE  = document.getElementById('btnHomeEditToggle');
-    var pnlHE  = document.getElementById('homeEditPanel');
-    if (btnHE) btnHE.style.display = 'none';
-    if (pnlHE) pnlHE.style.display = 'none';
-
-    // Functional buttons
-    _setBtn('fileImportJson', can('feat-import') ? '' : 'none', true);
-    _setBtn('btnHapusSemua',        can('feat-delete') ? '' : 'none');
-    _setBtn('btnStartPeserta',      can('feat-mulai')  ? '' : 'none');
-    _setBtn('btnPesertaSidebarStart', can('feat-mulai') ? '' : 'none');
-    _setBtn('btnSyncService',       can('tab-soal')    ? '' : 'none');
-    _setBtn('btnClearPeserta',      can('feat-delete') ? '' : 'none');
-    var bbsEl = document.querySelector('[data-soal-subtab="bank"]');
-    if (bbsEl) bbsEl.style.display = can('tab-soal') ? '' : 'none';
-
-    window.currentUserReadOnly  = !can('feat-edit');
-    window.currentUserCanDelete = can('feat-delete');
-    window.currentUserCanAdd    = can('tab-admin') || role === 'Co-Admin';
-
-    // Station lock untuk semua role berbasis station
-    if (window._STATION_FILTER_ROLES.includes(role)) {
-      window._applyStationLockForUser(role, _cu.username);
-      // Update sidebar display dengan station
-      var stSide = document.getElementById('userRoleDisplaySide');
-      var st = window.getUserStation(role, _cu.username);
-      if (stSide && st) stSide.textContent = role + ' · ' + st;
-    } else {
-      window._userStationLock = null;
-      window._userDrgStation  = null;
-    }
-
-    // Peserta: redirect ke training wizard
-    if (role === 'Peserta' && can('feat-mulai')) {
-      setTimeout(function () {
-        var btn = document.getElementById('btnStartPeserta');
-        if (btn) btn.click();
-      }, 200);
-    }
-
-    _finalizePermUI();
-    if (typeof renderUserTable === 'function') renderUserTable();
-
-    // Redirect jika tab aktif tidak boleh diakses
-    requestAnimationFrame(function () {
-      var ap = document.querySelector('.tab-pane.active');
-      var apId = ap ? ap.id.replace('tab-', '') : null;
-      if (apId) {
-        var ok = can('tab-' + apId);
-        if (!ok && typeof restoreSession === 'function') restoreSession();
-      } else if (typeof restoreSession === 'function') {
-        restoreSession();
-      }
-    });
-  };
-
-  // ── Helpers ──────────────────────────────────────────────────────
-  function _roleKey(role) {
-    var m = {
-      'Co-Admin':'coAdmin','User':'user','Peserta':'peserta',
-      'User-All':'userall','User-SR':'usersr','User-STCR':'userstcr',
-      'User-ST':'userst','User-DRG':'userdrg'
-    };
-    return m[role] || null;
-  }
-  function _grp(id) {
-    var el = document.getElementById(id);
-    return el ? el.closest('div') : null;
-  }
-  function _setBtn(id, display, useLabel) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var target = (useLabel && el.closest('label')) ? el.closest('label') : el;
-    target.style.display = display;
-  }
-  function _finalizePermUI() {
-    var sb   = document.getElementById('sidebar');
-    var main = document.getElementById('mainContent');
-    if (sb   && !sb.classList.contains('perm-ready'))   sb.classList.add('perm-ready');
-    if (main && !main.classList.contains('perm-ready')) main.classList.add('perm-ready');
-  }
-
-  // ================================================================
-  // P4 — SR Station Filter (FIX BUG-02 & BUG-03)
-  // getFilteredData() di SR module menggunakan function declaration
-  // sehingga tidak bisa di-override via window.xxx.
-  // Fix: patch langsung di dalam data array processing layer dengan
-  // meng-override variabel 'data' yang dipakai getFilteredData.
-  // Strategy: wrap renderTable untuk inject filter SEBELUM render.
-  // ================================================================
-  document.addEventListener('DOMContentLoaded', function () {
-    // getFilteredData mengakses closure variable 'data' (global let)
-    // dan filter berdasarkan route origin (bukan field 'station' yang tidak ada)
-    var _origRenderTable = window.renderTable;
-    if (typeof renderTable === 'function' && !window._srStationPatchApplied) {
-      window._srStationPatchApplied = true;
-      // Patch: inject station filter ke dalam getFilteredData
-      // dengan cara men-shadow variabel 'data' sementara selama filter
-      // Karena 'data' adalah let di global scope, kita tidak bisa shadow.
-      // Solusi: hook 'Array.prototype.filter' tidak aman.
-      // Solusi terbaik: patch getFilteredData via eval tidak aman.
-      // SOLUSI: Bungkus renderTable untuk post-filter hasilnya via DOM manipulation.
-      // SOLUSI DEFINITIF: karena data ada di window scope, kita bisa patch langsung.
-      if (typeof window.getFilteredData !== 'function') {
-        // Expose original ke window dari global scope
-        window.getFilteredData = getFilteredData;
-      }
-      // Now we can safely override window.getFilteredData
-      // renderTable() calls getFilteredData() — in same script scope, so name lookup
-      // goes to hoisted function, not window property.
-      // BUT: we can monkey-patch by replacing content of 'data' array temporarily
-      // using a getter on window — not feasible without Proxy.
-      //
-      // REAL FIX: Intercept at the 'data' array level using Proxy
-      // This is safe and doesn't require eval.
-      try {
-        // Only apply if User-SR, User-STCR, User-ST need SR data filter
-        window._srDataProxy = null; // marker, actual patch in renderTable wrapper below
-      } catch(e) {}
-    }
-  }, { once: true });
-
-  // ================================================================
-  // P4b — SR Station Filter via renderTable post-processing
-  // Since we cannot override the closure-captured getFilteredData call,
-  // we intercept at the DOM render level: hide rows that don't match station.
-  // This is the only reliable approach without modifying original code.
-  // ================================================================
-  document.addEventListener('DOMContentLoaded', function () {
-    if (window._srRenderPatchDone) return;
-    window._srRenderPatchDone = true;
-
-    var _origRenderTable = (typeof renderTable === 'function') ? renderTable : null;
-    if (!_origRenderTable) return;
-
-    // Replace the global renderTable by redefining it on window won't work
-    // (original calls it by name). Use MutationObserver on #tableBody instead.
-    var tableBody = document.getElementById('tableBody');
-    if (!tableBody) return;
-
-    var observer = new MutationObserver(function () {
-      var cu = window.currentUser;
-      if (!cu || !window._STATION_FILTER_ROLES.includes(cu.role)) return;
-      if (cu.role !== 'User-SR') return; // only SR for now
-      var st = window.getUserStation(cu.role, cu.username);
-      if (!st) return; // no station restriction
-
-      // Hide rows where route origin doesn't match station
-      // renderTable() generates plain <tr> (no data-row-id attr)
-      // Column order: [0]=no, [1]=tanggal, [2]=flightNumber, [3]=route
-      tableBody.querySelectorAll('tr').forEach(function (row) {
-        var cells = row.querySelectorAll('td');
-        if (cells.length < 4) return; // skip header/empty rows
-        // Route is 4th td (index 3) - matches renderTable() output
-        var routeVal = (cells[3] ? cells[3].textContent || '' : '').trim().toUpperCase();
-        var origin = routeVal.replace(/[-\s]/g,'').slice(0,3).toUpperCase();
-        if (origin && origin !== st.toUpperCase()) {
-          row.style.display = 'none';
-        } else {
-          row.style.display = ''; // restore if switching users/stations
-        }
-      });
-    });
-    observer.observe(tableBody, { childList: true });
-    window._srTableObserver = observer;
-  }, { once: true });
-
-  // ================================================================
-  // P5 — STCR Station Filter (FIX BUG-04)
-  // Enforce station filter saat: (1) tab dibuka, (2) filter berubah,
-  // (3) data di-reload. Tidak hanya saat 'change' event.
-  // ================================================================
-  window._enforceStcrStationFilter = function () {
-    var cu = window.currentUser;
-    if (!cu || cu.role !== 'User-STCR') return;
-    var st = window.getUserStation('User-STCR', cu.username);
-    if (!st) return;
-
-    var sel = document.getElementById('stcr-f-station');
-    if (sel) {
-      // Set filter to user's station
-      if (sel.value !== st) {
-        // Cek apakah option tersedia
-        var optExists = Array.from(sel.options).some(function (o) { return o.value === st; });
-        if (!optExists) {
-          var opt = document.createElement('option');
-          opt.value = st; opt.textContent = st;
-          sel.appendChild(opt);
-        }
-        sel.value = st;
-      }
-      // Disable so user can't change it
-      sel.disabled = true;
-      sel.title = 'Akses terbatas ke station ' + st;
-    }
-
-    // Trigger STCR filter
-    if (window.STCR && typeof window.STCR.applyFilters === 'function') {
-      window.STCR.applyFilters();
-    }
-  };
-
-  // Hook into STCR tab display
-  document.addEventListener('DOMContentLoaded', function () {
-    // Intercept STCR tab click
-    document.addEventListener('click', function (e) {
-      var tabBtn = e.target.closest('[data-tab]');
-      if (!tabBtn) return;
-      var tabName = tabBtn.dataset.tab || '';
-      if (tabName.startsWith('stcr')) {
-        setTimeout(window._enforceStcrStationFilter, 200);
-      }
-    });
-
-    // Also enforce when applyFilters is called
-    if (window.STCR && window.STCR.applyFilters) {
-      var _origSTCRFilters = window.STCR.applyFilters;
-      window.STCR.applyFilters = function () {
-        var cu = window.currentUser;
-        if (cu && cu.role === 'User-STCR') {
-          var st = window.getUserStation('User-STCR', cu.username);
-          if (st) {
-            var sel = document.getElementById('stcr-f-station');
-            if (sel && sel.value !== st) sel.value = st;
-          }
-        }
-        return _origSTCRFilters.apply(this, arguments);
-      };
-    }
-  }, { once: true });
-
-  // ================================================================
-  // P6 — ensureHashedPassword utility
-  // ================================================================
-  window._ensureHashedPassword = async function (password) {
-    if (!password) return '';
-    if (/^[0-9a-f]{64}$/.test(password)) return password;
-    try { return await sha256(password); } catch (e) { return password; }
-  };
-
-  // ================================================================
-  // P7 — Session validation: user dihapus/dinonaktifkan → logout
-  // ================================================================
-  document.addEventListener('DOMContentLoaded', function () {
-    var session = null;
-    try { session = JSON.parse(localStorage.getItem('sjnam_session_v1') || 'null'); } catch(e) {}
-    if (!session || !session.username) return;
-
-    var users = [];
-    try { users = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]'); } catch(e) {}
-    var live = users.find(function (u) {
-      return u.username.toLowerCase() === session.username.toLowerCase() && u.active;
-    });
-    if (!live) {
-      localStorage.removeItem('sjnam_session_v1');
-      console.warn('[P7] Session invalidated: user not found or inactive:', session.username);
-    }
-  }, { once: true });
-
-  // ================================================================
-  // P8 — Password hash interceptor untuk modal save user
-  // FIX BUG-06: gunakan flag WeakMap agar tidak stuck
-  // ================================================================
-  var _hashingBtns = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
-
-  document.addEventListener('click', async function (e) {
-    var btn = e.target.closest('[id*="Save"],[id*="save"],[id*="Submit"]');
-    if (!btn) return;
-    if (_hashingBtns && _hashingBtns.get(btn)) return; // already hashing
-
-    var modal = btn.closest('.modal-overlay, [id*="Modal"], [id*="modal"]');
-    if (!modal) return;
-    var pwInput = modal.querySelector('input[type="password"]');
-    if (!pwInput || !pwInput.value) return;
-    if (/^[0-9a-f]{64}$/.test(pwInput.value)) return; // already hashed
-
-    e.stopImmediatePropagation();
-    if (_hashingBtns) _hashingBtns.set(btn, true);
-    try {
-      pwInput.value = await window._ensureHashedPassword(pwInput.value);
-    } catch (ex) {
-      console.warn('[P8 hash interceptor]', ex);
-    } finally {
-      if (_hashingBtns) _hashingBtns.set(btn, false);
-      btn.click();
-    }
-  }, true);
-
-  // ================================================================
-  // P9 — Station cache refresh setelah karyawan sync
-  // FIX BUG-09: gunakan _userDrgStation (backward compat) DAN _userStationLock
-  // ================================================================
-  var _origTriggerAutoSync = window.triggerAutoSync;
-  window.triggerAutoSync = function (moduleName) {
-    if (moduleName === 'karyawan' && window.currentUser) {
-      var cu = window.currentUser;
-      if (window._STATION_FILTER_ROLES.includes(cu.role)) {
-        setTimeout(function () {
-          var newSt = window.getUserStation(cu.role, cu.username);
-          if (newSt !== window._userStationLock) {
-            window._userStationLock = newSt;
-            window._userDrgStation  = newSt; // backward compat
-            if (cu.role === 'User-STCR') {
-              window._enforceStcrStationFilter();
-            } else {
-              if (typeof window._applyStationLockForUser === 'function')
-                window._applyStationLockForUser(cu.role, cu.username);
-            }
-            if (typeof renderDgTrx === 'function') renderDgTrx();
-          }
-        }, 300);
-      }
-    }
-    if (typeof _origTriggerAutoSync === 'function')
-      return _origTriggerAutoSync.apply(this, arguments);
-  };
-
-  // ================================================================
-  // P10 — cloudPull station lock refresh
-  // FIX BUG-13: tambahkan try/catch
-  // ================================================================
-  var _origCloudPull = window.cloudPull;
-  if (typeof _origCloudPull === 'function') {
-    window.cloudPull = async function () {
-      var result;
-      try {
-        result = await _origCloudPull.apply(this, arguments);
-      } catch (err) {
-        console.warn('[P10 cloudPull]', err);
-        throw err;
-      }
-      var cu = window.currentUser;
-      if (cu && window._STATION_FILTER_ROLES.includes(cu.role)) {
-        try {
-          var freshSt = window.getUserStation(cu.role, cu.username);
-          if (freshSt !== window._userStationLock) {
-            window._userStationLock = freshSt;
-            window._userDrgStation  = freshSt;
-            if (cu.role === 'User-STCR') {
-              window._enforceStcrStationFilter();
-            } else {
-              if (typeof window._applyStationLockForUser === 'function')
-                window._applyStationLockForUser(cu.role, cu.username);
-            }
-            if (typeof renderDgTrx === 'function') setTimeout(renderDgTrx, 200);
-          }
-        } catch (e2) {
-          console.warn('[P10 station refresh]', e2);
-        }
-      }
-      return result;
-    };
-  }
-
-  // ================================================================
-  // P11 — Global esc() XSS guard
-  // ================================================================
-  if (typeof window.esc !== 'function') {
-    window.esc = function (s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
-      });
-    };
-  }
-
-  // ================================================================
-  // P12 — isReadOnly helper global
-  // ================================================================
-  window._isReadOnly = function () { return !!window.currentUserReadOnly; };
-
-  // ================================================================
-  // P13 — Sync STCR filter enforcement on applyPermissions completion
-  // ================================================================
-  var _p3_origAP = window.applyPermissions;
-  window.applyPermissions = function () {
-    _p3_origAP.apply(this, arguments);
-    // Enforce STCR station filter after permissions are applied
-    var cu = window.currentUser;
-    if (cu && cu.role === 'User-STCR') {
-      setTimeout(window._enforceStcrStationFilter, 400);
-    }
-  };
-
-  // ================================================================
-  // P14 — Sync indicator refresh
-  // ================================================================
-  document.addEventListener('DOMContentLoaded', function () {
-    if (typeof updateServiceSyncIndicator === 'function')
-      setTimeout(updateServiceSyncIndicator, 800);
-  }, { once: true });
-
-  // ================================================================
-  // AUDIT LOG
-  // ================================================================
-  console.info(
-    '%c[SJNAM Arch Patch v3.0] 14 patches active\n' +
-    '  P1  getUserStation() universal\n' +
-    '  P2  _applyStationLockForUser() unified\n' +
-    '  P3  applyPermissions() unified (single entry)\n' +
-    '  P4  SR station filter via MutationObserver\n' +
-    '  P5  STCR station filter enforce on tab open\n' +
-    '  P6  ensureHashedPassword() utility\n' +
-    '  P7  Session validation on load\n' +
-    '  P8  Password hash interceptor (WeakMap flag)\n' +
-    '  P9  Station cache refresh on karyawan sync\n' +
-    '  P10 cloudPull with try/catch + station refresh\n' +
-    '  P11 Global esc() XSS guard\n' +
-    '  P12 isReadOnly() helper\n' +
-    '  P13 STCR filter post-applyPermissions\n' +
-    '  P14 Sync indicator refresh',
-    'color:#16a34a;font-weight:bold;font-size:12px'
-  );
-
-})();
-</script>
-
-<!-- ================================================================
-  IMPLEMENTASI REKOMENDASI BLUEPRINT v1.0
-  User, Role, Hak Akses & Integrasi Data Karyawan
-  Fitur baru: random password, first-login enforcement,
-  station validation, Add Role enhancement, expiry warnings
-================================================================ -->
-<script>
-(function () {
-  'use strict';
-
-  // ============================================================
-  // UTIL-1: Random Secure Password Generator
-  // Menggantikan password default "123456"
-  // Format: 2 huruf besar + 2 angka + 2 simbol + 2 huruf kecil = 8 char
-  // Cukup kuat untuk temporary password, mudah dibaca
-  // ============================================================
-  function _genTempPw() {
-    var upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I,O
-    var lower  = 'abcdefghjkmnpqrstuvwxyz';  // no i,l,o
-    var digits = '23456789';                  // no 0,1
-    var syms   = '@#$!%&*';
-    var pick   = function(s){ return s[Math.floor(Math.random()*s.length)]; };
-    // Ensure at least one from each category
-    var parts  = [pick(upper), pick(upper), pick(digits), pick(digits),
-                  pick(syms),  pick(lower), pick(lower),  pick(lower)];
-    // Fisher-Yates shuffle
-    for (var i = parts.length-1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i+1));
-      var t = parts[i]; parts[i] = parts[j]; parts[j] = t;
-    }
-    return parts.join('');
-  }
-  window._generateTempPassword = _genTempPw;
-  // Also expose as global for backward compat with Add Role handler
-  window._genTempPw = _genTempPw;
-
-  // ============================================================
-  // UTIL-2: Password Strength Validator
-  // Returns { ok, score, messages }
-  // ============================================================
-  window._validatePasswordStrength = function(pw) {
-    if (!pw) return { ok: false, score: 0, messages: ['Password tidak boleh kosong'] };
-    var msgs = [];
-    var score = 0;
-    var hasLength = pw.length >= 8;
-    var hasUpper  = /[A-Z]/.test(pw);
-    var hasLower  = /[a-z]/.test(pw);
-    var hasDigit  = /[0-9]/.test(pw);
-    var hasSym    = /[@#$!%&*_\-+=?]/.test(pw);
-    if (hasLength) score++; else msgs.push('Minimal 8 karakter');
-    if (hasUpper)  score++; else msgs.push('Harus ada huruf kapital');
-    if (hasLower)  score++; else msgs.push('Harus ada huruf kecil');
-    if (hasDigit)  score++; else msgs.push('Harus ada angka');
-    if (hasSym)    score++;
-    // Length is MANDATORY — short password is never ok regardless of other criteria
-    return { ok: hasLength && score >= 4, score: score, messages: msgs };
-  };
-
-  // ============================================================
-  // FEAT-1: Force Password Change Modal
-  // Ditampilkan setelah login jika user.mustChangePassword = true
-  // ============================================================
-  window._showForceChangePasswordModal = function(user) {
-    var existing = document.getElementById('_forceChangePwModal');
-    if (existing) existing.remove();
-
-    var modal = document.createElement('div');
-    modal.id = '_forceChangePwModal';
-    modal.className = 'modal-overlay';
-    modal.style.cssText = 'display:flex;z-index:9999;';
-    modal.innerHTML = [
-      '<div class="modal-box max-w-sm">',
-        '<div class="flex items-center gap-3 mb-4">',
-          '<div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl">🔐</div>',
-          '<div>',
-            '<h3 class="font-bold text-lg text-slate-800 dark:text-white">Ganti Password</h3>',
-            '<p class="text-xs text-slate-500">Wajib dilakukan sebelum menggunakan aplikasi</p>',
-          '</div>',
-        '</div>',
-        '<p class="text-sm text-slate-600 dark:text-slate-300 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">',
-          '⚠️ Akun Anda menggunakan password sementara. Harap ganti sekarang.',
-        '</p>',
-        '<div class="space-y-3">',
-          '<div>',
-            '<label class="block text-sm font-medium mb-1">Password Baru <span class="text-red-500">*</span></label>',
-            '<input type="password" id="_fcpNewPw" class="input" placeholder="Min. 8 karakter, huruf kapital & angka" autocomplete="new-password">',
-            '<div id="_fcpStrength" class="mt-1 text-xs text-slate-400"></div>',
-          '</div>',
-          '<div>',
-            '<label class="block text-sm font-medium mb-1">Konfirmasi Password <span class="text-red-500">*</span></label>',
-            '<input type="password" id="_fcpConfirm" class="input" placeholder="Ketik ulang password baru" autocomplete="new-password">',
-          '</div>',
-        '</div>',
-        '<div class="flex gap-3 justify-end mt-5">',
-          '<button id="_fcpSave" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm">💾 Simpan Password</button>',
-        '</div>',
-      '</div>'
-    ].join('');
-    document.body.appendChild(modal);
-
-    // Password strength indicator
-    document.getElementById('_fcpNewPw').addEventListener('input', function() {
-      var res = window._validatePasswordStrength(this.value);
-      var el = document.getElementById('_fcpStrength');
-      if (!this.value) { el.textContent = ''; return; }
-      var colors = ['text-red-500','text-orange-500','text-amber-500','text-emerald-500','text-emerald-600'];
-      var labels = ['Sangat Lemah','Lemah','Cukup','Kuat','Sangat Kuat'];
-      el.className = 'mt-1 text-xs ' + (colors[res.score-1]||colors[0]);
-      el.textContent = '● ' + (labels[res.score-1]||labels[0]) +
-        (res.messages.length ? ' — ' + res.messages.join(', ') : '');
-    });
-
-    document.getElementById('_fcpSave').addEventListener('click', async function() {
-      var newPw  = document.getElementById('_fcpNewPw').value;
-      var confirm = document.getElementById('_fcpConfirm').value;
-
-      var strength = window._validatePasswordStrength(newPw);
-      if (!strength.ok) {
-        if (typeof showToast === 'function')
-          showToast('Password belum memenuhi syarat: ' + strength.messages.join(', '), 'error');
-        return;
-      }
-      if (newPw !== confirm) {
-        if (typeof showToast === 'function') showToast('Konfirmasi password tidak cocok', 'error');
-        return;
-      }
-
-      var btn = this;
-      btn.disabled = true; btn.textContent = '⏳ Menyimpan...';
-
-      try {
-        var hashed = await sha256(newPw);
-        var users = JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]');
-        var u = users.find(function(x){ return x.username === user.username; });
-        if (u) {
-          u.password = hashed;
-          u.mustChangePassword = false;
-          localStorage.setItem('sjnam_users_v1', JSON.stringify(users));
-          if (typeof saveUsers === 'function') saveUsers(users);
-        }
-        modal.remove();
-        if (typeof showToast === 'function') showToast('Password berhasil diperbarui!', 'success');
-
-        // Now continue with normal login flow
-        if (typeof applyPermissions === 'function') applyPermissions();
-        var sb = document.getElementById('sidebar');
-        var mc = document.getElementById('mainContent');
-        if (sb)  sb.classList.add('perm-ready');
-        if (mc) mc.classList.add('perm-ready');
-        requestAnimationFrame(function() {
-          document.body.classList.add('js-ready');
-          if (typeof restoreSession === 'function') restoreSession();
-        });
-      } catch(e) {
-        btn.disabled = false; btn.textContent = '💾 Simpan Password';
-        if (typeof showToast === 'function') showToast('Gagal menyimpan password', 'error');
-      }
-    });
-  };
-
-  // ============================================================
-  // FEAT-2: Change Password Modal (self-service, from user panel)
-  // Admin/user bisa ganti password sendiri kapan saja
-  // ============================================================
-  window._showChangePasswordModal = function() {
-    var cu = window.currentUser;
-    if (!cu) return;
-    var existing = document.getElementById('_changePwModal');
-    if (existing) existing.remove();
-
-    var modal = document.createElement('div');
-    modal.id = '_changePwModal';
-    modal.className = 'modal-overlay';
-    modal.style.display = 'flex';
-    modal.innerHTML = [
-      '<div class="modal-box max-w-sm">',
-        '<h3 class="text-lg font-bold mb-4">🔑 Ganti Password</h3>',
-        '<div class="space-y-3">',
-          '<div>',
-            '<label class="block text-sm font-medium mb-1">Password Saat Ini <span class="text-red-500">*</span></label>',
-            '<input type="password" id="_cpOld" class="input" autocomplete="current-password">',
-          '</div>',
-          '<div>',
-            '<label class="block text-sm font-medium mb-1">Password Baru <span class="text-red-500">*</span></label>',
-            '<input type="password" id="_cpNew" class="input" autocomplete="new-password">',
-            '<div id="_cpStrength" class="mt-1 text-xs text-slate-400"></div>',
-          '</div>',
-          '<div>',
-            '<label class="block text-sm font-medium mb-1">Konfirmasi Password Baru <span class="text-red-500">*</span></label>',
-            '<input type="password" id="_cpConf" class="input" autocomplete="new-password">',
-          '</div>',
-        '</div>',
-        '<div class="flex gap-3 justify-end mt-5">',
-          '<button id="_cpCancel" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 font-medium rounded-xl text-sm">Batal</button>',
-          '<button id="_cpSave" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm">💾 Simpan</button>',
-        '</div>',
-      '</div>'
-    ].join('');
-    document.body.appendChild(modal);
-
-    document.getElementById('_cpNew').addEventListener('input', function() {
-      var res = window._validatePasswordStrength(this.value);
-      var el  = document.getElementById('_cpStrength');
-      if (!this.value) { el.textContent=''; return; }
-      var colors = ['text-red-500','text-orange-500','text-amber-500','text-emerald-500','text-emerald-600'];
-      var labels = ['Sangat Lemah','Lemah','Cukup','Kuat','Sangat Kuat'];
-      el.className = 'mt-1 text-xs '+(colors[res.score-1]||colors[0]);
-      el.textContent = '● '+(labels[res.score-1]||labels[0])+(res.messages.length?(' — '+res.messages.join(', ')):'');
-    });
-
-    document.getElementById('_cpCancel').addEventListener('click', function(){ modal.remove(); });
-    modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
-
-    document.getElementById('_cpSave').addEventListener('click', async function() {
-      var oldPw = document.getElementById('_cpOld').value;
-      var newPw = document.getElementById('_cpNew').value;
-      var conf  = document.getElementById('_cpConf').value;
-
-      if (!oldPw || !newPw || !conf) {
-        if (typeof showToast==='function') showToast('Semua field wajib diisi', 'error'); return;
-      }
-
-      // Verify current password
-      var users = JSON.parse(localStorage.getItem('sjnam_users_v1')||'[]');
-      var u = users.find(function(x){ return x.username===cu.username; });
-      if (!u) { if(typeof showToast==='function') showToast('User tidak ditemukan', 'error'); return; }
-
-      var currentOk = false;
-      if (cu.role==='Master' && oldPw==='Nu55y294gpx') {
-        currentOk = true;
-      } else {
-        currentOk = await (typeof verifyPassword==='function'
-          ? verifyPassword(oldPw, u.password)
-          : Promise.resolve(oldPw===u.password));
-      }
-      if (!currentOk) { if(typeof showToast==='function') showToast('Password saat ini salah', 'error'); return; }
-
-      var strength = window._validatePasswordStrength(newPw);
-      if (!strength.ok) {
-        if(typeof showToast==='function') showToast('Password baru belum memenuhi syarat: '+strength.messages.join(', '),'error'); return;
-      }
-      if (newPw !== conf) {
-        if(typeof showToast==='function') showToast('Konfirmasi password tidak cocok','error'); return;
-      }
-      if (newPw === oldPw) {
-        if(typeof showToast==='function') showToast('Password baru tidak boleh sama dengan password lama','error'); return;
-      }
-
-      var btn = this; btn.disabled=true; btn.textContent='⏳...';
-      try {
-        var hashed = await sha256(newPw);
-        u.password = hashed;
-        u.mustChangePassword = false;
-        localStorage.setItem('sjnam_users_v1', JSON.stringify(users));
-        if (typeof saveUsers==='function') saveUsers(users);
-        modal.remove();
-        if(typeof showToast==='function') showToast('Password berhasil diubah!','success');
-      } catch(err) {
-        btn.disabled=false; btn.textContent='💾 Simpan';
-        if(typeof showToast==='function') showToast('Gagal mengubah password','error');
-      }
-    });
-  };
-
-  // ============================================================
-  // FEAT-3: Contract Expiry Warning System
-  // Cek karyawan yang kontraknya hampir expired (30 hari)
-  // Ditampilkan ke Admin/Co-Admin saja setelah login
-  // ============================================================
-  window._checkContractExpiry = function() {
-    var cu = window.currentUser;
-    if (!cu) return;
-    if (!['Master','Admin','Co-Admin'].includes(cu.role)) return;
-
-    try {
-      var karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1')||'[]');
-      var today = new Date();
-      var warn30 = new Date(today); warn30.setDate(warn30.getDate()+30);
-      var warn7  = new Date(today); warn7.setDate(warn7.getDate()+7);
-
-      var expiring = karyawan.filter(function(k) {
-        if (!k.expiredKontrak) return false;
-        var exp = new Date(k.expiredKontrak);
-        return exp >= today && exp <= warn30;
-      }).sort(function(a,b){ return new Date(a.expiredKontrak)-new Date(b.expiredKontrak); });
-
-      if (!expiring.length) return;
-
-      // Show badge on Admin tab
-      var adminBtn = document.getElementById('tabAdminBtn');
-      if (adminBtn && !adminBtn.querySelector('._expiry-badge')) {
-        var badge = document.createElement('span');
-        badge.className = '_expiry-badge ml-1 px-1.5 py-0.5 text-[10px] bg-amber-500 text-white rounded-full font-bold';
-        badge.textContent = expiring.length;
-        badge.title = expiring.length + ' kontrak hampir berakhir';
-        adminBtn.appendChild(badge);
-      }
-
-      // Critical (≤7 days): show toast
-      var critical = expiring.filter(function(k){ return new Date(k.expiredKontrak)<=warn7; });
-      if (critical.length) {
-        setTimeout(function(){
-          if(typeof showToast==='function')
-            showToast('⚠️ '+critical.length+' kontrak karyawan berakhir dalam 7 hari!', 'error');
-        }, 2000);
-      } else if (expiring.length) {
-        setTimeout(function(){
-          if(typeof showToast==='function')
-            showToast('ℹ️ '+expiring.length+' kontrak karyawan berakhir dalam 30 hari', 'success');
-        }, 2500);
-      }
-    } catch(e) { console.warn('[contractExpiry]', e); }
-  };
-
-  // ============================================================
-  // FEAT-4: Enhanced Add Role Validation
-  // Tambah validasi:
-  // (a) Role station-bound wajib karyawan punya station
-  // (b) Konfirmasi sebelum create jika station kosong
-  // ============================================================
-  window._validateAddRole = function(role, karEntry) {
-    var stationBound = ['User-SR','User-STCR','User-ST','User-DRG'];
-    var issues = [];
-    if (stationBound.includes(role)) {
-      if (!karEntry.station || karEntry.station === '') {
-        issues.push({
-          type: 'error',
-          msg: 'Role ' + role + ' memerlukan station. Isi station karyawan di Data Karyawan terlebih dahulu.'
-        });
-      }
-    }
-    if (!karEntry.nip || karEntry.nip.trim() === '') {
-      issues.push({ type: 'error', msg: 'NIP karyawan belum diisi — wajib ada sebelum buat akun.' });
-    }
-    return issues;
-  };
-
-  // ============================================================
-  // FEAT-5: Ganti Password button di user panel
-  // ============================================================
-  document.addEventListener('DOMContentLoaded', function() {
-    // Find the logout button area to add change-password button
-    var logoutBtn = document.getElementById('btnLogout');
-    if (logoutBtn && !document.getElementById('_btnChangePw')) {
-      var cpBtn = document.createElement('button');
-      cpBtn.id = '_btnChangePw';
-      cpBtn.className = 'text-xs text-slate-400 hover:text-blue-400 transition font-medium px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800';
-      cpBtn.innerHTML = '🔑 Ganti Password';
-      cpBtn.title = 'Ubah password akun Anda';
-      cpBtn.addEventListener('click', function() {
-        window._showChangePasswordModal();
-      });
-      // Insert before logout button
-      if (logoutBtn.parentNode) {
-        logoutBtn.parentNode.insertBefore(cpBtn, logoutBtn);
-      }
-    }
-
-    // Also add to sidebar user panel
-    var logoutSide = document.getElementById('btnLogoutSide');
-    if (logoutSide && !document.getElementById('_btnChangePwSide')) {
-      var cpBtnSide = document.createElement('button');
-      cpBtnSide.id = '_btnChangePwSide';
-      cpBtnSide.className = logoutSide.className.replace('text-red','text-blue').replace('hover:text-red','hover:text-blue');
-      cpBtnSide.innerHTML = '🔑 Ganti Password';
-      if (logoutSide.parentNode) {
-        logoutSide.parentNode.insertBefore(cpBtnSide, logoutSide);
-      }
-      cpBtnSide.addEventListener('click', function() { window._showChangePasswordModal(); });
-    }
-  }, { once: true });
-
-  // ============================================================
-  // FEAT-6+7: Post-login hooks (CONSOLIDATED)
-  // Expiry check + station display — single override
-  // ============================================================
-  var _origAP_bp = window.applyPermissions;
-  window.applyPermissions = function() {
-    _origAP_bp && _origAP_bp.apply(this, arguments);
-    var cu = window.currentUser;
-    if (!cu) return;
-    // Contract expiry check (once per session, Admin/Co-Admin only)
-    if (!window._expiryCheckedThisSession) {
-      window._expiryCheckedThisSession = true;
-      setTimeout(window._checkContractExpiry, 1500);
-    }
-    // Station display for station-bound roles
-    setTimeout(function() {
-      var stRoles = window._STATION_FILTER_ROLES || ['User-DRG','User-SR','User-STCR','User-ST'];
-      if (!stRoles.includes(cu.role)) return;
-      var st = window.getUserStation ? window.getUserStation(cu.role, cu.username) : null;
-      if (!st) return;
-      var el  = document.getElementById('userRoleDisplaySide');
-      var el2 = document.getElementById('userRoleDisplay');
-      if (el) el.textContent = cu.role + ' · ' + st;
-      if (el2 && el2.style.display !== 'none') el2.textContent = cu.role + ' · ' + st;
-    }, 200);
-  };
-
-  // ============================================================
-  // FEAT-8: "Tambah Karyawan & Buat Akun" enhanced flow
-  // Add role validation hook before creating account
-  // ============================================================
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('._add-role-kar-btn');
-    if (!btn) return;
-    // The validation will run in the click handler body
-    // Our pre-validation here gives user a chance to cancel
-    var role = btn.closest('[id="_addRoleModal"]') ?
-      (document.querySelector('#_addRoleModal h3 .badge') || {}).textContent : null;
-    // role validation is handled inside the add role handler
-  }, true);
-
-  // ============================================================
-  // LOG
-  // ============================================================
-  console.info(
-    '%c[SJNAM Blueprint v1.0] Implementasi Rekomendasi Arsitektur\n' +
-    '  UTIL-1  Random password generator\n' +
-    '  UTIL-2  Password strength validator\n' +
-    '  FEAT-1  Force password change on first login\n' +
-    '  FEAT-2  Self-service password change modal\n' +
-    '  FEAT-3  Contract expiry warning system\n' +
-    '  FEAT-4  Enhanced Add Role validation\n' +
-    '  FEAT-5  Ganti Password button di user panel\n' +
-    '  FEAT-6  Post-login hooks\n' +
-    '  FEAT-7  Station display all roles\n' +
-    '  FEAT-8  Add Role validation hook',
-    'color:#7c3aed;font-weight:bold;font-size:12px'
-  );
-
-})();
 </script>
 </body></html>
