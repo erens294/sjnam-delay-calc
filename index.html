@@ -8498,9 +8498,15 @@ async function cloudPull(silent = false){
       if(_localUsers && Array.isArray(_localUsers)){
         const _userMap = new Map();
         // Remote first (lower priority)
-        rec.users.forEach(u=>{ if(u.id) _userMap.set(u.id, u); });
+        // BUGFIX: gunakan != null (bukan truthy check) — id bisa bernilai 0
+        // (mis. user Master id:0). `if(u.id)` salah karena 0 dianggap falsy,
+        // sehingga user dengan id:0 selalu gugur dari hasil merge. Ini
+        // menyebabkan akun Master hilang dari sjnam_users_v1 setiap kali
+        // cloudPull jalan, dan checkAuth() di refresh berikutnya otomatis
+        // logout karena user tidak lagi ditemukan ("stillValid" gagal).
+        rec.users.forEach(u=>{ if(u.id != null) _userMap.set(u.id, u); });
         // Local overwrites (higher priority — local admin changes win)
-        _localUsers.forEach(u=>{ if(u.id) _userMap.set(u.id, u); });
+        _localUsers.forEach(u=>{ if(u.id != null) _userMap.set(u.id, u); });
         _mergedUsers = Array.from(_userMap.values());
       }
       localStorage.setItem('sjnam_users_v1', JSON.stringify(_mergedUsers));
@@ -8514,8 +8520,10 @@ async function cloudPull(silent = false){
       let _mergedKar = rec.karyawan;
       if(_localKar && Array.isArray(_localKar)){
         const _karMap = new Map();
-        rec.karyawan.forEach(k=>{ if(k.id) _karMap.set(k.id, k); });
-        _localKar.forEach(k=>{ if(k.id) _karMap.set(k.id, k); });
+        // BUGFIX: id != null (lihat catatan di merge users di atas) — mencegah
+        // entri karyawan dengan id:0 gugur dari hasil merge.
+        rec.karyawan.forEach(k=>{ if(k.id != null) _karMap.set(k.id, k); });
+        _localKar.forEach(k=>{ if(k.id != null) _karMap.set(k.id, k); });
         _mergedKar = Array.from(_karMap.values());
       }
       localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(_mergedKar));
@@ -8706,8 +8714,11 @@ function startRealtimeSubscription(){
               let _rtMU = rec.users;
               if(_rtLU && Array.isArray(_rtLU)){
                 const _m = new Map();
-                rec.users.forEach(u=>{ if(u.id) _m.set(u.id, u); });
-                _rtLU.forEach(u=>{ if(u.id) _m.set(u.id, u); });
+                // BUGFIX: id != null (lihat catatan di cloudPull) — mencegah user
+                // dengan id:0 (mis. Master) gugur saat realtime sync, yang akan
+                // menyebabkan auto-logout di refresh berikutnya.
+                rec.users.forEach(u=>{ if(u.id != null) _m.set(u.id, u); });
+                _rtLU.forEach(u=>{ if(u.id != null) _m.set(u.id, u); });
                 _rtMU = Array.from(_m.values());
               }
               localStorage.setItem('sjnam_users_v1', JSON.stringify(_rtMU));
@@ -8720,8 +8731,9 @@ function startRealtimeSubscription(){
               let _rtMK = rec.karyawan;
               if(_rtLK && Array.isArray(_rtLK)){
                 const _mk = new Map();
-                rec.karyawan.forEach(k=>{ if(k.id) _mk.set(k.id, k); });
-                _rtLK.forEach(k=>{ if(k.id) _mk.set(k.id, k); });
+                // BUGFIX: id != null (lihat catatan di cloudPull)
+                rec.karyawan.forEach(k=>{ if(k.id != null) _mk.set(k.id, k); });
+                _rtLK.forEach(k=>{ if(k.id != null) _mk.set(k.id, k); });
                 _rtMK = Array.from(_mk.values());
               }
               localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(_rtMK));
