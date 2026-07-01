@@ -743,6 +743,11 @@ function getAllCloudData(){
     rolePerms, certTemplate1, certTemplate2, certTemplateActive, certPositions, certBarcode, certCustomTexts,
     certCustomTextsSJ, certCustomTextsNAM, certCustomTextsBoth,
     certParaf, certParafShow,
+    // [BUGFIX] Sertakan tombstone dalam payload cloud agar device LAIN juga tahu
+    // mana user/karyawan/peserta yang sudah dihapus — bukan hanya device yang
+    // melakukan penghapusan. Tanpa ini, device lain tetap punya data yang sudah
+    // dihapus dan akan mengirimkannya kembali ke device kita lewat realtime/pull.
+    deletedTombstones: _loadTombstones(),
     savedAt: new Date().toISOString(), version: 'v5.0-audit'
   };
 }
@@ -965,6 +970,26 @@ async function cloudPull(silent = false){
 
     window._cloudPullInProgress = true;
     try {
+    // [BUGFIX] Merge tombstone dari cloud dengan tombstone lokal terlebih dahulu —
+    // supaya penghapusan yang dilakukan di device LAIN juga dikenali di device ini.
+    // Tanpa ini, device A hapus user, push tombstone ke cloud, tapi device B tidak
+    // pernah tahu → device B tetap punya user itu dan akan terus mengirimkannya
+    // kembali ke cloud lewat push berikutnya.
+    if(rec.deletedTombstones && typeof rec.deletedTombstones === 'object'){
+      const localTS = _loadTombstones();
+      let changed = false;
+      Object.keys(rec.deletedTombstones).forEach(scope => {
+        if(!localTS[scope]) localTS[scope] = {};
+        Object.keys(rec.deletedTombstones[scope] || {}).forEach(id => {
+          // Hanya ambil jika lebih baru dari tombstone lokal yang sudah ada
+          if(!localTS[scope][id] || rec.deletedTombstones[scope][id] > localTS[scope][id]){
+            localTS[scope][id] = rec.deletedTombstones[scope][id];
+            changed = true;
+          }
+        });
+      });
+      if(changed) _saveTombstones(localTS);
+    }
     if(Array.isArray(rec.data)) { window.data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(window.data)); }
     if(Array.isArray(rec.stations) && rec.stations.length > 0) { window.stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(window.stations)); }
     if(Array.isArray(rec.dfsData)) { window.dfsData = rec.dfsData; localStorage.setItem(DFS_KEY, JSON.stringify(window.dfsData)); }
@@ -1187,6 +1212,23 @@ function startRealtimeSubscription(){
           cloudLog('🔄 Update masuk dari device lain ('+( rec._pushedBy||'?')+') — memuat ulang data...', 'info');
           window._cloudPullInProgress = true;
           try {
+          // [BUGFIX] Merge tombstone dari cloud dengan lokal terlebih dahulu —
+          // sama seperti di cloudPull() — agar penghapusan dari device lain langsung
+          // dikenali sebelum merge data users/karyawan/peserta di bawah berjalan.
+          if(rec.deletedTombstones && typeof rec.deletedTombstones === 'object'){
+            const localTS = _loadTombstones();
+            let changed = false;
+            Object.keys(rec.deletedTombstones).forEach(scope => {
+              if(!localTS[scope]) localTS[scope] = {};
+              Object.keys(rec.deletedTombstones[scope] || {}).forEach(id => {
+                if(!localTS[scope][id] || rec.deletedTombstones[scope][id] > localTS[scope][id]){
+                  localTS[scope][id] = rec.deletedTombstones[scope][id];
+                  changed = true;
+                }
+              });
+            });
+            if(changed) _saveTombstones(localTS);
+          }
           if(Array.isArray(rec.data)) { window.data = rec.data; localStorage.setItem(STORAGE_KEY, JSON.stringify(window.data)); }
           if(Array.isArray(rec.stations) && rec.stations.length > 0) { window.stations = rec.stations; localStorage.setItem(STATIONS_KEY, JSON.stringify(window.stations)); }
           if(Array.isArray(rec.dfsData)) { window.dfsData = rec.dfsData; localStorage.setItem(DFS_KEY, JSON.stringify(window.dfsData)); }
@@ -1296,11 +1338,21 @@ function startRealtimeSubscription(){
           if(payload.new?.updated_at){ window._lastCloudUpdatedAt = payload.new.updated_at; try{ localStorage.setItem(window._LAST_PULL_TS_KEY, window._lastCloudUpdatedAt); }catch(e){} }
           // Batalkan push timer yang mungkin sedang menunggu — data sudah datang dari cloud
           // BUGFIX: jangan batalkan jika ada perubahan rolePerms lokal yang belum ter-push
-          if(!window._rolePermsLocalDirty){
+          // [BUGFIX-2] juga jangan batalkan jika ada modul lain yang DIRTY (perubahan lokal
+          // belum ter-push ke cloud) — sebelumnya penghapusan user/karyawan sering TIDAK
+          // pernah sampai ke cloud karena push timer-nya dibatalkan di sini tepat sebelum
+          // sempat dieksekusi, menyebabkan cloud tetap punya data yang sudah dihapus dan
+          // akhirnya mengembalikannya ke device lain lewat realtime/pull berikutnya.
+          if(!window._rolePermsLocalDirty && !isDirty()){
             if(_autoSyncTimer){ clearTimeout(_autoSyncTimer); window._autoSyncTimer = null; }
           }
           // Set hash SETELAH semua data diapply ke localStorage & variabel in-memory
-          window._lastPushedHash = _hashPayload(getAllCloudData());
+          // [BUGFIX-2] JANGAN update hash jika ada perubahan lokal yang dirty (belum ter-push)
+          // — kalau hash di-update sekarang, Smart Push berikutnya akan mengira "tidak ada
+          // perubahan" dan skip, padahal ada penghapusan yang belum pernah sampai ke cloud.
+          if(!isDirty()) {
+            window._lastPushedHash = _hashPayload(getAllCloudData());
+          }
           } finally {
           window._cloudPullInProgress = false; // always reset — prevents deadlock
           }
