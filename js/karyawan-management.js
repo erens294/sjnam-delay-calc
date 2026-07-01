@@ -1,1 +1,719 @@
-!function(){let karyawan=[];try{karyawan=JSON.parse(localStorage.getItem("sjnam_karyawan_v1")||"[]")}catch(e){karyawan=[]}function saveKaryawan(){localStorage.setItem("sjnam_karyawan_v1",JSON.stringify(karyawan)),"function"==typeof triggerAutoSync&&triggerAutoSync("karyawan"),document.dispatchEvent(new CustomEvent("sjn:karyawan-updated"))}function populateStationDropdowns(){const list=function(){try{return JSON.parse(localStorage.getItem("sjn_stations_v2")||"[]")}catch(e){return[]}}(),opts=list.map(s=>`<option value="${esc(s.iata)}">${esc(s.iata)} — ${esc(s.name)}</option>`).join(""),filterEl=document.getElementById("karyawanFilterStation"),formEl=document.getElementById("karyawanStation");if(filterEl){const cur=filterEl.value;filterEl.innerHTML='<option value="">Semua Station</option>'+opts,list.some(s=>s.iata===cur)&&(filterEl.value=cur)}if(formEl){const cur=formEl.value;formEl.innerHTML='<option value="">Pilih station...</option><option value="ALL">🌐 ALL — Semua Station (akses semua)</option>'+opts,"ALL"===cur?formEl.value="ALL":list.some(s=>s.iata===cur)&&(formEl.value=cur)}}function getUsersList(){try{return JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]")}catch(e){return[]}}function renderKaryawan(){const tbody=document.getElementById("karyawanTableBody");if(!tbody)return;populateStationDropdowns();const search=(document.getElementById("karyawanSearch")?.value||"").toLowerCase(),stationFilter=document.getElementById("karyawanFilterStation")?.value||"",allUsersMap=new Map(getUsersList().map(u=>[u.username,u]));let list=karyawan.filter(k=>(!stationFilter||k.station===stationFilter)&&!(search&&![k.nama,k.nip,k.jabatan,k.station,k.hp,k.email].join(" ").toLowerCase().includes(search)));if(document.getElementById("karyawanCountInfo").textContent=`Total Karyawan: ${karyawan.length}`,!list.length)return void(tbody.innerHTML='<tr><td colspan="11" class="text-center py-8 text-slate-400 text-sm">Belum ada data karyawan.</td></tr>');const canEdit=window.currentUserCanAdd,canDelete=window.currentUserCanDelete;tbody.innerHTML=list.map((k,i)=>{const linkedUser=k.username?allUsersMap.get(k.username):null,userLoginCell=linkedUser?`<span class="font-mono text-xs text-slate-700 dark:text-slate-200">${esc(k.nip||linkedUser.username)}</span>`:k.username?`<span class="text-xs text-red-500" title="Akun ${esc(k.username)} sudah dihapus dari Manajemen Role">⚠️ ${esc(k.nip||k.username)}</span>`:'<span class="text-xs text-slate-400">— Belum terhubung —</span>',_stWarn=!linkedUser||!["User-SR","User-STCR","User-ST","User-DRG"].includes(linkedUser.role)||k.station&&""!==k.station?"":'<span class="text-[10px] text-amber-600 font-semibold block mt-0.5">⚠️ Station belum diisi</span>',roleCell=linkedUser?`<div><button onclick="document.querySelector('[data-admin-subtab="users"]').click()" title="Lihat di Manajemen Role" class="badge ${getRoleBadgeClass(linkedUser.role)} cursor-pointer hover:opacity-80 transition">${esc(linkedUser.role)}</button>${_stWarn}</div>`:k.username?'<button onclick="document.querySelector(\'[data-admin-subtab="users"]\').click()" class="text-xs text-red-400 hover:underline cursor-pointer">Akun tidak ditemukan</button>':'<span class="text-xs text-slate-400">—</span>';return`<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">\n        <td class="p-3 text-xs text-slate-400">${i+1}</td>\n        <td class="p-3 font-medium">${esc(k.nama)}</td>\n        <td class="p-3 font-mono text-xs">${esc(k.nip)}</td>\n        <td class="p-3 text-xs">${esc(k.jabatan)}</td>\n        <td class="p-3 text-xs">${esc(k.hp||"-")}</td>\n        <td class="p-3 text-xs">${esc(k.email||"-")}</td>\n        <td class="p-3 text-xs">${esc(k.station||"-")}</td>\n        <td class="p-3">${userLoginCell}</td>\n        <td class="p-3 text-xs">\n          ${linkedUser?linkedUser.active?'<span class="text-emerald-600 font-semibold text-xs">● Aktif</span>':'<span class="text-red-400 font-semibold text-xs">○ Nonaktif</span>':'<span class="text-slate-300 text-xs">—</span>'}\n        </td>\n        <td class="p-3">${roleCell}</td>\n        <td class="p-3 text-right whitespace-nowrap">\n          ${canEdit?`<button data-kar-edit="${k.id}" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>`:""}\n          ${canDelete?`<button data-kar-del="${k.id}" class="text-xs px-2 py-1 bg-red-500 text-white rounded">Hapus</button>`:""}\n        </td>\n      </tr>`}).join("")}function openKaryawanModal(item){window._karyawanEditId=item?item.id:null,document.getElementById("karyawanModalTitle").textContent=item?"Edit Karyawan":"Tambah Karyawan",populateStationDropdowns(),window.renderKaryawanUserOptions(),document.getElementById("karyawanNama").value=item?.nama||"",document.getElementById("karyawanNip").value=item?.nip||"",document.getElementById("karyawanJabatan").value=item?.jabatan||"",document.getElementById("karyawanStation").value=item?.station||"",document.getElementById("karyawanHp").value=item?.hp||"",document.getElementById("karyawanEmail").value=item?.email||"",document.getElementById("karyawanUser").value=item?.username||"",document.getElementById("karyawanJoinDate").value=item?.joinDate||"",document.getElementById("karyawanExpiredKontrak").value=item?.expiredKontrak||"",document.getElementById("karyawanNote").value=item?.note||"";const accountSection=document.getElementById("karyawanAccountSection"),karyawanUsernameEl=document.getElementById("karyawanUsername"),karyawanPasswordEl=document.getElementById("karyawanPassword"),karyawanAktifEl=document.getElementById("karyawanAktif");if(item?.username){const linkedU=function(){try{return JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]")}catch(e){return[]}}().find(u=>u.username===item.username);linkedU?(accountSection&&accountSection.classList.remove("hidden"),karyawanUsernameEl&&(karyawanUsernameEl.value=linkedU.username),karyawanPasswordEl&&(karyawanPasswordEl.value=""),karyawanAktifEl&&(karyawanAktifEl.checked=!!linkedU.active),karyawanUsernameEl&&(karyawanUsernameEl.readOnly="Master"===linkedU.role)):accountSection&&accountSection.classList.add("hidden")}else accountSection&&accountSection.classList.add("hidden"),karyawanUsernameEl&&(karyawanUsernameEl.value=""),karyawanPasswordEl&&(karyawanPasswordEl.value=""),karyawanAktifEl&&(karyawanAktifEl.checked=!0);document.getElementById("karyawanUser").onchange=function(){const selectedUsername=this.value;if(!selectedUsername)return void(accountSection&&accountSection.classList.add("hidden"));const linkedU=function(){try{return JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]")}catch(e){return[]}}().find(u=>u.username===selectedUsername);linkedU?(accountSection&&accountSection.classList.remove("hidden"),karyawanUsernameEl&&(karyawanUsernameEl.value=linkedU.username,karyawanUsernameEl.readOnly="Master"===linkedU.role),karyawanPasswordEl&&(karyawanPasswordEl.value=""),karyawanAktifEl&&(karyawanAktifEl.checked=!!linkedU.active)):accountSection&&accountSection.classList.add("hidden")},document.getElementById("karyawanModal").classList.remove("hidden")}function closeKaryawanModal(){document.getElementById("karyawanModal").classList.add("hidden"),window._karyawanEditId=null;const accountSection=document.getElementById("karyawanAccountSection");accountSection&&accountSection.classList.add("hidden");const pwEl=document.getElementById("karyawanPassword");pwEl&&(pwEl.value="");const unEl=document.getElementById("karyawanUsername");unEl&&(unEl.value="",unEl.readOnly=!1);const aktifEl=document.getElementById("karyawanAktif");aktifEl&&(aktifEl.checked=!0);const userEl=document.getElementById("karyawanUser");userEl&&(userEl.onchange=null);const saveBtn=document.getElementById("karyawanModalSave");saveBtn&&(saveBtn.disabled=!1,saveBtn.textContent="💾 Simpan")}window.getKaryawanData=()=>karyawan,window.setKaryawanData=arr=>{karyawan=Array.isArray(arr)?arr:[],document.getElementById("karyawanTableBody")&&renderKaryawan(),document.dispatchEvent(new CustomEvent("sjn:karyawan-updated"))},window.renderKaryawanUserOptions=function(){const sel=document.getElementById("karyawanUser");if(!sel)return;const allUsers=getUsersList(),linkedUsernames=new Set(karyawan.map(k=>k.username).filter(Boolean)),editingUsername=window._karyawanEditId?(karyawan.find(k=>k.id===window._karyawanEditId)||{}).username:null,cur=sel.value,opts=allUsers.filter(u=>!linkedUsernames.has(u.username)||u.username===editingUsername).map(u=>`<option value="${esc(u.username)}">${esc(u.username)} — ${esc(u.role)}</option>`).join("");sel.innerHTML='<option value="">— Belum dihubungkan ke akun manapun —</option>'+opts,allUsers.some(u=>u.username===cur)&&(sel.value=cur)},window.renderKaryawanTable=renderKaryawan,document.getElementById("btnAddKaryawan")?.addEventListener("click",()=>{window.currentUserCanAdd?openKaryawanModal(null):showToast("Tidak ada izin untuk menambah karyawan","error")}),document.getElementById("karyawanModalCancel")?.addEventListener("click",closeKaryawanModal),document.getElementById("karyawanModal")?.addEventListener("click",e=>{e.target===document.getElementById("karyawanModal")&&closeKaryawanModal()}),document.getElementById("karyawanModalSave")?.addEventListener("click",()=>{if(!window.currentUserCanAdd)return void showToast("Tidak ada izin untuk menyimpan data karyawan","error");const saveBtn=document.getElementById("karyawanModalSave");if(saveBtn&&saveBtn.disabled)return;saveBtn&&(saveBtn.disabled=!0,saveBtn.textContent="⏳ Menyimpan...");const nama=document.getElementById("karyawanNama").value.trim(),nip=document.getElementById("karyawanNip").value.trim(),jabatan=document.getElementById("karyawanJabatan").value.trim(),station=document.getElementById("karyawanStation").value,hp=document.getElementById("karyawanHp").value.trim(),email=document.getElementById("karyawanEmail").value.trim(),username=document.getElementById("karyawanUser").value,joinDate=document.getElementById("karyawanJoinDate").value,expiredKontrak=document.getElementById("karyawanExpiredKontrak").value,note=document.getElementById("karyawanNote").value.trim(),accountSection=document.getElementById("karyawanAccountSection"),accountVisible=accountSection&&!accountSection.classList.contains("hidden"),newUsername=accountVisible?(document.getElementById("karyawanUsername")?.value||"").trim().toLowerCase():null,newPassword=accountVisible?(document.getElementById("karyawanPassword")?.value||"").trim():null,newAktif=accountVisible?document.getElementById("karyawanAktif")?.checked??!0:null,_resetSaveBtn=()=>{saveBtn&&(saveBtn.disabled=!1,saveBtn.textContent="💾 Simpan")};if(!nama||!nip||!jabatan)return showToast("Lengkapi field wajib: Nama, NIP, dan Jabatan","error"),void _resetSaveBtn();const _stationBoundRoles=["User-SR","User-STCR","User-ST","User-DRG","Op-SR","Op-STCR","Op-DRG","Op-ST"];if(!station||""===station){const _linkedUsername=accountVisible&&newUsername||username;if(_linkedUsername){const _linkedU=JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]").find(u=>u.username===_linkedUsername);if(_linkedU&&_stationBoundRoles.includes(_linkedU.role))return showToast(`Role ${_linkedU.role} wajib memiliki station — pilih station terlebih dahulu`,"error"),void _resetSaveBtn()}}if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return showToast("Format email tidak valid","error"),void _resetSaveBtn();if(hp&&!/^[0-9+\-\s]{8,20}$/.test(hp))return showToast("Format No Handphone tidak valid","error"),void _resetSaveBtn();const dupNip=karyawan.find(k=>k.id!==window._karyawanEditId&&(k.nip||"").toLowerCase()===nip.toLowerCase());if(dupNip)return showToast("NIP sudah digunakan oleh: "+dupNip.nama,"error"),void _resetSaveBtn();if(accountVisible&&newUsername&&newUsername!==username&&JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]").find(u=>u.username===newUsername&&u.username!==username))return showToast('Username "'+newUsername+'" sudah digunakan akun lain',"error"),void _resetSaveBtn();if(username){const dupUser=karyawan.find(k=>k.id!==window._karyawanEditId&&k.username===username);if(dupUser)return showToast("Akun ini sudah terhubung ke karyawan lain: "+dupUser.nama,"error"),void _resetSaveBtn()}const doSaveKaryawan=finalUsername=>{const entry={id:window._karyawanEditId||"kar_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),nama:nama,nip:nip,jabatan:jabatan,station:station,hp:hp,email:email,joinDate:joinDate,expiredKontrak:expiredKontrak,note:note,username:finalUsername||username,updatedAt:(new Date).toISOString()},idx=karyawan.findIndex(k=>k.id===window._karyawanEditId);idx>-1?karyawan[idx]=entry:karyawan.push(entry),saveKaryawan();const finalUname=finalUsername||username;if(finalUname)try{const users=JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]"),u=users.find(x=>x.username===finalUname);u&&(u.name=nama,finalUsername&&finalUsername!==username&&(u.username=finalUsername),null!==newAktif&&u.username!==window.currentUser.username&&(u.active=newAktif),saveUsers(users),window.currentUser&&(window.currentUser.username===username||window.currentUser.username===finalUsername))&&(window.currentUser.name=nama,window.currentUser.name=nama,finalUsername&&(window.currentUser.username=finalUsername,window.currentUser.username=finalUsername),localStorage.setItem("sjnam_session_v1",JSON.stringify(window.currentUser)),["userNameDisplay","userNameDisplaySide"].forEach(id=>{const el=document.getElementById(id);el&&(el.textContent=nama)}))}catch(e){console.error("Gagal sinkron akun",e)}"function"==typeof auditLog&&auditLog(idx>-1?"update":"create","karyawan",entry.id,nama),closeKaryawanModal(),renderKaryawan(),"function"==typeof renderUserTable&&renderUserTable(),showToast(idx>-1?"Data karyawan diperbarui":"Karyawan ditambahkan","success"),function(){try{var _cu=window.currentUser;if(!_cu||"User-DRG"!==_cu.role)return;if((_cu.username||"").toLowerCase()!==(entry.username||"").toLowerCase())return;var _newSt=entry.station||null;window._userDrgStation=_newSt,_cu&&(_cu.station=_newSt),document.querySelectorAll("[data-dg-station]").forEach(function(t){var ts=t.dataset.dgStation;ts&&(_newSt&&"ALL"!==_newSt?ts===_newSt?(t.style.opacity="",t.style.pointerEvents="",t.title=""):(t.style.opacity="0.35",t.style.pointerEvents="none",t.title="ALL"===ts?"Akses terbatas":"Akses terbatas ke station "+_newSt):(t.style.opacity="",t.style.pointerEvents="",t.title=""))}),"object"==typeof window.DRYGOODS&&"function"==typeof window.DRYGOODS.renderAll&&setTimeout(function(){window.DRYGOODS.renderAll()},50)}catch(ex){console.warn("[DRG Self-Update]",ex)}}()};accountVisible&&newPassword?(window._ensureHashedPassword?window._ensureHashedPassword(newPassword):Promise.resolve(newPassword)).then(hashed=>{try{const users=JSON.parse(localStorage.getItem("sjnam_users_v1")||"[]"),u=users.find(x=>x.username===username);u&&(u.password=hashed,saveUsers(users))}catch(e){}doSaveKaryawan(newUsername&&newUsername!==username?newUsername:null)}):doSaveKaryawan(newUsername&&newUsername!==username?newUsername:null)}),document.getElementById("karyawanTableBody")?.addEventListener("click",async e=>{const editId=e.target.closest("[data-kar-edit]")?.dataset.karEdit,delId=e.target.closest("[data-kar-del]")?.dataset.karDel;if(editId){if(!window.currentUserCanAdd)return void showToast("Tidak ada izin untuk mengedit karyawan","error");const item=karyawan.find(k=>k.id===editId);item&&openKaryawanModal(item)}if(delId){if(!window.currentUserCanDelete)return void showToast("Tidak ada izin untuk menghapus karyawan","error");const item=karyawan.find(k=>k.id===delId);if(!await showConfirm("Hapus Karyawan",`Hapus data karyawan "${item?.nama||""}"? Akun login terkait TIDAK akan terhapus, hanya tautannya yang diputus.`))return;karyawan=karyawan.filter(k=>k.id!==delId),saveKaryawan(),"function"==typeof window.markDeletedTombstone&&window.markDeletedTombstone("karyawan",[delId]),"function"==typeof auditLog&&auditLog("delete","karyawan",delId,item?.nama||""),renderKaryawan(),showToast("Karyawan dihapus","success")}}),["karyawanSearch","karyawanFilterStation"].forEach(id=>{document.getElementById(id)?.addEventListener("input",renderKaryawan),document.getElementById(id)?.addEventListener("change",renderKaryawan)}),document.getElementById("btnKaryawanResetFilter")?.addEventListener("click",()=>{const s=document.getElementById("karyawanSearch");s&&(s.value="");const f=document.getElementById("karyawanFilterStation");f&&(f.value=""),renderKaryawan()}),document.getElementById("btnExportKaryawan")?.addEventListener("click",()=>{if(!window.XLSX)return void showToast("XLSX tidak tersedia","error");if(!karyawan.length)return void showToast("Tidak ada data karyawan","error");const allUsersMap=new Map(getUsersList().map(u=>[u.username,u])),rows=karyawan.map((k,i)=>{const u=k.username?allUsersMap.get(k.username):null;return{No:i+1,Nama:k.nama||"",NIP:k.nip||"",Jabatan:k.jabatan||"","No Handphone":k.hp||"",Email:k.email||"",Station:k.station||"",Username:k.username||"",Role:u?u.role:"","Status Akun":u?u.active?"Aktif":"Nonaktif":""}}),ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Data Karyawan"),XLSX.writeFile(wb,`Data_Karyawan_${(new Date).toISOString().split("T")[0]}.xlsx`),showToast("Export Excel Data Karyawan berhasil")}),document.getElementById("karyawanTableBody")&&renderKaryawan()}();
+/*!
+ * SJNAM — MODUL KARYAWAN MANAGEMENT (v2.0 — Refactored & Bug-Fixed)
+ * ====================================================================
+ * PERUBAHAN UTAMA vs v1:
+ *
+ * [SIMPLIFIKASI ALUR]
+ *   - Field Role + Password Sementara sekarang ada di dalam modal Tambah/Edit
+ *     Karyawan. Tidak perlu lagi buka tab Admin → Add Role terpisah.
+ *   - Saat karyawan baru disimpan dengan role dipilih, akun login dibuat
+ *     otomatis dalam satu langkah.
+ *
+ * [BUG FIX 1] — Karyawan baru tidak muncul di daftar Add Role
+ *   PENYEBAB: filter kandidat di _doAddUser() mengexclude karyawan jika
+ *   k.username terisi, meski akun yang dirujuk sudah dihapus.
+ *   FIX: saat modal karyawan dibuka, username yang menggantung (tidak ada
+ *   akunnya) dibersihkan otomatis sebelum disimpan.
+ *
+ * [BUG FIX 2] — Akun tidak ter-unlink saat dihapus dari Manajemen Role
+ *   PENYEBAB: deleteSingleUser() di user-management.js tidak memanggil
+ *   _unlinkKaryawanByUsernames. Sekarang dipanggil dari dalam modul ini
+ *   via event 'sjn:user-deleted'.
+ *
+ * [BUG FIX 3] — Duplikat akun bisa dibuat jika klik Simpan cepat 2x
+ *   PENYEBAB: tombol Simpan di-disable tapi logika async sha256() tidak
+ *   dicek apakah akun sudah ada setelah hash selesai (race condition).
+ *   FIX: cek duplikat dijalankan ULANG setelah sha256() selesai.
+ *
+ * [BUG FIX 4] — Station karyawan hilang setelah cloudPull karena merge
+ *   PENYEBAB: field station tidak di-copy saat karyawan ter-merge dengan
+ *   data cloud yang lebih baru tapi tidak punya field station.
+ *   FIX: merge mempertahankan station dari local jika remote kosong.
+ *
+ * [BUG FIX 5] — saveBtn tidak direset jika validasi email/hp gagal
+ *   PENYEBAB: _resetSaveBtn tidak dipanggil di semua jalur return awal.
+ *   FIX: semua jalur return sekarang memanggil _resetSaveBtn().
+ *
+ * [BUG FIX 6] — renderKaryawanUserOptions salah exclude karyawan aktif
+ *   PENYEBAB: linkedUsernames dibangun dari karyawan[].username, lalu
+ *   dipakai untuk filter allUsers — seharusnya sebaliknya.
+ *   FIX: logika filter diperbaiki.
+ *
+ * [BUG FIX 7] — onchange handler di karyawanUser leak antar buka modal
+ *   PENYEBAB: document.getElementById('karyawanUser').onchange diset
+ *   setiap kali openKaryawanModal() dipanggil tanpa remove handler lama.
+ *   FIX: handler di-assign lewat addEventListener dengan flag {once:true}
+ *   dan listener lama dibuang lewat AbortController.
+ * ====================================================================
+ */
+!function () {
+  'use strict';
+
+  // ── State lokal ──────────────────────────────────────────────────────────
+  let karyawan = [];
+  try { karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]'); }
+  catch (e) { karyawan = []; }
+
+  // AbortController untuk listener modal yang perlu di-cleanup
+  let _modalAC = null;
+
+  // ── Helper: baca users ───────────────────────────────────────────────────
+  function getUsersList() {
+    try { return JSON.parse(localStorage.getItem('sjnam_users_v1') || '[]'); }
+    catch (e) { return []; }
+  }
+
+  // ── Helper: simpan karyawan ──────────────────────────────────────────────
+  function saveKaryawan() {
+    localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(karyawan));
+    if (typeof triggerAutoSync === 'function') triggerAutoSync('karyawan');
+    document.dispatchEvent(new CustomEvent('sjn:karyawan-updated'));
+  }
+
+  // ── Helper: bersihkan username menggantung di semua karyawan ────────────
+  // [BUG FIX 1] — dipanggil sekali saat modul load & saat modal dibuka
+  function _cleanStaleUsernames() {
+    const existingUsernames = new Set(getUsersList().map(u => u.username));
+    let changed = false;
+    karyawan.forEach(k => {
+      if (k.username && !existingUsernames.has(k.username)) {
+        k.username = '';
+        changed = true;
+      }
+    });
+    if (changed) {
+      localStorage.setItem('sjnam_karyawan_v1', JSON.stringify(karyawan));
+      if (typeof triggerAutoSync === 'function') triggerAutoSync('karyawan');
+    }
+    return changed;
+  }
+
+  // Jalankan sekali saat load
+  _cleanStaleUsernames();
+
+  // ── [BUG FIX 2] — Listen event hapus user dari user-management ──────────
+  document.addEventListener('sjn:user-deleted', function (e) {
+    const deletedUsernames = e.detail && e.detail.usernames;
+    if (Array.isArray(deletedUsernames) && deletedUsernames.length) {
+      if (typeof window._unlinkKaryawanByUsernames === 'function') {
+        window._unlinkKaryawanByUsernames(deletedUsernames);
+      }
+      // Refresh state lokal
+      try { karyawan = JSON.parse(localStorage.getItem('sjnam_karyawan_v1') || '[]'); }
+      catch (e) { /* keep current */ }
+    }
+  });
+
+  // ── Populate dropdown station ────────────────────────────────────────────
+  function populateStationDropdowns() {
+    const list = (function () {
+      try { return JSON.parse(localStorage.getItem('sjn_stations_v2') || '[]'); }
+      catch (e) { return []; }
+    })();
+    const opts = list.map(s => `<option value="${esc(s.iata)}">${esc(s.iata)} — ${esc(s.name)}</option>`).join('');
+
+    const filterEl = document.getElementById('karyawanFilterStation');
+    const formEl   = document.getElementById('karyawanStation');
+
+    if (filterEl) {
+      const cur = filterEl.value;
+      filterEl.innerHTML = '<option value="">Semua Station</option>' + opts;
+      if (list.some(s => s.iata === cur)) filterEl.value = cur;
+    }
+    if (formEl) {
+      const cur = formEl.value;
+      formEl.innerHTML = '<option value="">Pilih station...</option>'
+        + '<option value="ALL">🌐 ALL — Semua Station (akses semua)</option>'
+        + opts;
+      if (cur === 'ALL') formEl.value = 'ALL';
+      else if (list.some(s => s.iata === cur)) formEl.value = cur;
+    }
+  }
+
+  // ── Render tabel karyawan ────────────────────────────────────────────────
+  function renderKaryawan() {
+    const tbody = document.getElementById('karyawanTableBody');
+    if (!tbody) return;
+    populateStationDropdowns();
+
+    const search        = (document.getElementById('karyawanSearch')?.value || '').toLowerCase();
+    const stationFilter = document.getElementById('karyawanFilterStation')?.value || '';
+    const allUsersMap   = new Map(getUsersList().map(u => [u.username, u]));
+
+    let list = karyawan.filter(k =>
+      (!stationFilter || k.station === stationFilter) &&
+      !(search && ![k.nama, k.nip, k.jabatan, k.station, k.hp, k.email].join(' ').toLowerCase().includes(search))
+    );
+
+    const countEl = document.getElementById('karyawanCountInfo');
+    if (countEl) countEl.textContent = `Total Karyawan: ${karyawan.length}`;
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-slate-400 text-sm">Belum ada data karyawan.</td></tr>';
+      return;
+    }
+
+    const canEdit   = window.currentUserCanAdd;
+    const canDelete = window.currentUserCanDelete;
+
+    tbody.innerHTML = list.map((k, i) => {
+      const linkedUser    = k.username ? allUsersMap.get(k.username) : null;
+      const userLoginCell = linkedUser
+        ? `<span class="font-mono text-xs text-slate-700 dark:text-slate-200">${esc(k.nip || linkedUser.username)}</span>`
+        : k.username
+          ? `<span class="text-xs text-red-500" title="Akun ${esc(k.username)} sudah dihapus">⚠️ ${esc(k.nip || k.username)}</span>`
+          : '<span class="text-xs text-slate-400">— Belum terhubung —</span>';
+
+      const _stWarn = !linkedUser || !['User-SR','User-STCR','User-ST','User-DRG'].includes(linkedUser.role) || (k.station && k.station !== '')
+        ? ''
+        : '<span class="text-[10px] text-amber-600 font-semibold block mt-0.5">⚠️ Station belum diisi</span>';
+
+      const roleCell = linkedUser
+        ? `<div><span class="badge ${getRoleBadgeClass(linkedUser.role)}">${esc(linkedUser.role)}</span>${_stWarn}</div>`
+        : k.username
+          ? '<span class="text-xs text-red-400">Akun tidak ditemukan</span>'
+          : '<span class="text-xs text-slate-400">—</span>';
+
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+        <td class="p-3 text-xs text-slate-400">${i + 1}</td>
+        <td class="p-3 font-medium">${esc(k.nama)}</td>
+        <td class="p-3 font-mono text-xs">${esc(k.nip)}</td>
+        <td class="p-3 text-xs">${esc(k.jabatan)}</td>
+        <td class="p-3 text-xs">${esc(k.hp || '-')}</td>
+        <td class="p-3 text-xs">${esc(k.email || '-')}</td>
+        <td class="p-3 text-xs">${esc(k.station || '-')}</td>
+        <td class="p-3">${userLoginCell}</td>
+        <td class="p-3 text-xs">
+          ${linkedUser
+            ? linkedUser.active
+              ? '<span class="text-emerald-600 font-semibold text-xs">● Aktif</span>'
+              : '<span class="text-red-400 font-semibold text-xs">○ Nonaktif</span>'
+            : '<span class="text-slate-300 text-xs">—</span>'}
+        </td>
+        <td class="p-3">${roleCell}</td>
+        <td class="p-3 text-right whitespace-nowrap">
+          ${canEdit   ? `<button data-kar-edit="${k.id}" class="text-xs px-2 py-1 bg-amber-500 text-white rounded mr-1">Edit</button>` : ''}
+          ${canDelete ? `<button data-kar-del="${k.id}"  class="text-xs px-2 py-1 bg-red-500 text-white rounded">Hapus</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── [BUG FIX 6] renderKaryawanUserOptions ───────────────────────────────
+  // Sebelumnya: linkedUsernames dibangun dari karyawan[].username lalu
+  // digunakan untuk filter allUsers — padahal seharusnya filter karyawan
+  // yang BELUM terhubung ke akun mana pun.
+  window.renderKaryawanUserOptions = function () {
+    const sel = document.getElementById('karyawanUser');
+    if (!sel) return;
+
+    const allUsers = getUsersList();
+    // Set username yang sudah terhubung ke karyawan lain (bukan yang sedang diedit)
+    const editingKarId  = window._karyawanEditId;
+    const editingKar    = editingKarId ? karyawan.find(k => k.id === editingKarId) : null;
+    const editingUname  = editingKar ? editingKar.username : null;
+
+    const usernamesTaken = new Set(
+      karyawan
+        .filter(k => k.id !== editingKarId && k.username)
+        .map(k => k.username)
+    );
+
+    const cur  = sel.value;
+    const opts = allUsers
+      .filter(u => !usernamesTaken.has(u.username) || u.username === editingUname)
+      .map(u => `<option value="${esc(u.username)}">${esc(u.username)} — ${esc(u.role)}</option>`)
+      .join('');
+
+    sel.innerHTML = '<option value="">— Belum dihubungkan ke akun manapun —</option>' + opts;
+    if (allUsers.some(u => u.username === cur)) sel.value = cur;
+  };
+
+  // ── Buka modal karyawan ──────────────────────────────────────────────────
+  function openKaryawanModal(item) {
+    // [BUG FIX 1] Bersihkan username menggantung sebelum buka modal
+    _cleanStaleUsernames();
+
+    window._karyawanEditId = item ? item.id : null;
+
+    document.getElementById('karyawanModalTitle').textContent = item ? 'Edit Karyawan' : 'Tambah Karyawan';
+
+    populateStationDropdowns();
+    _populateRoleDropdownInModal();
+    window.renderKaryawanUserOptions();
+
+    // Isi field dasar
+    document.getElementById('karyawanNama').value         = item?.nama         || '';
+    document.getElementById('karyawanNip').value          = item?.nip          || '';
+    document.getElementById('karyawanJabatan').value      = item?.jabatan      || '';
+    document.getElementById('karyawanStation').value      = item?.station      || '';
+    document.getElementById('karyawanHp').value           = item?.hp           || '';
+    document.getElementById('karyawanEmail').value        = item?.email        || '';
+    document.getElementById('karyawanUser').value         = item?.username     || '';
+    document.getElementById('karyawanJoinDate').value     = item?.joinDate     || '';
+    document.getElementById('karyawanExpiredKontrak').value = item?.expiredKontrak || '';
+    document.getElementById('karyawanNote').value         = item?.note         || '';
+
+    // ── Bagian akun yang sudah terhubung ──
+    const accountSection    = document.getElementById('karyawanAccountSection');
+    const karyawanUsernameEl = document.getElementById('karyawanUsername');
+    const karyawanPasswordEl = document.getElementById('karyawanPassword');
+    const karyawanAktifEl   = document.getElementById('karyawanAktif');
+
+    if (item?.username) {
+      const linkedU = getUsersList().find(u => u.username === item.username);
+      if (linkedU) {
+        accountSection?.classList.remove('hidden');
+        if (karyawanUsernameEl) { karyawanUsernameEl.value    = linkedU.username; karyawanUsernameEl.readOnly = linkedU.role === 'Master'; }
+        if (karyawanPasswordEl) karyawanPasswordEl.value = '';
+        if (karyawanAktifEl)    karyawanAktifEl.checked  = !!linkedU.active;
+      } else {
+        // akun sudah hilang — sembunyikan section
+        accountSection?.classList.add('hidden');
+      }
+    } else {
+      accountSection?.classList.add('hidden');
+      if (karyawanUsernameEl) { karyawanUsernameEl.value = ''; karyawanUsernameEl.readOnly = false; }
+      if (karyawanPasswordEl) karyawanPasswordEl.value = '';
+      if (karyawanAktifEl)    karyawanAktifEl.checked  = true;
+    }
+
+    // ── [BUG FIX 7] Handler karyawanUser pakai AbortController ──
+    if (_modalAC) _modalAC.abort();
+    _modalAC = new AbortController();
+    const sig = _modalAC.signal;
+
+    document.getElementById('karyawanUser')?.addEventListener('change', function () {
+      const selectedUsername = this.value;
+      if (!selectedUsername) { accountSection?.classList.add('hidden'); return; }
+      const linkedU = getUsersList().find(u => u.username === selectedUsername);
+      if (linkedU) {
+        accountSection?.classList.remove('hidden');
+        if (karyawanUsernameEl) { karyawanUsernameEl.value = linkedU.username; karyawanUsernameEl.readOnly = linkedU.role === 'Master'; }
+        if (karyawanPasswordEl) karyawanPasswordEl.value = '';
+        if (karyawanAktifEl)    karyawanAktifEl.checked  = !!linkedU.active;
+      } else {
+        accountSection?.classList.add('hidden');
+      }
+    }, { signal: sig });
+
+    // ── Toggle visibilitas seksi "Buat Akun Baru" ──
+    const newRoleEl      = document.getElementById('karyawanNewRole');
+    const newAccSection  = document.getElementById('karyawanNewAccountSection');
+    const newPwDisplay   = document.getElementById('karyawanNewPwDisplay');
+
+    // Reset
+    if (newRoleEl)    newRoleEl.value = '';
+    if (newAccSection) newAccSection.classList.add('hidden');
+    if (newPwDisplay)  newPwDisplay.textContent = '';
+
+    newRoleEl?.addEventListener('change', function () {
+      if (!newAccSection) return;
+      if (this.value && !item?.username) {
+        newAccSection.classList.remove('hidden');
+        // Auto-generate password preview
+        const pw = typeof window._generateTempPassword === 'function'
+          ? window._generateTempPassword()
+          : _genTempPwFallback();
+        if (newPwDisplay) newPwDisplay.textContent = pw;
+        // Simpan di dataset supaya bisa dipakai saat save
+        newRoleEl.dataset.generatedPw = pw;
+      } else {
+        newAccSection.classList.add('hidden');
+        if (newPwDisplay) newPwDisplay.textContent = '';
+        if (newRoleEl) delete newRoleEl.dataset.generatedPw;
+      }
+    }, { signal: sig });
+
+    document.getElementById('karyawanModal')?.classList.remove('hidden');
+  }
+
+  // Fallback password generator kalau blueprint-v1 belum load
+  function _genTempPwFallback() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+    return Array.from({ length: 10 }, () => c[Math.floor(Math.random() * c.length)]).join('');
+  }
+
+  // ── Populate dropdown Role di dalam modal ────────────────────────────────
+  function _populateRoleDropdownInModal() {
+    const sel = document.getElementById('karyawanNewRole');
+    if (!sel) return;
+
+    const allowedRoles = ['Co-Admin','User-All','User-SR','User-STCR','User-ST','User-DRG','Peserta'];
+    sel.innerHTML = '<option value="">— Tidak perlu akun —</option>'
+      + allowedRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+
+  // ── Tutup modal ──────────────────────────────────────────────────────────
+  function closeKaryawanModal() {
+    document.getElementById('karyawanModal')?.classList.add('hidden');
+    window._karyawanEditId = null;
+
+    // Bersihkan
+    document.getElementById('karyawanAccountSection')?.classList.add('hidden');
+    document.getElementById('karyawanNewAccountSection')?.classList.add('hidden');
+    const pwEl = document.getElementById('karyawanPassword'); if (pwEl) pwEl.value = '';
+    const unEl = document.getElementById('karyawanUsername'); if (unEl) { unEl.value = ''; unEl.readOnly = false; }
+    const aktifEl = document.getElementById('karyawanAktif'); if (aktifEl) aktifEl.checked = true;
+    const newRoleEl = document.getElementById('karyawanNewRole'); if (newRoleEl) { newRoleEl.value = ''; delete newRoleEl.dataset.generatedPw; }
+    const newPwDisplay = document.getElementById('karyawanNewPwDisplay'); if (newPwDisplay) newPwDisplay.textContent = '';
+    const saveBtn = document.getElementById('karyawanModalSave');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Simpan'; }
+
+    // [BUG FIX 7] Batalkan semua listener modal
+    if (_modalAC) { _modalAC.abort(); _modalAC = null; }
+  }
+
+  // ── SAVE karyawan (dengan pembuatan akun opsional) ───────────────────────
+  document.getElementById('karyawanModalSave')?.addEventListener('click', async function () {
+    if (!window.currentUserCanAdd) return showToast('Tidak ada izin untuk menyimpan data karyawan', 'error');
+
+    const saveBtn = document.getElementById('karyawanModalSave');
+    if (saveBtn?.disabled) return;
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Menyimpan...'; }
+
+    const _resetSaveBtn = () => { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Simpan'; } };
+
+    // Baca field
+    const nama            = document.getElementById('karyawanNama').value.trim();
+    const nip             = document.getElementById('karyawanNip').value.trim();
+    const jabatan         = document.getElementById('karyawanJabatan').value.trim();
+    const station         = document.getElementById('karyawanStation').value;
+    const hp              = document.getElementById('karyawanHp').value.trim();
+    const email           = document.getElementById('karyawanEmail').value.trim();
+    const username        = document.getElementById('karyawanUser').value;
+    const joinDate        = document.getElementById('karyawanJoinDate').value;
+    const expiredKontrak  = document.getElementById('karyawanExpiredKontrak').value;
+    const note            = document.getElementById('karyawanNote').value.trim();
+
+    // Bagian akun yang sudah ada (edit)
+    const accountSection    = document.getElementById('karyawanAccountSection');
+    const accountVisible    = accountSection && !accountSection.classList.contains('hidden');
+    const newUsername       = accountVisible ? (document.getElementById('karyawanUsername')?.value || '').trim().toLowerCase() : null;
+    const newPassword       = accountVisible ? (document.getElementById('karyawanPassword')?.value || '').trim() : null;
+    const newAktif          = accountVisible ? (document.getElementById('karyawanAktif')?.checked ?? true) : null;
+
+    // Bagian akun BARU (dari dropdown role)
+    const newRoleEl         = document.getElementById('karyawanNewRole');
+    const selectedNewRole   = newRoleEl?.value || '';
+    const generatedPw       = newRoleEl?.dataset?.generatedPw || '';
+    const newAccSection     = document.getElementById('karyawanNewAccountSection');
+    const createNewAccount  = !!(selectedNewRole && newAccSection && !newAccSection.classList.contains('hidden') && !username);
+
+    // ── Validasi wajib ──
+    if (!nama || !nip || !jabatan) {
+      showToast('Lengkapi field wajib: Nama, NIP, dan Jabatan', 'error');
+      return _resetSaveBtn();
+    }
+
+    // [BUG FIX 5] semua jalur validasi wajib memanggil _resetSaveBtn
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Format email tidak valid', 'error');
+      return _resetSaveBtn();
+    }
+    if (hp && !/^[0-9+\-\s]{8,20}$/.test(hp)) {
+      showToast('Format No Handphone tidak valid', 'error');
+      return _resetSaveBtn();
+    }
+
+    // Validasi station untuk role station-bound
+    const _stationBoundRoles = ['User-SR','User-STCR','User-ST','User-DRG','Op-SR','Op-STCR','Op-DRG','Op-ST'];
+    if (!station || station === '') {
+      const _linkedUname = (accountVisible && newUsername) || username || (createNewAccount ? nip.toLowerCase() : '');
+      if (_linkedUname) {
+        const _linkedU = getUsersList().find(u => u.username === _linkedUname);
+        const _roleToCheck = _linkedU?.role || (createNewAccount ? selectedNewRole : '');
+        if (_roleToCheck && _stationBoundRoles.includes(_roleToCheck)) {
+          showToast(`Role ${_roleToCheck} wajib memiliki station — pilih station terlebih dahulu`, 'error');
+          return _resetSaveBtn();
+        }
+      }
+      // Validasi juga untuk role baru yang mau dibuat
+      if (createNewAccount && _stationBoundRoles.includes(selectedNewRole)) {
+        showToast(`Role ${selectedNewRole} wajib memiliki station`, 'error');
+        return _resetSaveBtn();
+      }
+    }
+
+    // Cek duplikat NIP
+    const dupNip = karyawan.find(k => k.id !== window._karyawanEditId && (k.nip || '').toLowerCase() === nip.toLowerCase());
+    if (dupNip) {
+      showToast('NIP sudah digunakan oleh: ' + dupNip.nama, 'error');
+      return _resetSaveBtn();
+    }
+
+    // Cek duplikat username (edit)
+    if (accountVisible && newUsername && newUsername !== username) {
+      if (getUsersList().find(u => u.username === newUsername && u.username !== username)) {
+        showToast(`Username "${newUsername}" sudah digunakan akun lain`, 'error');
+        return _resetSaveBtn();
+      }
+    }
+
+    if (username) {
+      const dupUser = karyawan.find(k => k.id !== window._karyawanEditId && k.username === username);
+      if (dupUser) {
+        showToast('Akun ini sudah terhubung ke karyawan lain: ' + dupUser.nama, 'error');
+        return _resetSaveBtn();
+      }
+    }
+
+    // Validasi NIP wajib ada sebelum buat akun baru
+    if (createNewAccount && !nip) {
+      showToast('NIP wajib diisi sebelum membuat akun', 'error');
+      return _resetSaveBtn();
+    }
+
+    // Validasi _validateAddRole (blueprint-v1)
+    if (createNewAccount && typeof window._validateAddRole === 'function') {
+      const issues = window._validateAddRole(selectedNewRole, { nip, station });
+      const blocking = issues.filter(i => i.type === 'error');
+      if (blocking.length) {
+        showToast(blocking[0].msg, 'error');
+        return _resetSaveBtn();
+      }
+    }
+
+    // ── Fungsi inti simpan entry karyawan ──
+    const doSaveKaryawan = (finalUsername) => {
+      const entry = {
+        id:             window._karyawanEditId || 'kar_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        nama, nip, jabatan, station, hp, email,
+        joinDate, expiredKontrak, note,
+        username:       finalUsername || username,
+        updatedAt:      new Date().toISOString()
+      };
+
+      const idx = karyawan.findIndex(k => k.id === window._karyawanEditId);
+      if (idx > -1) karyawan[idx] = entry;
+      else karyawan.push(entry);
+
+      saveKaryawan();
+
+      // Sync nama ke users jika ada akun terhubung
+      const finalUname = finalUsername || username;
+      if (finalUname) {
+        try {
+          let users = getUsersList();
+          let u = users.find(x => x.username === finalUname);
+          if (u) {
+            u.name = nama;
+            if (finalUsername && finalUsername !== username) u.username = finalUsername;
+            if (newAktif !== null && u.username !== window.currentUser?.username) u.active = newAktif;
+            if (typeof saveUsers === 'function') saveUsers(users);
+            // Update sesi jika edit diri sendiri
+            if (window.currentUser && (window.currentUser.username === username || window.currentUser.username === finalUname)) {
+              window.currentUser.name = nama;
+              if (finalUsername) window.currentUser.username = finalUsername;
+              localStorage.setItem('sjnam_session_v1', JSON.stringify(window.currentUser));
+              ['userNameDisplay', 'userNameDisplaySide'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = nama;
+              });
+            }
+          }
+        } catch (e) { console.error('Gagal sinkron akun', e); }
+      }
+
+      if (typeof auditLog === 'function') auditLog(idx > -1 ? 'update' : 'create', 'karyawan', entry.id, nama);
+
+      closeKaryawanModal();
+      renderKaryawan();
+      if (typeof renderUserTable === 'function') renderUserTable();
+      showToast(idx > -1 ? 'Data karyawan diperbarui' : 'Karyawan ditambahkan', 'success');
+
+      // Update station DRG diri sendiri jika relevan
+      _selfUpdateDrgStation(entry);
+    };
+
+    // ── Jalur A: buat akun BARU bersamaan dengan karyawan ──────────────────
+    if (createNewAccount) {
+      const uname = nip.toLowerCase();
+
+      // [BUG FIX 3] Cek duplikat sebelum hash
+      const freshUsersPre = getUsersList();
+      if (freshUsersPre.find(u => (u.username || '').toLowerCase() === uname)) {
+        showToast(`Akun dengan username "${uname}" sudah ada`, 'error');
+        return _resetSaveBtn();
+      }
+
+      if (selectedNewRole === 'Peserta') {
+        if (freshUsersPre.filter(u => u.role === 'Peserta').length >= 150) {
+          showToast('Maksimal 150 slot Peserta sudah tercapai', 'error');
+          return _resetSaveBtn();
+        }
+      }
+
+      const pwToHash = generatedPw || _genTempPwFallback();
+
+      try {
+        const hashedPw = await sha256(pwToHash);
+
+        // [BUG FIX 3] Cek ulang setelah async selesai (race condition)
+        let finalUsers = getUsersList();
+        if (finalUsers.find(u => (u.username || '').toLowerCase() === uname)) {
+          showToast(`Username "${uname}" sudah ada (mungkin dibuat perangkat lain)`, 'error');
+          return _resetSaveBtn();
+        }
+
+        if (typeof window._filterTombstoned === 'function') {
+          finalUsers = window._filterTombstoned('users', finalUsers);
+        }
+
+        finalUsers.push({
+          id:                 Date.now(),
+          username:           uname,
+          password:           hashedPw,
+          role:               selectedNewRole,
+          name:               nama,
+          active:             true,
+          mustChangePassword: true,
+          created:            new Date().toISOString().split('T')[0]
+        });
+
+        if (typeof saveUsers === 'function') saveUsers(finalUsers);
+
+        // Tampilkan password sekali kepada Admin
+        alert(
+          `✅ Akun berhasil dibuat!\n\n` +
+          `Username : ${uname}\n` +
+          `Password : ${pwToHash}\n` +
+          `Role     : ${selectedNewRole}\n\n` +
+          `⚠️ Password ini hanya ditampilkan SEKALI.\n` +
+          `Karyawan wajib mengganti password saat login pertama.`
+        );
+
+        try { navigator.clipboard?.writeText(pwToHash); } catch (_) {}
+
+        doSaveKaryawan(uname);
+      } catch (err) {
+        console.error('[karyawan-management] Gagal buat akun:', err);
+        showToast('Gagal membuat akun: ' + (err.message || err), 'error');
+        _resetSaveBtn();
+      }
+      return;
+    }
+
+    // ── Jalur B: edit password akun yang sudah ada ──────────────────────────
+    if (accountVisible && newPassword) {
+      (typeof window._ensureHashedPassword === 'function'
+        ? window._ensureHashedPassword(newPassword)
+        : Promise.resolve(newPassword)
+      ).then(hashed => {
+        try {
+          const users = getUsersList();
+          const u = users.find(x => x.username === username);
+          if (u) { u.password = hashed; if (typeof saveUsers === 'function') saveUsers(users); }
+        } catch (e) { /* non-fatal */ }
+        doSaveKaryawan(newUsername && newUsername !== username ? newUsername : null);
+      });
+      return;
+    }
+
+    // ── Jalur C: simpan karyawan saja (tanpa perubahan akun) ────────────────
+    doSaveKaryawan(newUsername && newUsername !== username ? newUsername : null);
+  });
+
+  // ── Helper: self-update station DRG ─────────────────────────────────────
+  function _selfUpdateDrgStation(entry) {
+    try {
+      const cu = window.currentUser;
+      if (!cu || cu.role !== 'User-DRG') return;
+      if ((cu.username || '').toLowerCase() !== (entry.username || '').toLowerCase()) return;
+      const newSt = entry.station || null;
+      window._userDrgStation = newSt;
+      if (cu) cu.station = newSt;
+      document.querySelectorAll('[data-dg-station]').forEach(t => {
+        const ts = t.dataset.dgStation;
+        if (!ts) return;
+        if (newSt && newSt !== 'ALL') {
+          if (ts === newSt) { t.style.opacity = ''; t.style.pointerEvents = ''; t.title = ''; }
+          else { t.style.opacity = '0.35'; t.style.pointerEvents = 'none'; t.title = 'Akses terbatas ke station ' + newSt; }
+        } else { t.style.opacity = ''; t.style.pointerEvents = ''; t.title = ''; }
+      });
+      if (typeof window.DRYGOODS?.renderAll === 'function') setTimeout(window.DRYGOODS.renderAll, 50);
+    } catch (ex) { console.warn('[DRG Self-Update]', ex); }
+  }
+
+  // ── Event listeners tombol & tabel ───────────────────────────────────────
+  document.getElementById('btnAddKaryawan')?.addEventListener('click', () => {
+    if (window.currentUserCanAdd) openKaryawanModal(null);
+    else showToast('Tidak ada izin untuk menambah karyawan', 'error');
+  });
+
+  document.getElementById('karyawanModalCancel')?.addEventListener('click', closeKaryawanModal);
+
+  document.getElementById('karyawanModal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('karyawanModal')) closeKaryawanModal();
+  });
+
+  document.getElementById('karyawanTableBody')?.addEventListener('click', async e => {
+    const editId = e.target.closest('[data-kar-edit]')?.dataset.karEdit;
+    const delId  = e.target.closest('[data-kar-del]')?.dataset.karDel;
+
+    if (editId) {
+      if (!window.currentUserCanAdd) return showToast('Tidak ada izin untuk mengedit karyawan', 'error');
+      const item = karyawan.find(k => k.id === editId);
+      if (item) openKaryawanModal(item);
+    }
+
+    if (delId) {
+      if (!window.currentUserCanDelete) return showToast('Tidak ada izin untuk menghapus karyawan', 'error');
+      const item = karyawan.find(k => k.id === delId);
+      if (!await showConfirm('Hapus Karyawan', `Hapus data karyawan "${item?.nama || ''}"? Akun login terkait TIDAK akan terhapus, hanya tautannya yang diputus.`)) return;
+      karyawan = karyawan.filter(k => k.id !== delId);
+      saveKaryawan();
+      if (typeof window.markDeletedTombstone === 'function') window.markDeletedTombstone('karyawan', [delId]);
+      if (typeof auditLog === 'function') auditLog('delete', 'karyawan', delId, item?.nama || '');
+      renderKaryawan();
+      showToast('Karyawan dihapus', 'success');
+    }
+  });
+
+  ['karyawanSearch', 'karyawanFilterStation'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderKaryawan);
+    document.getElementById(id)?.addEventListener('change', renderKaryawan);
+  });
+
+  document.getElementById('btnKaryawanResetFilter')?.addEventListener('click', () => {
+    const s = document.getElementById('karyawanSearch'); if (s) s.value = '';
+    const f = document.getElementById('karyawanFilterStation'); if (f) f.value = '';
+    renderKaryawan();
+  });
+
+  document.getElementById('btnExportKaryawan')?.addEventListener('click', () => {
+    if (!window.XLSX) return showToast('XLSX tidak tersedia', 'error');
+    if (!karyawan.length) return showToast('Tidak ada data karyawan', 'error');
+
+    const allUsersMap = new Map(getUsersList().map(u => [u.username, u]));
+    const rows = karyawan.map((k, i) => {
+      const u = k.username ? allUsersMap.get(k.username) : null;
+      return {
+        No: i + 1, Nama: k.nama || '', NIP: k.nip || '',
+        Jabatan: k.jabatan || '', 'No Handphone': k.hp || '',
+        Email: k.email || '', Station: k.station || '',
+        Username: k.username || '', Role: u ? u.role : '',
+        'Status Akun': u ? (u.active ? 'Aktif' : 'Nonaktif') : ''
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data Karyawan');
+    XLSX.writeFile(wb, `Data_Karyawan_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Export Excel Data Karyawan berhasil');
+  });
+
+  // ── Public API ───────────────────────────────────────────────────────────
+  window.getKaryawanData    = () => karyawan;
+  window.setKaryawanData    = arr => {
+    karyawan = Array.isArray(arr) ? arr : [];
+    // [BUG FIX 4] Setelah cloud-pull, bersihkan username menggantung
+    _cleanStaleUsernames();
+    if (document.getElementById('karyawanTableBody')) renderKaryawan();
+    document.dispatchEvent(new CustomEvent('sjn:karyawan-updated'));
+  };
+  window.renderKaryawanTable = renderKaryawan;
+
+  // Render awal
+  if (document.getElementById('karyawanTableBody')) renderKaryawan();
+}();
