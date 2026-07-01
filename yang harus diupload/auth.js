@@ -669,36 +669,11 @@
     const savedTab = localStorage.getItem(CURRENT_TAB_KEY) || 'home';
     const tabBtn = document.querySelector(`[data-tab="${savedTab}"]`);
     if (tabBtn && tabBtn.style.display !== 'none') {
+      // switchTab('admin') sekarang sudah otomatis me-restore sub-tab terakhir
+      // (sjnam_current_admin_subtab) di dalam base switchTab di service-recovery.js
+      // secara SINKRON — tidak perlu delay atau requestAnimationFrame terpisah
+      // yang bisa kalah dengan operasi async lain (cloudPull, applyPermissions, dll).
       window.switchTab(savedTab);
-      // Jika tab yang aktif adalah 'admin', restore juga sub-tab-nya
-      if (savedTab === 'admin') {
-        const savedSubtab = localStorage.getItem('sjnam_current_admin_subtab');
-        if (savedSubtab) {
-          // Panggil window.switchAdminSubtab() langsung — jauh lebih andal
-          // dari simulasi .click() yang bisa gagal kalau timing tidak pas.
-          // Gunakan retry loop kalau fungsi belum tersedia saat ini dipanggil.
-          const _restoreSubtab = () => {
-            if (typeof window.switchAdminSubtab === 'function') {
-              window.switchAdminSubtab(savedSubtab);
-            } else {
-              let tries = 0;
-              const retry = setInterval(() => {
-                tries++;
-                if (typeof window.switchAdminSubtab === 'function') {
-                  clearInterval(retry);
-                  window.switchAdminSubtab(savedSubtab);
-                } else if (tries >= 20) {
-                  clearInterval(retry);
-                  // Last resort fallback: klik langsung
-                  const subBtn = document.querySelector(`[data-admin-subtab="${savedSubtab}"]`);
-                  if (subBtn) subBtn.click();
-                }
-              }, 100);
-            }
-          };
-          requestAnimationFrame(_restoreSubtab);
-        }
-      }
     } else {
       const homeBtn = document.querySelector('[data-tab="home"]');
       if (homeBtn && homeBtn.style.display !== 'none') {
