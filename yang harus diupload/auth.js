@@ -674,8 +674,29 @@
       if (savedTab === 'admin') {
         const savedSubtab = localStorage.getItem('sjnam_current_admin_subtab');
         if (savedSubtab) {
-          const subBtn = document.querySelector(`[data-admin-subtab="${savedSubtab}"]`);
-          if (subBtn) setTimeout(() => subBtn.click(), 50);
+          // Panggil window.switchAdminSubtab() langsung — jauh lebih andal
+          // dari simulasi .click() yang bisa gagal kalau timing tidak pas.
+          // Gunakan retry loop kalau fungsi belum tersedia saat ini dipanggil.
+          const _restoreSubtab = () => {
+            if (typeof window.switchAdminSubtab === 'function') {
+              window.switchAdminSubtab(savedSubtab);
+            } else {
+              let tries = 0;
+              const retry = setInterval(() => {
+                tries++;
+                if (typeof window.switchAdminSubtab === 'function') {
+                  clearInterval(retry);
+                  window.switchAdminSubtab(savedSubtab);
+                } else if (tries >= 20) {
+                  clearInterval(retry);
+                  // Last resort fallback: klik langsung
+                  const subBtn = document.querySelector(`[data-admin-subtab="${savedSubtab}"]`);
+                  if (subBtn) subBtn.click();
+                }
+              }, 100);
+            }
+          };
+          requestAnimationFrame(_restoreSubtab);
         }
       }
     } else {

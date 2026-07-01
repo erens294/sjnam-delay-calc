@@ -1370,64 +1370,68 @@ table:not(.stcr-page table) tbody td {
     <!-- Logo SJ -->
     <div id="logo-sj-wrap" class="home-logo-wrap" style="position:absolute;top:60px;left:50%;transform:translateX(-200px);width:180px;height:100px;cursor:move;z-index:20;">
       <img id="logo-sj" src="" alt="Sriwijaya Air" style="width:100%;height:100%;object-fit:contain;display:none;" />
-      <div id="logo-sj-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">✈ Sriwijaya Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
+      <div id="logo-sj-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">&#x2708; Sriwijaya Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
     </div>
 
     <!-- Logo NAM -->
     <div id="logo-nam-wrap" class="home-logo-wrap" style="position:absolute;top:60px;left:50%;transform:translateX(20px);width:180px;height:100px;cursor:move;z-index:20;">
       <img id="logo-nam" src="" alt="NAM Air" style="width:100%;height:100%;object-fit:contain;display:none;" />
-      <div id="logo-nam-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">✈ NAM Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
+      <div id="logo-nam-placeholder" style="width:100%;height:100%;border:2px dashed rgba(255,255,255,0.5);border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);font-size:0.8rem;font-weight:600;text-align:center;padding:8px;">&#x2708; NAM Air<br/><span style="font-size:0.7rem;opacity:0.7;">Klik Edit untuk upload logo</span></div>
     </div>
 
     <!-- Edit toggle button — hanya Admin (dikontrol oleh applyPermissions) -->
-    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="display:none;position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">✏️ Edit</button>
-
-    <!-- Edit panel (hidden by default) -->
-    <div id="homeEditPanel" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:25;background:rgba(10,15,40,0.92);backdrop-filter:blur(12px);padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,0.15);">
-      <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;">
-        <!-- Background -->
-        <div style="flex:1;min-width:200px;">
-          <p style="color:rgba(200,220,255,0.9);font-size:0.78rem;font-weight:600;margin-bottom:6px;">🖼 Background</p>
-          <label style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.12);color:#fff;border-radius:8px;cursor:pointer;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);">
-            Upload BG
-            <input type="file" id="homeBgInput" accept="image/*" style="display:none;" onchange="setHomeBg(this)">
-          </label>
-          <button onclick="resetHomeBg()" style="margin-left:6px;padding:5px 10px;background:rgba(239,68,68,0.7);color:#fff;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;">Reset</button>
-        </div>
-        <!-- Logo SJ -->
-        <div style="flex:1;min-width:200px;">
-          <p style="color:rgba(200,220,255,0.9);font-size:0.78rem;font-weight:600;margin-bottom:6px;">✈ Logo Sriwijaya Air</p>
-          <label style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.12);color:#fff;border-radius:8px;cursor:pointer;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);">
-            Upload Logo
-            <input type="file" id="logoSjInput" accept="image/*" style="display:none;" onchange="setHomeLogo('sj',this)">
-          </label>
-          <button onclick="resetHomeLogo('sj')" style="margin-left:6px;padding:5px 10px;background:rgba(239,68,68,0.7);color:#fff;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;">Reset</button>
-          <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
-            <span style="color:rgba(180,200,255,0.8);font-size:0.72rem;">Ukuran:</span>
-            <button onclick="resizeHomeLogo('sj',-20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">−</button>
-            <button onclick="resizeHomeLogo('sj',20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">+</button>
-          </div>
-        </div>
-        <!-- Logo NAM -->
-        <div style="flex:1;min-width:200px;">
-          <p style="color:rgba(200,220,255,0.9);font-size:0.78rem;font-weight:600;margin-bottom:6px;">✈ Logo NAM Air</p>
-          <label style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.12);color:#fff;border-radius:8px;cursor:pointer;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);">
-            Upload Logo
-            <input type="file" id="logoNamInput" accept="image/*" style="display:none;" onchange="setHomeLogo('nam',this)">
-          </label>
-          <button onclick="resetHomeLogo('nam')" style="margin-left:6px;padding:5px 10px;background:rgba(239,68,68,0.7);color:#fff;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;">Reset</button>
-          <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
-            <span style="color:rgba(180,200,255,0.8);font-size:0.72rem;">Ukuran:</span>
-            <button onclick="resizeHomeLogo('nam',-20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">−</button>
-            <button onclick="resizeHomeLogo('nam',20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">+</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <button id="btnHomeEditToggle" onclick="toggleHomeEdit()" style="display:none;position:absolute;top:12px;right:12px;z-index:30;background:rgba(37,99,235,0.85);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);">&#x270F;&#xFE0F; Edit</button>
 
     <!-- Subtitle -->
     <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;z-index:10;pointer-events:none;">
       <p style="color:rgba(200,220,255,0.9);font-size:clamp(0.8rem,2vw,1rem);font-weight:500;text-shadow:0 1px 8px rgba(0,0,0,0.5);">Sriwijaya Air Group</p>
+    </div>
+  </div>
+
+  <!-- Edit panel — di LUAR homeContainer supaya tidak terpotong overflow:hidden -->
+  <!-- PERBAIKAN: sebelumnya position:absolute;bottom:0 DI DALAM homeContainer
+       yang punya overflow:hidden — panel terpotong/terhalang dan tidak bisa
+       di-scroll karena container memiliki ukuran tetap. Sekarang dipindah
+       ke bawah container sebagai elemen normal dalam alur dokumen. -->
+  <div id="homeEditPanel" style="display:none;margin-top:12px;border-radius:12px;background:rgba(10,15,40,0.95);backdrop-filter:blur(12px);padding:1rem 1.25rem;border:1px solid rgba(255,255,255,0.15);box-shadow:0 4px 24px rgba(0,0,0,0.4);">
+    <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;">
+      <!-- Background -->
+      <div style="flex:1;min-width:200px;">
+        <p style="color:rgba(200,220,255,0.9);font-size:0.78rem;font-weight:600;margin-bottom:6px;">&#x1F5BC; Background</p>
+        <label style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.12);color:#fff;border-radius:8px;cursor:pointer;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);">
+          Upload BG
+          <input type="file" id="homeBgInput" accept="image/*" style="display:none;" onchange="setHomeBg(this)">
+        </label>
+        <button onclick="resetHomeBg()" style="margin-left:6px;padding:5px 10px;background:rgba(239,68,68,0.7);color:#fff;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;">Reset</button>
+      </div>
+      <!-- Logo SJ -->
+      <div style="flex:1;min-width:200px;">
+        <p style="color:rgba(200,220,255,0.9);font-size:0.78rem;font-weight:600;margin-bottom:6px;">&#x2708; Logo Sriwijaya Air</p>
+        <label style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.12);color:#fff;border-radius:8px;cursor:pointer;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);">
+          Upload Logo
+          <input type="file" id="logoSjInput" accept="image/*" style="display:none;" onchange="setHomeLogo('sj',this)">
+        </label>
+        <button onclick="resetHomeLogo('sj')" style="margin-left:6px;padding:5px 10px;background:rgba(239,68,68,0.7);color:#fff;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;">Reset</button>
+        <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
+          <span style="color:rgba(180,200,255,0.8);font-size:0.72rem;">Ukuran:</span>
+          <button onclick="resizeHomeLogo('sj',-20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">&#x2212;</button>
+          <button onclick="resizeHomeLogo('sj',20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">+</button>
+        </div>
+      </div>
+      <!-- Logo NAM -->
+      <div style="flex:1;min-width:200px;">
+        <p style="color:rgba(200,220,255,0.9);font-size:0.78rem;font-weight:600;margin-bottom:6px;">&#x2708; Logo NAM Air</p>
+        <label style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.12);color:#fff;border-radius:8px;cursor:pointer;font-size:0.78rem;border:1px solid rgba(255,255,255,0.25);">
+          Upload Logo
+          <input type="file" id="logoNamInput" accept="image/*" style="display:none;" onchange="setHomeLogo('nam',this)">
+        </label>
+        <button onclick="resetHomeLogo('nam')" style="margin-left:6px;padding:5px 10px;background:rgba(239,68,68,0.7);color:#fff;border:none;border-radius:8px;font-size:0.78rem;cursor:pointer;">Reset</button>
+        <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
+          <span style="color:rgba(180,200,255,0.8);font-size:0.72rem;">Ukuran:</span>
+          <button onclick="resizeHomeLogo('nam',-20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">&#x2212;</button>
+          <button onclick="resizeHomeLogo('nam',20)" style="padding:2px 8px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;">+</button>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -5777,16 +5781,20 @@ window.addEventListener('error', function(e){
   });
 
   // Admin sub-tab switching
-  document.addEventListener('click', function(e){
-    const btn = e.target.closest('[data-admin-subtab]');
-    if(!btn) return;
-    const target = btn.dataset.adminSubtab;
+  // Fungsi switchAdminSubtab diekstrak agar bisa dipanggil langsung dari
+  // auth.js saat restore session — lebih andal dari simulasi .click() yang
+  // bergantung pada timing event listener.
+  window.switchAdminSubtab = function(target) {
+    if (!target) return;
     document.querySelectorAll('.admin-subtab-btn').forEach(b=>{
       b.classList.remove('active','border-blue-600','text-blue-600');
       b.classList.add('border-transparent','text-slate-500');
     });
-    btn.classList.add('active','border-blue-600','text-blue-600');
-    btn.classList.remove('border-transparent','text-slate-500');
+    const btn = document.querySelector(`[data-admin-subtab="${target}"]`);
+    if (btn) {
+      btn.classList.add('active','border-blue-600','text-blue-600');
+      btn.classList.remove('border-transparent','text-slate-500');
+    }
     document.querySelectorAll('.admin-subtab-pane').forEach(p=>p.classList.add('hidden'));
     const paneId = target === 'karyawan' ? 'adminSubKaryawan' : target === 'users' ? 'adminSubUsers' : 'adminSubPerms';
     const pane = document.getElementById(paneId);
@@ -5804,8 +5812,13 @@ window.addEventListener('error', function(e){
         renderUserTable();
       }
     }
-    // Simpan sub-tab yang aktif supaya tetap di sini setelah refresh halaman
     try { localStorage.setItem('sjnam_current_admin_subtab', target); } catch(e){}
+  };
+
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-admin-subtab]');
+    if(!btn) return;
+    window.switchAdminSubtab(btn.dataset.adminSubtab);
   });
 
 })();
